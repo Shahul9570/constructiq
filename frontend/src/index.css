@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════
+   CONSTRUCTION COMMAND CENTER — DESIGN SYSTEM
+   Primary: #0F172A bg · #F97316 accent · #F8FAFC text
+   ═══════════════════════════════════════════════════════ */
+
+@layer base {
+  :root {
+    /* Dark theme as the ONLY theme — always on */
+    --background:       222 47% 8%;    /* #0F172A  slate-950 */
+    --foreground:       210 40% 98%;   /* #F8FAFC  */
+
+    --card:             221 39% 11%;   /* #111827  gray-900  */
+    --card-foreground:  210 40% 98%;
+
+    --popover:          221 39% 11%;
+    --popover-foreground: 210 40% 98%;
+
+    /* PRIMARY: Construction Orange — used sparingly on actions */
+    --primary:          24 95% 53%;    /* #F97316 orange-500 */
+    --primary-foreground: 0 0% 100%;
+
+    /* SECONDARY: Slate panel */
+    --secondary:        217 33% 17%;   /* #1E293B slate-800 */
+    --secondary-foreground: 215 20% 65%;
+
+    --muted:            217 33% 17%;
+    --muted-foreground: 215 20% 57%;   /* #94A3B8 slate-400 */
+
+    --accent:           217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive:      0 72% 51%;     /* #EF4444 */
+    --destructive-foreground: 0 0% 100%;
+
+    --border:           215 25% 27%;   /* #334155 slate-600 */
+    --input:            217 33% 17%;   /* #1E293B */
+    --ring:             24 95% 53%;    /* orange */
+
+    --radius:           0.75rem;
+
+    /* Sidebar: deepest dark */
+    --sidebar:          222 47% 6%;    /* #0A0F1A slightly deeper */
+    --sidebar-foreground: 215 20% 75%;
+
+    /* Semantic colors */
+    --success:          142 71% 45%;   /* #22C55E */
+    --warning:          38 92% 50%;    /* #F59E0B */
+    --info:             199 89% 48%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1, "cv02" 1, "cv03" 1;
+    /* Subtle warm radial glow at top — like a control room light source */
+    background-image:
+      radial-gradient(ellipse 100% 50% at 50% -10%, rgba(249,115,22,0.07) 0%, transparent 55%),
+      radial-gradient(ellipse 60% 40% at 80% 110%, rgba(249,115,22,0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  /* Refined scrollbar */
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  { background: #334155; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #475569; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   CORE UTILITY CLASSES
+   ═══════════════════════════════════════════════════════ */
+
+/* Header glass — sticky bar */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+}
+
+/* Card — dark elevated panel */
+.glass-card {
+  @apply bg-card border border-border/70 transition-all duration-200;
+}
+
+/* Orange primary gradient */
+.gradient-primary {
+  background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+}
+
+/* Card hover — subtle lift */
+.card-hover {
+  @apply hover:-translate-y-px hover:border-orange-500/30 hover:shadow-xl;
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+}
+
+/* Premium KPI stat card */
+.stat-card {
+  @apply p-6 rounded-2xl bg-card border border-border/70 relative overflow-hidden card-hover;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(249,115,22,0) 20%, rgba(249,115,22,0.5) 50%, rgba(249,115,22,0) 80%, transparent 100%);
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.stat-card:hover::before { opacity: 1; }
+
+/* Section label */
+.section-label {
+  @apply text-xs font-semibold tracking-widest uppercase text-muted-foreground;
+}
+
+/* Badge variants */
+.badge-success { @apply bg-green-500/10 text-green-400 border border-green-500/20 rounded-full px-2.5 py-0.5 text-xs font-medium; }
+.badge-warning { @apply bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full px-2.5 py-0.5 text-xs font-medium; }
+.badge-danger  { @apply bg-red-500/10 text-red-400 border border-red-500/20 rounded-full px-2.5 py-0.5 text-xs font-medium; }
+.badge-info    { @apply bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-full px-2.5 py-0.5 text-xs font-medium; }
+.badge-orange  { @apply bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-full px-2.5 py-0.5 text-xs font-medium; }
+
+/* Animated shimmer skeleton */
+.skeleton {
+  @apply rounded-md bg-slate-800/80;
+  background-image: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.8s ease infinite;
+}
+@keyframes skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Glow effect for accent elements */
+.glow-orange { box-shadow: 0 0 20px rgba(249,115,22,0.25), 0 0 40px rgba(249,115,22,0.1); }
+
+/* Dividers */
+.divider { @apply border-t border-border/60 my-6; }

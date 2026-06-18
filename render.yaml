@@ -1,0 +1,84 @@
+services:
+  # ------------------------------------
+  # 1. PostgreSQL Database
+  # ------------------------------------
+  - type: pserv
+    name: constructiq-db
+    env: postgres
+    plan: free
+    postgres:
+      databaseName: constructiq
+      user: constructiq
+
+  # ------------------------------------
+  # 2. Redis Cache & Broker
+  # ------------------------------------
+  - type: redis
+    name: constructiq-redis
+    plan: free
+
+  # ------------------------------------
+  # 3. FastAPI Backend API
+  # ------------------------------------
+  - type: web
+    name: constructiq-api
+    env: python
+    plan: free
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: constructiq-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: constructiq-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: constructiq-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: constructiq-redis
+          property: connectionString
+      - key: FRONTEND_URL
+        value: "https://<your-cloudflare-pages-url>.pages.dev" # UPDATE THIS AFTER CLOUDFLARE DEPLOY
+      - key: SECRET_KEY
+        generateValue: true
+
+  # ------------------------------------
+  # 4. Celery Worker (Background Tasks)
+  # ------------------------------------
+  - type: worker
+    name: constructiq-celery
+    env: python
+    plan: free
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "celery -A app.core.celery_app worker --loglevel=info"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: constructiq-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: constructiq-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: constructiq-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: constructiq-redis
+          property: connectionString

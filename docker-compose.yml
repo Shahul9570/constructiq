@@ -1,0 +1,136 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: constructiq
+      POSTGRES_PASSWORD: constructiq123
+      POSTGRES_DB: constructiq
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U constructiq"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: constructiq-access
+      MINIO_ROOT_PASSWORD: constructiq-secret
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - DATABASE_URL=postgresql://constructiq:constructiq123@postgres:5432/constructiq
+      - SECRET_KEY=${SECRET_KEY:-change-this-to-a-very-long-random-secret-key}
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=constructiq-access
+      - S3_SECRET_KEY=constructiq-secret
+      - S3_BUCKET_NAME=constructiq-uploads
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - REDIS_URL=redis://redis:6379/0
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+    volumes:
+      - ./backend:/app
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://constructiq:constructiq123@postgres:5432/constructiq
+      - SECRET_KEY=${SECRET_KEY:-change-this-to-a-very-long-random-secret-key}
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=constructiq-access
+      - S3_SECRET_KEY=constructiq-secret
+      - S3_BUCKET_NAME=constructiq-uploads
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.core.celery_app worker --loglevel=info
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: ${BUILD_TARGET:-development}
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8001/api/v1
+      - VITE_APP_NAME=ConstructIQ
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+      - frontend
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  backend_uploads:

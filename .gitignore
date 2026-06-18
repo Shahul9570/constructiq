@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Database
+*.db
+*.sqlite3
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Docker
+docker-data/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
