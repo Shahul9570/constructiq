@@ -44,6 +44,8 @@ services:
           type: redis
           name: constructiq-redis
           property: connectionString
+      - key: PYTHON_VERSION
+        value: "3.12.2"
       - key: FRONTEND_URL
         value: "https://<your-cloudflare-pages-url>.pages.dev" # UPDATE THIS AFTER CLOUDFLARE DEPLOY
       - key: SECRET_KEY
@@ -79,3 +81,5 @@ services:
           type: redis
           name: constructiq-redis
           property: connectionString
+      - key: PYTHON_VERSION
+        value: "3.12.2"
