@@ -1,17 +1,12 @@
+databases:
+  - name: constructiq-db
+    plan: free
+    databaseName: constructiq
+    user: constructiq
+
 services:
   # ------------------------------------
-  # 1. PostgreSQL Database
-  # ------------------------------------
-  - type: pserv
-    name: constructiq-db
-    env: postgres
-    plan: free
-    postgres:
-      databaseName: constructiq
-      user: constructiq
-
-  # ------------------------------------
-  # 2. Redis Cache & Broker
+  # 1. Redis Cache & Broker
   # ------------------------------------
   - type: redis
     name: constructiq-redis
