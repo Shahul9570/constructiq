@@ -30,8 +30,13 @@ class StorageService:
     def _ensure_bucket(self):
         try:
             self.s3_client.head_bucket(Bucket=self.bucket_name)
-        except Exception:
-            self.s3_client.create_bucket(Bucket=self.bucket_name)
+        except Exception as e:
+            try:
+                self.s3_client.create_bucket(Bucket=self.bucket_name)
+            except Exception as creation_error:
+                print(f"Warning: Could not connect to S3 ({creation_error}). Falling back to local storage.")
+                self.use_s3 = False
+                os.makedirs("uploads", exist_ok=True)
 
     async def upload_file(self, file: UploadFile, key: Optional[str] = None) -> str:
         if not key:
