@@ -3,6 +3,7 @@ databases:
     plan: free
     databaseName: constructiq
     user: constructiq
+    ipAllowList: []
 
 services:
   # ------------------------------------
@@ -11,6 +12,7 @@ services:
   - type: redis
     name: constructiq-redis
     plan: free
+    ipAllowList: []
 
   # ------------------------------------
   # 3. FastAPI Backend API
