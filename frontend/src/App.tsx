@@ -18,6 +18,8 @@ import ReportsPage from '@/pages/reports/ReportsPage'
 import AIAssistantPage from '@/pages/ai/AIAssistantPage'
 import SettingsPage from '@/pages/settings/SettingsPage'
 
+import UsersPage from '@/pages/users/UsersPage'
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
   if (isLoading) {
@@ -47,6 +49,7 @@ export default function App() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="projects/:id" element={<ProjectDetailPage />} />
+        <Route path="users" element={<UsersPage />} />
         <Route path="labour" element={<LabourSummaryPage />} />
         <Route path="contractors" element={<ContractorsPage />} />
         <Route path="materials" element={<MaterialsPage />} />

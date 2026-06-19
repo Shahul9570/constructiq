@@ -19,11 +19,37 @@ import {
   X,
   HardHat,
 } from 'lucide-react'
+import { UserRole } from '@/types'
 
 interface SidebarProps {
   open: boolean
   onClose: () => void
 }
+
+const adminNavGroups = [
+  {
+    title: 'Platform Overview',
+    items: [
+      { label: 'Global Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { label: 'All Projects', href: '/projects', icon: FolderKanban },
+    ],
+  },
+  {
+    title: 'Management',
+    items: [
+      { label: 'System Users', href: '/users', icon: Users },
+      { label: 'Global Contractors', href: '/contractors', icon: Building2 },
+    ],
+  },
+  {
+    title: 'System',
+    items: [
+      { label: 'Financial Overview', href: '/financial', icon: DollarSign },
+      { label: 'AI Analytics', href: '/ai', icon: Bot },
+      { label: 'Settings', href: '/settings', icon: Settings },
+    ],
+  },
+]
 
 const navGroups = [
   {

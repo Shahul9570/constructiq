@@ -29,6 +29,7 @@ const pageTitles: Record<string, { title: string; subtitle: string }> = {
   '/documents':     { title: 'Documents',      subtitle: 'Project documentation' },
   '/photos':        { title: 'Photos',         subtitle: 'Site imagery' },
   '/reports':       { title: 'Reports',        subtitle: 'Analytics & insights' },
+  '/users':         { title: 'Users',          subtitle: 'System user management' },
   '/ai':            { title: 'AI Assistant',   subtitle: 'Powered by AI' },
   '/settings':      { title: 'Settings',       subtitle: 'Platform configuration' },
 }
@@ -64,7 +65,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       </Button>
 
       {/* Project switcher */}
-      {user?.role !== 'client' && (
+      {user?.role !== 'client' && user?.role !== 'super_admin' && (
         <div className="hidden md:block">
           <ProjectSwitcher />
         </div>
