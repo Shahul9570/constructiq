@@ -47,7 +47,7 @@ services:
       - key: PYTHON_VERSION
         value: "3.12.2"
       - key: FRONTEND_URL
-        value: "https://<your-cloudflare-pages-url>.pages.dev" # UPDATE THIS AFTER CLOUDFLARE DEPLOY
+        value: "https://constructiq-ebi.pages.dev"
       - key: SECRET_KEY
         generateValue: true
 
