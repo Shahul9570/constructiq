@@ -194,7 +194,6 @@ export default function RegisterPage() {
                   <SelectValue placeholder="Select your role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
                   <SelectItem value="company_owner">Company Owner</SelectItem>
                   <SelectItem value="project_manager">Project Manager</SelectItem>
                   <SelectItem value="site_engineer">Site Engineer</SelectItem>
