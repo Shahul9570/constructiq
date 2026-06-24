@@ -6,4 +6,12 @@ export const userService = {
     const response = await api.get('/users', { params })
     return response.data
   },
+  async update(userId: number, data: Partial<User>): Promise<User> {
+    const response = await api.patch(`/users/${userId}`, data)
+    return response.data
+  },
+
+  async delete(userId: number): Promise<void> {
+    await api.delete(`/users/${userId}`)
+  },
 }
