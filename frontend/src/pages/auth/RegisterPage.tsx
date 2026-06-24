@@ -32,11 +32,20 @@ const registerSchema = z
     phone: z.string().optional(),
     role: z.string(),
     company_name: z.string().optional(),
+    company_code: z.string().optional(),
   })
   .refine((data) => data.password === data.confirm_password, {
     message: 'Passwords do not match',
     path: ['confirm_password'],
   })
+  .refine(
+    (data) => {
+      const staffRoles = ['project_manager', 'site_engineer', 'contractor', 'accountant']
+      if (staffRoles.includes(data.role) && !data.company_code) return false
+      return true
+    },
+    { message: 'Company Code is required for this role', path: ['company_code'] }
+  )
 
 type RegisterFormData = z.infer<typeof registerSchema>
 
@@ -48,6 +57,7 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -55,6 +65,10 @@ export default function RegisterPage() {
       role: 'site_engineer',
     },
   })
+
+  const selectedRole = watch('role')
+  const staffRoles = ['project_manager', 'site_engineer', 'contractor', 'accountant']
+  const needsCompanyCode = staffRoles.includes(selectedRole)
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
@@ -67,6 +81,7 @@ export default function RegisterPage() {
         role: data.role,
         phone: data.phone || undefined,
         company_name: data.company_name || undefined,
+        company_code: data.company_code || undefined,
       }
       await authService.register(payload)
       navigate('/login', { replace: true })
@@ -183,6 +198,22 @@ export default function RegisterPage() {
                 )}
               </div>
             </div>
+
+            {/* Company Code field — only for staff roles */}
+            {needsCompanyCode && (
+              <div className="space-y-2">
+                <Label htmlFor="company_code">Company Code <span className="text-destructive">*</span></Label>
+                <Input
+                  id="company_code"
+                  placeholder="e.g. CO-0001 — get this from your Company Owner"
+                  {...register('company_code')}
+                />
+                <p className="text-xs text-muted-foreground">Ask your Company Owner for their unique Company Code.</p>
+                {errors.company_code && (
+                  <p className="text-sm text-destructive">{errors.company_code.message}</p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>

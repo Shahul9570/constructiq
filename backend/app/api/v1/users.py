@@ -20,6 +20,14 @@ def list_users(
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.CONTRACTOR)),
 ):
     query = db.query(User)
+
+    # Company Owners only see users belonging to their company
+    if current_user.role == UserRole.COMPANY_OWNER:
+        query = query.filter(User.company_owner_id == current_user.id)
+    elif current_user.role != UserRole.SUPER_ADMIN:
+        # Project Managers and Contractors see only their company peers
+        query = query.filter(User.company_owner_id == current_user.company_owner_id)
+
     if role:
         query = query.filter(User.role == role)
     if search:

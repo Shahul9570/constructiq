@@ -113,6 +113,37 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Manage your account settings</p>
       </div>
 
+      {/* Company Code display for Company Owners */}
+      {user?.role === 'company_owner' && (user as any).company_code && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <Settings className="h-5 w-5" />
+              Your Company Code
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-3">
+              Share this code with your team (Site Engineers, Accountants, etc.) so they can register under your company.
+            </p>
+            <div className="flex items-center gap-3">
+              <code className="text-2xl font-bold tracking-widest bg-background border rounded-lg px-6 py-3 select-all">
+                {(user as any).company_code}
+              </code>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText((user as any).company_code)
+                  import('react-hot-toast').then(t => t.default.success('Company code copied!'))
+                }}
+                className="text-sm text-primary hover:underline"
+              >
+                Copy
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

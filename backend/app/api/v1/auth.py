@@ -19,11 +19,29 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserResponse, status_code=201)
 def register(data: UserCreate, db: Session = Depends(get_db)):
+    # Block direct super_admin registration
     if data.role and data.role.lower() == UserRole.SUPER_ADMIN.value:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot register as a super admin via this endpoint"
         )
+
+    # Staff roles must provide a company_code to link to their Company Owner
+    staff_roles = {UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR, UserRole.ACCOUNTANT}
+    company_owner_id = None
+    if data.role in [r.value for r in staff_roles]:
+        if not data.company_code:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A Company Code is required for this role. Ask your Company Owner for their code."
+            )
+        owner = db.query(User).filter(User.company_code == data.company_code.upper()).first()
+        if not owner:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Invalid Company Code. Please check the code with your Company Owner."
+            )
+        company_owner_id = owner.id
 
     existing = db.query(User).filter(
         (User.email == data.email) | (User.username == data.username)
@@ -42,10 +60,18 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
         phone=data.phone,
         role=UserRole(data.role) if hasattr(UserRole, data.role.upper()) else UserRole.SITE_ENGINEER,
         company_name=data.company_name,
+        company_owner_id=company_owner_id,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
+
+    # Auto-generate company_code for Company Owners after we have their ID
+    if user.role == UserRole.COMPANY_OWNER:
+        user.company_code = f"CO-{user.id:04d}"
+        db.commit()
+        db.refresh(user)
+
     return user
 
 

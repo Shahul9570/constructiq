@@ -14,6 +14,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
+    company_code: Optional[str] = None  # Required for staff roles to link to a Company Owner
 
 
 class UserUpdate(BaseModel):
@@ -30,6 +31,8 @@ class UserResponse(UserBase):
     is_active: bool
     is_verified: bool
     avatar_url: Optional[str] = None
+    company_code: Optional[str] = None        # Shown for Company Owners to share
+    company_owner_id: Optional[int] = None    # Shows which company the staff belongs to
     created_at: datetime
     updated_at: datetime
 
@@ -62,3 +65,4 @@ class UserList(BaseModel):
     total: int
     page: int
     size: int
+

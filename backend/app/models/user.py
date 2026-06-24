@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum as SAEnum, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 import enum
 
 from app.core.database import Base
@@ -26,6 +27,9 @@ class User(Base):
     phone = Column(String(20))
     role = Column(SAEnum(UserRole), nullable=False, default=UserRole.SITE_ENGINEER)
     company_name = Column(String(255))
+    # Company isolation fields
+    company_code = Column(String(20), unique=True, nullable=True, index=True)
+    company_owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     avatar_url = Column(String(500))
@@ -33,6 +37,8 @@ class User(Base):
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    company_staff = relationship("User", foreign_keys=[company_owner_id], backref="company_owner")
 
     def __repr__(self):
         return f"<User {self.email} ({self.role.value})>"
