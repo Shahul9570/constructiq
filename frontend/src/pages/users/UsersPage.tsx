@@ -13,7 +13,7 @@ export default function UsersPage() {
       <Card className="bg-white/5 border-white/10 backdrop-blur-xl">
         <CardContent className="pt-6">
           <EmptyState
-            icon={Users}
+            icon={<Users className="w-8 h-8" />}
             title="User Management Coming Soon"
             description="The full user administration table is being built. For now, users can register themselves on the main page."
           />
