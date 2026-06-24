@@ -14,6 +14,7 @@ export interface RegisterData {
   phone?: string
   role?: string
   company_name?: string
+  company_code?: string
 }
 
 export interface AuthResponse {
