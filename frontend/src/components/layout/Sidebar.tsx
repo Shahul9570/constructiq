@@ -93,17 +93,18 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const role = user?.role
 
   // Filter groups based on role
-  const filteredNavGroups = navGroups.map(group => {
-    if (role === 'client') {
-      return {
-        ...group,
-        items: group.items.filter(item => 
-          item.label === 'Dashboard' || item.label === 'Settings'
-        )
-      }
-    }
-    return group
-  }).filter(group => group.items.length > 0)
+  let filteredNavGroups = navGroups;
+
+  if (role === 'super_admin' || role === 'company_owner') {
+    filteredNavGroups = adminNavGroups;
+  } else if (role === 'client') {
+    filteredNavGroups = navGroups.map(group => ({
+      ...group,
+      items: group.items.filter(item => 
+        item.label === 'Dashboard' || item.label === 'Settings'
+      )
+    })).filter(group => group.items.length > 0);
+  }
 
   return (
     <>
