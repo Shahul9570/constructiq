@@ -95,7 +95,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   // Filter groups based on role
   let filteredNavGroups = navGroups;
 
-  if (role === 'super_admin' || role === 'company_owner') {
+  if (role === 'super_admin') {
     filteredNavGroups = adminNavGroups;
   } else if (role === 'client') {
     filteredNavGroups = navGroups.map(group => ({
