@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ProjectTasksTab } from './ProjectTasksTab'
+import ProjectTeamTab from './ProjectTeamTab'
 import {
   Table,
   TableBody,
@@ -174,6 +175,7 @@ export default function ProjectDetailPage() {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="flex-wrap">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="team">Team</TabsTrigger>
           <TabsTrigger value="tasks">Tasks & Milestones</TabsTrigger>
           <TabsTrigger value="blocks">Blocks</TabsTrigger>
           <TabsTrigger value="workforce">Workforce</TabsTrigger>
@@ -185,6 +187,10 @@ export default function ProjectDetailPage() {
           <TabsTrigger value="photos">Photos</TabsTrigger>
           <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="team" className="mt-6">
+          <ProjectTeamTab projectId={projectId} />
+        </TabsContent>
 
         <TabsContent value="tasks" className="mt-6">
           <ProjectTasksTab projectId={projectId} />

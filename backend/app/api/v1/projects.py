@@ -6,11 +6,12 @@ from sqlalchemy import func
 from app.core.database import get_db
 from app.core.security import get_current_user, require_roles
 from app.models.user import User, UserRole
-from app.models.project import Project, ProjectBlock, ProjectStructure, ProjectStatus
+from app.models.project import Project, ProjectBlock, ProjectStructure, ProjectStatus, ProjectMember
 from app.schemas.project import (
     ProjectCreate, ProjectUpdate, ProjectResponse, ProjectList,
     ProjectBlockCreate, ProjectBlockResponse,
     ProjectStructureCreate, ProjectStructureResponse,
+    ProjectMemberCreate, ProjectMemberResponse
 )
 
 router = APIRouter()
@@ -30,8 +31,16 @@ def list_projects(
     
     if current_user.role == UserRole.CLIENT:
         query = query.filter(Project.client_id == current_user.id)
+    elif current_user.role in [UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT, UserRole.CONTRACTOR, UserRole.PROJECT_MANAGER]:
+        # They can see projects they created OR are assigned to as a member
+        query = query.join(ProjectMember, ProjectMember.project_id == Project.id, isouter=True)
+        query = query.filter(
+            (Project.created_by == current_user.id) | 
+            (ProjectMember.user_id == current_user.id)
+        )
     elif current_user.role != UserRole.SUPER_ADMIN:
-        query = query.filter((Project.created_by == current_user.id) | (Project.client_id == current_user.id))
+        # Fallback for others (like COMPANY_OWNER who sees everything or created_by)
+        pass
 
     if status:
         query = query.filter(Project.status == status)
@@ -259,3 +268,80 @@ def project_stats(
         "total_cost": total_cost,
         "today_logs": today_logs,
     }
+
+
+@router.post("/{project_id}/members", response_model=ProjectMemberResponse, status_code=201)
+def add_project_member(
+    project_id: int,
+    data: ProjectMemberCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER)),
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    user_to_add = db.query(User).filter(User.id == data.user_id).first()
+    if not user_to_add:
+        raise HTTPException(status_code=404, detail="User to add not found")
+
+    existing = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == data.user_id
+    ).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="User is already a member of this project")
+
+    member = ProjectMember(
+        project_id=project_id,
+        user_id=data.user_id,
+        role_in_project=data.role_in_project or user_to_add.role.value
+    )
+    db.add(member)
+    db.commit()
+    db.refresh(member)
+
+    response = ProjectMemberResponse.model_validate(member)
+    response.user_email = user_to_add.email
+    response.user_full_name = user_to_add.full_name
+    response.user_role = user_to_add.role.value
+    return response
+
+
+@router.get("/{project_id}/members", response_model=list[ProjectMemberResponse])
+def get_project_members(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    members = db.query(ProjectMember).filter(ProjectMember.project_id == project_id).all()
+    result = []
+    for m in members:
+        user = db.query(User).filter(User.id == m.user_id).first()
+        if user:
+            r = ProjectMemberResponse.model_validate(m)
+            r.user_email = user.email
+            r.user_full_name = user.full_name
+            r.user_role = user.role.value
+            result.append(r)
+    return result
+
+
+@router.delete("/{project_id}/members/{user_id}", status_code=204)
+def remove_project_member(
+    project_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER)),
+):
+    member = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == user_id
+    ).first()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="User is not a member of this project")
+
+    db.delete(member)
+    db.commit()

@@ -40,4 +40,18 @@ export const projectService = {
     const response = await api.get(`/projects/${id}/stats`)
     return response.data
   },
+
+  async getMembers(id: number): Promise<any[]> {
+    const response = await api.get(`/projects/${id}/members`)
+    return response.data
+  },
+
+  async addMember(id: number, data: { user_id: number; role_in_project?: string }): Promise<any> {
+    const response = await api.post(`/projects/${id}/members`, data)
+    return response.data
+  },
+
+  async removeMember(id: number, userId: number): Promise<void> {
+    await api.delete(`/projects/${id}/members/${userId}`)
+  },
 }

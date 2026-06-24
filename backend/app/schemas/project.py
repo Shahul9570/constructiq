@@ -94,3 +94,23 @@ class ProjectList(BaseModel):
     total: int
     page: int
     size: int
+
+
+class ProjectMemberCreate(BaseModel):
+    user_id: int
+    role_in_project: Optional[str] = None
+
+
+class ProjectMemberResponse(BaseModel):
+    id: int
+    project_id: int
+    user_id: int
+    role_in_project: Optional[str] = None
+    created_at: datetime
+    
+    # We will include basic user info
+    user_email: Optional[str] = None
+    user_full_name: Optional[str] = None
+    user_role: Optional[str] = None
+
+    model_config = {"from_attributes": True}
