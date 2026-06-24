@@ -19,6 +19,12 @@ router = APIRouter()
 
 @router.post("/register", response_model=UserResponse, status_code=201)
 def register(data: UserCreate, db: Session = Depends(get_db)):
+    if data.role and data.role.lower() == UserRole.SUPER_ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot register as a super admin via this endpoint"
+        )
+
     existing = db.query(User).filter(
         (User.email == data.email) | (User.username == data.username)
     ).first()
