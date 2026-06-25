@@ -24,10 +24,10 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [formData, setFormData] = useState<{ 
     name: string, description: string, weight_percentage: number, assigned_to_id?: string,
-    area?: string, quantity?: number, unit?: string, work_type?: string, start_date?: string, end_date?: string
+    area?: string, unit?: string, work_type?: string, start_date?: string, end_date?: string
   }>({ 
     name: '', description: '', weight_percentage: 0, assigned_to_id: 'none',
-    area: '', quantity: 0, unit: '', work_type: '', start_date: '', end_date: ''
+    area: '', unit: '', work_type: 'Other', start_date: '', end_date: ''
   })
 
   const { data: tasks, isLoading } = useQuery({
@@ -44,7 +44,6 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
     mutationFn: () => projectTaskService.create(projectId, {
       ...formData,
       assigned_to_id: formData.assigned_to_id !== 'none' ? Number(formData.assigned_to_id) : undefined,
-      quantity: formData.quantity ? Number(formData.quantity) : undefined,
       start_date: formData.start_date ? new Date(formData.start_date).toISOString() : undefined,
       end_date: formData.end_date ? new Date(formData.end_date).toISOString() : undefined,
     }),
@@ -53,7 +52,7 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
       setIsOpen(false)
       setFormData({ 
         name: '', description: '', weight_percentage: 0, assigned_to_id: 'none',
-        area: '', quantity: 0, unit: '', work_type: '', start_date: '', end_date: ''
+        area: '', unit: '', work_type: 'Other', start_date: '', end_date: ''
       })
       toast.success('Task created successfully')
     },
@@ -117,17 +116,22 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                   </div>
                   <div className="space-y-2">
                     <Label>Work Type</Label>
-                    <Input value={formData.work_type} onChange={(e) => setFormData({ ...formData, work_type: e.target.value })} placeholder="e.g., Concrete" />
+                    <Select value={formData.work_type} onValueChange={(val) => setFormData({ ...formData, work_type: val })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select work type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {['Excavation', 'Concrete', 'Reinforcement', 'Masonry', 'Plastering', 'Painting', 'Flooring', 'Electrical', 'Plumbing', 'HVAC', 'Other'].map(type => (
+                          <SelectItem key={type} value={type}>{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Area</Label>
-                    <Input value={formData.area} onChange={(e) => setFormData({ ...formData, area: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Quantity</Label>
-                    <Input type="number" min="0" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) })} />
+                    <Input value={formData.area} onChange={(e) => setFormData({ ...formData, area: e.target.value })} placeholder="e.g., Block A, 1st Floor" />
                   </div>
                   <div className="space-y-2">
                     <Label>Unit</Label>
@@ -195,7 +199,7 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                 <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
                   {task.area && <div><span className="font-medium text-foreground">Area:</span> {task.area}</div>}
                   {task.work_type && <div><span className="font-medium text-foreground">Type:</span> {task.work_type}</div>}
-                  {task.quantity && task.unit && <div><span className="font-medium text-foreground">Quantity:</span> {task.quantity} {task.unit}</div>}
+                  {task.unit && <div><span className="font-medium text-foreground">Unit:</span> {task.unit}</div>}
                   {task.start_date && task.end_date && (
                     <div className="col-span-2">
                       <span className="font-medium text-foreground">Schedule:</span> {new Date(task.start_date).toLocaleDateString()} - {new Date(task.end_date).toLocaleDateString()}
