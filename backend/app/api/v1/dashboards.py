@@ -23,7 +23,10 @@ router = APIRouter()
     
 def _get_project_total_cost(db: Session, project_id: int) -> float:
     manual_cost = db.query(func.coalesce(func.sum(CostRecord.amount), 0)).filter(CostRecord.project_id == project_id).scalar() or 0
-    labour_cost = db.query(func.coalesce(func.sum(DailyLabourSummary.workers_count * DailyLabourSummary.daily_rate), 0)).filter(DailyLabourSummary.project_id == project_id).scalar() or 0
+    labour_cost = db.query(func.coalesce(func.sum(DailyLabourSummary.workers_count * DailyLabourSummary.daily_rate), 0)).filter(
+        DailyLabourSummary.project_id == project_id,
+        DailyLabourSummary.verification_status == 'approved'
+    ).scalar() or 0
     equipment_logs = db.query(EquipmentUsage).filter(EquipmentUsage.project_id == project_id).all()
     equipment_cost = sum(e.hours_used * e.equipment.hourly_rate for e in equipment_logs)
     material_arrivals = db.query(MaterialArrival).join(Material).filter(Material.project_id == project_id).all()
@@ -87,6 +90,7 @@ def site_engineer_dashboard(
     ).filter(
         DailyLabourSummary.project_id == project_id,
         DailyLabourSummary.date == today,
+        DailyLabourSummary.verification_status == 'approved'
     ).scalar() or 0
 
     today_labour_cost = db.query(
@@ -94,6 +98,7 @@ def site_engineer_dashboard(
     ).filter(
         DailyLabourSummary.project_id == project_id,
         DailyLabourSummary.date == today,
+        DailyLabourSummary.verification_status == 'approved'
     ).scalar() or 0
 
     today_material_consumption = db.query(
@@ -106,6 +111,7 @@ def site_engineer_dashboard(
     today_logs = db.query(DailyWorkLog).filter(
         DailyWorkLog.project_id == project_id,
         DailyWorkLog.date == today,
+        DailyWorkLog.verification_status == 'approved'
     ).all()
 
     total_planned = sum(l.planned_quantity for l in today_logs)
@@ -152,12 +158,14 @@ def project_manager_dashboard(
     weekly_logs = db.query(DailyWorkLog).filter(
         DailyWorkLog.project_id == project_id,
         DailyWorkLog.date >= date.today() - timedelta(days=7),
+        DailyWorkLog.verification_status == 'approved'
     ).all()
 
     weekly_progress = sum(l.completed_quantity for l in weekly_logs)
 
     total_workers = db.query(func.coalesce(func.sum(DailyLabourSummary.workers_count), 0)).filter(
         DailyLabourSummary.project_id == project_id,
+        DailyLabourSummary.verification_status == 'approved'
     ).scalar() or 0
 
     return {
