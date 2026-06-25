@@ -38,20 +38,13 @@ const registerSchema = z
     message: 'Passwords do not match',
     path: ['confirm_password'],
   })
-  .refine(
-    (data) => {
-      const staffRoles = ['project_manager', 'site_engineer', 'contractor', 'accountant']
-      if (staffRoles.includes(data.role) && !data.company_code) return false
-      return true
-    },
-    { message: 'Company Code is required for this role', path: ['company_code'] }
-  )
 
 type RegisterFormData = z.infer<typeof registerSchema>
 
 export default function RegisterPage() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
+  const [registeredUser, setRegisteredUser] = useState<{ company_code?: string; role?: string } | null>(null)
 
   const {
     register,
@@ -83,11 +76,52 @@ export default function RegisterPage() {
         company_name: data.company_name || undefined,
         company_code: data.company_code || undefined,
       }
-      await authService.register(payload)
-      navigate('/login', { replace: true })
-    } catch {
-      setError('Registration failed. Please try again.')
+      const result = await authService.register(payload)
+      // Show success with company code for Company Owners
+      if (data.role === 'company_owner' && (result as any).company_code) {
+        setRegisteredUser({ company_code: (result as any).company_code, role: data.role })
+      } else {
+        navigate('/login', { replace: true })
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail
+      setError(msg || 'Registration failed. Please try again.')
     }
+  }
+
+  // Show success screen for Company Owners with their code
+  if (registeredUser?.company_code) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardHeader>
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+              <span className="text-3xl">✓</span>
+            </div>
+            <CardTitle className="text-2xl">Account Created!</CardTitle>
+            <CardDescription>Your company has been registered successfully.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-6">
+              <p className="text-sm text-muted-foreground mb-2">Your Company Code</p>
+              <p className="text-4xl font-bold tracking-widest text-primary">{registeredUser.company_code}</p>
+              <p className="text-xs text-muted-foreground mt-3">
+                Share this code with your team members (Site Engineers, Accountants, etc.) so they can register under your company.
+              </p>
+            </div>
+            <button
+              onClick={() => navigator.clipboard.writeText(registeredUser.company_code!)}
+              className="text-sm text-primary hover:underline"
+            >
+              📋 Copy Code
+            </button>
+            <Button className="w-full" onClick={() => navigate('/login', { replace: true })}>
+              Continue to Login
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -199,16 +233,18 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Company Code field — only for staff roles */}
+            {/* Company Code field — optional for staff, hidden for owners */}
             {needsCompanyCode && (
               <div className="space-y-2">
-                <Label htmlFor="company_code">Company Code <span className="text-destructive">*</span></Label>
+                <Label htmlFor="company_code">Company Code <span className="text-xs text-muted-foreground">(Optional)</span></Label>
                 <Input
                   id="company_code"
-                  placeholder="e.g. CO-0001 — get this from your Company Owner"
+                  placeholder="e.g. CO-0001 — leave blank if independent"
                   {...register('company_code')}
                 />
-                <p className="text-xs text-muted-foreground">Ask your Company Owner for their unique Company Code.</p>
+                <p className="text-xs text-muted-foreground">
+                  Working under a company? Enter their code. Leave blank if you are independent.
+                </p>
                 {errors.company_code && (
                   <p className="text-sm text-destructive">{errors.company_code.message}</p>
                 )}
