@@ -76,6 +76,7 @@ export default function ProjectsPage() {
     name: '',
     client_name: '',
     client_id: undefined as number | undefined,
+    client_email: '',
     location: '',
     start_date: '',
     expected_end_date: '',
@@ -83,12 +84,6 @@ export default function ProjectsPage() {
     description: '',
     status: 'planning' as ProjectStatus,
     project_type: 'residential',
-  })
-
-  const { data: clientsData } = useQuery({
-    queryKey: ['clients'],
-    queryFn: () => userService.list({ role: 'client', size: 100 }),
-    enabled: isCreateOpen,
   })
 
   const { data, isLoading, isError } = useQuery({
@@ -408,28 +403,14 @@ export default function ProjectsPage() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="client">Client</Label>
-                <select
-                  id="client"
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  value={createForm.client_id || ''}
-                  onChange={(e) => {
-                    const selectedId = e.target.value ? Number(e.target.value) : undefined
-                    const selectedClient = clientsData?.items.find((c) => c.id === selectedId)
-                    setCreateForm({ 
-                      ...createForm, 
-                      client_id: selectedId,
-                      client_name: selectedClient ? selectedClient.full_name : ''
-                    })
-                  }}
-                >
-                  <option value="">Select a client (Optional)</option>
-                  {clientsData?.items.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.full_name} ({client.email})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground">Select a registered client to link them to this project.</p>
+                <Input
+                  id="client_email"
+                  type="email"
+                  placeholder="Enter client's email address"
+                  value={createForm.client_email || ''}
+                  onChange={(e) => setCreateForm({ ...createForm, client_email: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">Type a registered client's email to link them to this project.</p>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="location">Location</Label>
