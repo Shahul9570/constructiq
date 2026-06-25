@@ -178,7 +178,19 @@ def owner_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    projects = db.query(Project).filter(Project.is_archived == False).all()
+    from app.models.project import ProjectMember
+    query = db.query(Project).filter(Project.is_archived == False)
+
+    if current_user.role == UserRole.COMPANY_OWNER:
+        query = query.filter(Project.created_by == current_user.id)
+    elif current_user.role in [UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT, UserRole.CONTRACTOR, UserRole.PROJECT_MANAGER]:
+        query = query.join(ProjectMember, ProjectMember.project_id == Project.id, isouter=True)
+        query = query.filter(
+            (Project.created_by == current_user.id) | 
+            (ProjectMember.user_id == current_user.id)
+        )
+
+    projects = query.all()
 
     total_projects = len(projects)
     active_projects = sum(1 for p in projects if p.status == ProjectStatus.IN_PROGRESS)

@@ -38,9 +38,12 @@ def list_projects(
             (Project.created_by == current_user.id) | 
             (ProjectMember.user_id == current_user.id)
         )
+    elif current_user.role == UserRole.COMPANY_OWNER:
+        # Company owners only see their own projects
+        query = query.filter(Project.created_by == current_user.id)
     elif current_user.role != UserRole.SUPER_ADMIN:
-        # Fallback for others (like COMPANY_OWNER who sees everything or created_by)
-        pass
+        # Fallback for any other unexpected roles to fail safe
+        query = query.filter(Project.created_by == current_user.id)
 
     if status:
         query = query.filter(Project.status == status)
