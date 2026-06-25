@@ -66,7 +66,10 @@ def list_costs(
 
     # 2. Labour
     if not category or category == "labour":
-        labour_q = db.query(DailyLabourSummary).filter(DailyLabourSummary.project_id == project_id)
+        labour_q = db.query(DailyLabourSummary).filter(
+            DailyLabourSummary.project_id == project_id,
+            DailyLabourSummary.verification_status == 'approved'
+        )
         if date_from: labour_q = labour_q.filter(DailyLabourSummary.date >= date_from)
         if date_to: labour_q = labour_q.filter(DailyLabourSummary.date <= date_to)
         for l in labour_q.all():
@@ -137,7 +140,8 @@ def cost_summary(
 
     # Labour cost from DailyLabourSummary (workers_count * daily_rate)
     labour_q = db.query(DailyLabourSummary).filter(
-        DailyLabourSummary.project_id == project_id
+        DailyLabourSummary.project_id == project_id,
+        DailyLabourSummary.verification_status == 'approved'
     )
     if date_from:
         labour_q = labour_q.filter(DailyLabourSummary.date >= date_from)
@@ -242,7 +246,8 @@ def budget_tracking(
 
     # Labour cost
     labour_rows = db.query(DailyLabourSummary).filter(
-        DailyLabourSummary.project_id == project_id
+        DailyLabourSummary.project_id == project_id,
+        DailyLabourSummary.verification_status == 'approved'
     ).all()
     labour_total = sum((r.workers_count or 0) * (r.daily_rate or 0) for r in labour_rows)
 
