@@ -119,7 +119,7 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                       <SelectItem value="none">Unassigned</SelectItem>
                       {members?.map((m: any) => (
                         <SelectItem key={m.id} value={m.user_id.toString()}>
-                          {m.user.full_name} ({m.user.role.replace('_', ' ')})
+                          {m.user_full_name} ({m.user_role?.replace('_', ' ') || 'member'})
                         </SelectItem>
                       ))}
                     </SelectContent>
