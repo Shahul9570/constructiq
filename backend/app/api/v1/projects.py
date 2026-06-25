@@ -115,10 +115,24 @@ def get_project(
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-        
-    if current_user.role == UserRole.CLIENT and project.client_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to view this project")
-    elif current_user.role != UserRole.SUPER_ADMIN and project.created_by != current_user.id and project.client_id != current_user.id:
+
+    # Super admin and company owner see everything
+    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER]:
+        return project
+
+    # Client can only see their own projects
+    if current_user.role == UserRole.CLIENT:
+        if project.client_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Not authorized to view this project")
+        return project
+
+    # For all other roles: allow if they created it OR they are an assigned member
+    is_member = db.query(ProjectMember).filter(
+        ProjectMember.project_id == project_id,
+        ProjectMember.user_id == current_user.id
+    ).first()
+
+    if project.created_by != current_user.id and not is_member:
         raise HTTPException(status_code=403, detail="Not authorized to view this project")
 
     return project
