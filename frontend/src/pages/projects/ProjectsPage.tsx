@@ -125,6 +125,7 @@ export default function ProjectsPage() {
       name: '',
       client_name: '',
       client_id: undefined,
+      client_email: '',
       location: '',
       start_date: '',
       expected_end_date: '',
