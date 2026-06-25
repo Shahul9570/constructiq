@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4"
 
     FRONTEND_URL: str = "http://localhost:5173"
-    # Comma-separated list of allowed CORS origins for production
-    ALLOWED_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    # Comma-separated list of allowed CORS origins — must be set in production env vars
+    ALLOWED_ORIGINS: str = ""
 
     REDIS_URL: str = "redis://localhost:6379/0"
     CELERY_BROKER_URL: str = "redis://localhost:6379/1"

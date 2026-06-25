@@ -18,10 +18,6 @@ app = FastAPI(
 )
 
 allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
-# Always include localhost dev origins
-for dev_origin in ["http://localhost:5173", "http://localhost:3000", settings.FRONTEND_URL]:
-    if dev_origin not in allowed_origins:
-        allowed_origins.append(dev_origin)
 
 app.add_middleware(
     CORSMiddleware,
