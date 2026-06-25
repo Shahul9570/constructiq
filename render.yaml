@@ -48,6 +48,8 @@ services:
         value: "3.12.2"
       - key: FRONTEND_URL
         value: "https://constructiq-ebi.pages.dev"
+      - key: ALLOWED_ORIGINS
+        value: "https://constructiq-ebi.pages.dev"
       - key: SECRET_KEY
         generateValue: true
 
