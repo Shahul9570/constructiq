@@ -69,16 +69,14 @@ def create_project(
 ):
     create_data = data.model_dump(exclude={"client_email"})
     
-    client_id = data.client_id
     if data.client_email:
         client_user = db.query(User).filter(User.email == data.client_email, User.role == UserRole.CLIENT).first()
         if client_user:
-            client_id = client_user.id
+            create_data["client_id"] = client_user.id
             create_data["client_name"] = client_user.full_name
             
     project = Project(
         **create_data,
-        client_id=client_id,
         created_by=current_user.id,
         company_id=current_user.company_owner_id if current_user.company_owner_id else current_user.id,
     )
