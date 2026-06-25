@@ -46,6 +46,8 @@ async def startup():
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_code VARCHAR(20) UNIQUE",
                 "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_owner_id INTEGER REFERENCES users(id)",
                 "ALTER TABLE projects ADD COLUMN IF NOT EXISTS members_count INTEGER DEFAULT 0",
+                "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending'",
+                "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS assigned_to_id INTEGER REFERENCES users(id)",
             ]
             for sql in migrations:
                 try:

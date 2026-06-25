@@ -20,7 +20,13 @@ def list_tasks(
     current_user: User = Depends(get_current_user),
 ):
     tasks = db.query(ProjectTask).filter(ProjectTask.project_id == project_id).all()
-    return tasks
+    results = []
+    for task in tasks:
+        task_data = task.__dict__.copy()
+        if task.assigned_to:
+            task_data["assigned_to_name"] = task.assigned_to.full_name
+        results.append(ProjectTaskResponse(**task_data))
+    return results
 
 
 @router.post("/", response_model=ProjectTaskResponse, status_code=201)

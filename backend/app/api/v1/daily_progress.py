@@ -27,8 +27,16 @@ def _update_project_progress(db: Session, project_id: int):
             total_planned = sum(l.planned_quantity for l in logs)
             total_completed = sum(l.completed_quantity for l in logs)
             task.progress_percentage = min((total_completed / total_planned * 100) if total_planned > 0 else 0.0, 100.0)
+            
+            if task.progress_percentage >= 100.0:
+                task.status = "completed"
+            elif task.progress_percentage > 0:
+                task.status = "in_progress"
+            else:
+                task.status = "pending"
         else:
             task.progress_percentage = 0.0
+            task.status = "pending"
             
         # Add to overall progress (Weighted: e.g., if task is 20% weight and 50% done, adds 10% to overall)
         overall_progress += (task.progress_percentage * task.weight_percentage / 100.0)

@@ -5,6 +5,9 @@ export interface ProjectTask {
   description?: string
   weight_percentage: number
   progress_percentage: number
+  status?: string
+  assigned_to_id?: number
+  assigned_to_name?: string
   created_at: string
   updated_at: string
 }

@@ -14,6 +14,8 @@ class ProjectTask(Base):
     description = Column(Text)
     weight_percentage = Column(Float, default=0.0)
     progress_percentage = Column(Float, default=0.0)
+    status = Column(String(50), default="pending")
+    assigned_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
@@ -21,6 +23,7 @@ class ProjectTask(Base):
     )
 
     project = relationship("Project", back_populates="tasks")
+    assigned_to = relationship("User", foreign_keys=[assigned_to_id])
 
     def __repr__(self):
-        return f"<ProjectTask {self.name} - {self.weight_percentage}%>"
+        return f"<ProjectTask {self.name} - {self.status}>"
