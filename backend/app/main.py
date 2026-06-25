@@ -38,6 +38,25 @@ async def startup():
     except Exception as e:
         logger.error(f"Database initialization error: {e}")
 
+    # Run safe column migrations for any new columns added to existing tables
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            migrations = [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_code VARCHAR(20) UNIQUE",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_owner_id INTEGER REFERENCES users(id)",
+                "ALTER TABLE projects ADD COLUMN IF NOT EXISTS members_count INTEGER DEFAULT 0",
+            ]
+            for sql in migrations:
+                try:
+                    conn.execute(text(sql))
+                except Exception:
+                    pass  # Column likely already exists
+            conn.commit()
+        logger.info("Database column migrations applied")
+    except Exception as e:
+        logger.error(f"Migration error: {e}")
+
     from app.core.celery_app import celery_app
     logger.info("Celery app initialized")
 
