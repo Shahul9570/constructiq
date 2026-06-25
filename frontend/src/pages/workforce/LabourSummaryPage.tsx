@@ -6,9 +6,11 @@ import {
   Users,
   Plus,
   Filter,
-  IndianRupee,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -40,11 +42,14 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Badge } from '@/components/ui/badge'
 
 export default function LabourSummaryPage() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [tradeFilter, setTradeFilter] = useState('all')
   const [page] = useState(1)
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [trades, setTrades] = useState<string[]>([])
+  const [rejectLogId, setRejectLogId] = useState<number | null>(null)
+  const [rejectRemarks, setRejectRemarks] = useState('')
 
   const pid = Number(localStorage.getItem('selected_project_id')) || 0
 
@@ -99,6 +104,21 @@ export default function LabourSummaryPage() {
     },
     onError: () => toast.error('Failed to add labour entry'),
   })
+
+  const verifyMutation = useMutation({
+    mutationFn: ({ id, status, remarks }: { id: number, status: 'approved' | 'rejected', remarks?: string }) =>
+      labourService.verify(id, status, remarks),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['labour'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toast.success('Labour entry verification updated')
+      setRejectLogId(null)
+      setRejectRemarks('')
+    },
+    onError: () => toast.error('Failed to verify labour entry'),
+  })
+
+  const canManage = ['site_engineer', 'project_manager', 'company_owner'].includes(user?.role || '')
 
   const resetForm = () => {
     setForm({
@@ -189,6 +209,7 @@ export default function LabourSummaryPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/30 hover:bg-muted/30">
+                <TableHead className="font-semibold">Status</TableHead>
                 <TableHead className="font-semibold">Date</TableHead>
                 <TableHead className="font-semibold">Trade</TableHead>
                 <TableHead className="text-right font-semibold">Workers</TableHead>
@@ -196,11 +217,17 @@ export default function LabourSummaryPage() {
                 <TableHead className="text-right font-semibold">Total Cost</TableHead>
                 <TableHead className="font-semibold">Contractor</TableHead>
                 <TableHead className="font-semibold">Remarks</TableHead>
+                {canManage && <TableHead className="text-right font-semibold">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {labourList.map((l: DailyLabourSummary) => (
                 <TableRow key={l.id} className="hover:bg-muted/20 transition-colors">
+                  <TableCell>
+                    {l.verification_status === 'approved' && <Badge className="bg-green-500">Approved</Badge>}
+                    {l.verification_status === 'rejected' && <Badge variant="destructive">Rejected</Badge>}
+                    {l.verification_status === 'pending' && <Badge variant="secondary">Pending</Badge>}
+                  </TableCell>
                   <TableCell className="font-medium">{new Date(l.date).toLocaleDateString()}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="capitalize rounded-full border-primary/20 text-primary bg-primary/5">
@@ -225,7 +252,32 @@ export default function LabourSummaryPage() {
                   <TableCell className="text-muted-foreground">{getContractorName(l.contractor_id)}</TableCell>
                   <TableCell className="text-muted-foreground max-w-[200px] truncate">
                     {l.remarks || <span className="text-muted-foreground/40">—</span>}
+                    {l.verification_remarks && (
+                      <span className="block text-xs text-red-500 mt-1 whitespace-normal">
+                        Reject Reason: {l.verification_remarks}
+                      </span>
+                    )}
                   </TableCell>
+                  {canManage && (
+                    <TableCell className="text-right">
+                      {l.verification_status === 'pending' && (
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="ghost" size="icon" className="text-green-600 h-8 w-8"
+                            onClick={() => verifyMutation.mutate({ id: l.id, status: 'approved' })}
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" size="icon" className="text-red-600 h-8 w-8"
+                            onClick={() => setRejectLogId(l.id)}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -296,6 +348,35 @@ export default function LabourSummaryPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!rejectLogId} onOpenChange={(open) => !open && setRejectLogId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Reject Labour Entry</DialogTitle>
+            <DialogDescription>Please provide a reason for rejecting this entry.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="reject-remarks">Remarks / Reason</Label>
+            <Input 
+              id="reject-remarks" 
+              value={rejectRemarks} 
+              onChange={(e) => setRejectRemarks(e.target.value)} 
+              placeholder="e.g., Incorrect worker count"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectLogId(null)}>Cancel</Button>
+            <Button 
+              variant="destructive" 
+              disabled={!rejectRemarks.trim() || verifyMutation.isPending}
+              onClick={() => rejectLogId && verifyMutation.mutate({ id: rejectLogId, status: 'rejected', remarks: rejectRemarks })}
+            >
+              Confirm Rejection
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

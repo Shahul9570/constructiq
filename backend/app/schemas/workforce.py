@@ -27,10 +27,19 @@ class DailyLabourSummaryUpdate(BaseModel):
     remarks: Optional[str] = None
 
 
+class VerifyLabourRequest(BaseModel):
+    status: str = Field(pattern="^(approved|rejected)$")
+    remarks: Optional[str] = None
+
+
 class DailyLabourSummaryResponse(DailyLabourSummaryBase):
     id: int
     project_id: int
     created_by: int
+    verification_status: str
+    verified_by_id: Optional[int] = None
+    verified_at: Optional[datetime] = None
+    verification_remarks: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

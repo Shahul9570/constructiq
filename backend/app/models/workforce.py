@@ -32,6 +32,12 @@ class DailyLabourSummary(Base):
     contractor_id = Column(Integer, ForeignKey("contractors.id"), nullable=True)
     remarks = Column(Text)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    verification_status = Column(String(50), default="pending")
+    verified_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    verification_remarks = Column(Text, nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

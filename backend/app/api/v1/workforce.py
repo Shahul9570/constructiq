@@ -51,11 +51,21 @@ def create_labour_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    from app.models.user import UserRole
+    # Auto-approve if created by a manager/owner
+    status = "approved" if current_user.role in [UserRole.SITE_ENGINEER, UserRole.PROJECT_MANAGER, UserRole.COMPANY_OWNER] else "pending"
+
     summary = DailyLabourSummary(
         **data.model_dump(),
         project_id=project_id,
-        created_by=current_user.id
+        created_by=current_user.id,
+        verification_status=status
     )
+    if status == "approved":
+        summary.verified_by_id = current_user.id
+        from datetime import datetime, timezone
+        summary.verified_at = datetime.now(timezone.utc)
+
     db.add(summary)
     db.commit()
     db.refresh(summary)
@@ -95,6 +105,35 @@ def delete_labour_summary(
     db.commit()
 
 
+from app.schemas.workforce import VerifyLabourRequest
+
+@router.post("/{summary_id}/verify", response_model=DailyLabourSummaryResponse)
+def verify_labour_summary(
+    summary_id: int,
+    data: VerifyLabourRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.user import UserRole
+    from datetime import datetime, timezone
+
+    if current_user.role not in [UserRole.SITE_ENGINEER, UserRole.PROJECT_MANAGER, UserRole.COMPANY_OWNER]:
+        raise HTTPException(status_code=403, detail="Not authorized to verify labour entries")
+
+    summary = db.query(DailyLabourSummary).filter(DailyLabourSummary.id == summary_id).first()
+    if not summary:
+        raise HTTPException(status_code=404, detail="Labour summary not found")
+
+    summary.verification_status = data.status
+    summary.verification_remarks = data.remarks
+    summary.verified_by_id = current_user.id
+    summary.verified_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(summary)
+    return summary
+
+
 @router.get("/summary")
 def labour_metrics_summary(
     project_id: int,
@@ -107,6 +146,7 @@ def labour_metrics_summary(
         DailyLabourSummary.project_id == project_id,
         DailyLabourSummary.date >= date_from,
         DailyLabourSummary.date <= date_to,
+        DailyLabourSummary.verification_status == 'approved'
     ).all()
 
     total_workers = 0

@@ -10,6 +10,10 @@ export interface DailyLabourSummary {
   daily_rate: number
   contractor_id?: number
   remarks?: string
+  verification_status: 'pending' | 'approved' | 'rejected'
+  verified_by_id?: number
+  verified_at?: string
+  verification_remarks?: string
   created_at: string
 }
 
@@ -56,6 +60,11 @@ export const labourService = {
 
   async getTrades(): Promise<string[]> {
     const response = await api.get('/labour/trades')
+    return response.data
+  },
+
+  async verify(id: number, status: 'approved' | 'rejected', remarks?: string): Promise<DailyLabourSummary> {
+    const response = await api.post(`/labour/${id}/verify`, { status, remarks })
     return response.data
   }
 }
