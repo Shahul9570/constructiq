@@ -190,7 +190,7 @@ def owner_dashboard(
     query = db.query(Project).filter(Project.is_archived == False)
 
     if current_user.role == UserRole.COMPANY_OWNER:
-        query = query.filter(Project.created_by == current_user.id)
+        query = query.filter(Project.company_id == current_user.id)
     elif current_user.role in [UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT, UserRole.CONTRACTOR, UserRole.PROJECT_MANAGER]:
         query = query.join(ProjectMember, ProjectMember.project_id == Project.id, isouter=True)
         query = query.filter(

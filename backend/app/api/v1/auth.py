@@ -26,8 +26,8 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
             detail="Cannot register as a super admin via this endpoint"
         )
 
-    # Staff roles CAN provide a company_code to link to their Company Owner (optional)
-    staff_roles = {UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR, UserRole.ACCOUNTANT}
+    # Staff and Client roles CAN provide a company_code to link to their Company Owner (optional)
+    staff_roles = {UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR, UserRole.ACCOUNTANT, UserRole.CLIENT}
     company_owner_id = None
     if data.role in [r.value for r in staff_roles] and data.company_code:
         owner = db.query(User).filter(User.company_code == data.company_code.upper()).first()

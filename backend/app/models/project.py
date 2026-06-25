@@ -41,6 +41,7 @@ class Project(Base):
     name = Column(String(255), nullable=False)
     client_name = Column(String(255), nullable=True)  # Kept for legacy/fallback
     client_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    company_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     location = Column(Text, nullable=False)
     description = Column(Text)
     start_date = Column(DateTime, nullable=False)

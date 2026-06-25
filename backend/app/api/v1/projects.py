@@ -39,8 +39,8 @@ def list_projects(
             (ProjectMember.user_id == current_user.id)
         )
     elif current_user.role == UserRole.COMPANY_OWNER:
-        # Company owners only see their own projects
-        query = query.filter(Project.created_by == current_user.id)
+        # Company owners see all projects belonging to their company
+        query = query.filter(Project.company_id == current_user.id)
     elif current_user.role != UserRole.SUPER_ADMIN:
         # Fallback for any other unexpected roles to fail safe
         query = query.filter(Project.created_by == current_user.id)
@@ -70,6 +70,7 @@ def create_project(
     project = Project(
         **data.model_dump(),
         created_by=current_user.id,
+        company_id=current_user.company_owner_id if current_user.company_owner_id else current_user.id,
     )
     db.add(project)
     db.commit()
