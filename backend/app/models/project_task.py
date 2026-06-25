@@ -17,6 +17,13 @@ class ProjectTask(Base):
     status = Column(String(50), default="pending")
     assigned_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     
+    area = Column(String(255), nullable=True)
+    quantity = Column(Float, nullable=True)
+    unit = Column(String(50), nullable=True)
+    work_type = Column(String(100), nullable=True)
+    start_date = Column(DateTime(timezone=True), nullable=True)
+    end_date = Column(DateTime(timezone=True), nullable=True)
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

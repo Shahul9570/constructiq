@@ -27,9 +27,13 @@ def _update_project_progress(db: Session, project_id: int):
             DailyWorkLog.verification_status == 'approved'
         ).all()
         if logs:
-            total_planned = sum(l.planned_quantity for l in logs)
             total_completed = sum(l.completed_quantity for l in logs)
-            task.progress_percentage = min((total_completed / total_planned * 100) if total_planned > 0 else 0.0, 100.0)
+            
+            if task.quantity and task.quantity > 0:
+                task.progress_percentage = min((total_completed / task.quantity * 100), 100.0)
+            else:
+                total_planned = sum(l.planned_quantity for l in logs)
+                task.progress_percentage = min((total_completed / total_planned * 100) if total_planned > 0 else 0.0, 100.0)
             
             if task.progress_percentage >= 100.0:
                 task.status = "completed"

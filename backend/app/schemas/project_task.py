@@ -9,6 +9,12 @@ class ProjectTaskBase(BaseModel):
     weight_percentage: float = 0.0
     status: Optional[str] = "pending"
     assigned_to_id: Optional[int] = None
+    area: Optional[str] = None
+    quantity: Optional[float] = None
+    unit: Optional[str] = None
+    work_type: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
 
 class ProjectTaskCreate(ProjectTaskBase):
@@ -22,6 +28,12 @@ class ProjectTaskUpdate(BaseModel):
     progress_percentage: Optional[float] = None
     status: Optional[str] = None
     assigned_to_id: Optional[int] = None
+    area: Optional[str] = None
+    quantity: Optional[float] = None
+    unit: Optional[str] = None
+    work_type: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
 
 
 class ProjectTaskResponse(ProjectTaskBase):
