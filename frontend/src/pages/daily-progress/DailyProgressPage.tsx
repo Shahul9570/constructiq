@@ -14,6 +14,7 @@ import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/hooks/useAuth'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import {
   Table,
@@ -37,9 +38,14 @@ import { Skeleton } from '@/components/ui/skeleton'
 const projectId = () => Number(localStorage.getItem('selected_project_id') || 0)
 
 export default function DailyProgressPage() {
+  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [isAddOpen, setIsAddOpen] = useState(false)
+  
+  // Verification states
+  const [rejectLogId, setRejectLogId] = useState<number | null>(null)
+  const [rejectRemarks, setRejectRemarks] = useState('')
 
   const [form, setForm] = useState({
     area: '',
@@ -120,6 +126,23 @@ export default function DailyProgressPage() {
     },
     onError: () => toast.error('Failed to add work log'),
   })
+
+  const verifyMutation = useMutation({
+    mutationFn: ({ id, status, remarks }: { id: number, status: 'approved' | 'rejected', remarks?: string }) =>
+      dailyProgressService.verify(id, status, remarks),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-progress'] })
+      queryClient.invalidateQueries({ queryKey: ['daily-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['project-tasks'] })
+      queryClient.invalidateQueries({ queryKey: ['project', pid] })
+      toast.success('Log verification updated')
+      setRejectLogId(null)
+      setRejectRemarks('')
+    },
+    onError: () => toast.error('Failed to verify work log'),
+  })
+
+  const canManage = ['site_engineer', 'project_manager', 'company_owner'].includes(user?.role || '')
 
   const resetForm = () => {
     setForm({
@@ -260,6 +283,7 @@ export default function DailyProgressPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Status</TableHead>
                 <TableHead>Area</TableHead>
                 <TableHead>Activity</TableHead>
                 <TableHead className="text-right">Planned Qty</TableHead>
@@ -268,11 +292,17 @@ export default function DailyProgressPage() {
                 <TableHead className="text-right">Progress %</TableHead>
                 <TableHead className="text-center">Workers</TableHead>
                 <TableHead>Remarks</TableHead>
+                {canManage && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {logs.map((log) => (
                 <TableRow key={log.id}>
+                  <TableCell>
+                    {log.verification_status === 'approved' && <Badge className="bg-green-500">Approved</Badge>}
+                    {log.verification_status === 'rejected' && <Badge variant="destructive">Rejected</Badge>}
+                    {log.verification_status === 'pending' && <Badge variant="secondary">Pending</Badge>}
+                  </TableCell>
                   <TableCell className="font-medium">{log.area}</TableCell>
                   <TableCell>{log.activity}</TableCell>
                   <TableCell className="text-right">{log.planned_quantity}</TableCell>
@@ -288,7 +318,36 @@ export default function DailyProgressPage() {
                   <TableCell className="text-center">{log.workers_count}</TableCell>
                   <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                     {log.remarks || '-'}
+                    {log.verification_remarks && (
+                      <span className="block text-xs text-red-500 mt-1">
+                        Reject Reason: {log.verification_remarks}
+                      </span>
+                    )}
                   </TableCell>
+                  {canManage && (
+                    <TableCell className="text-right">
+                      {log.verification_status === 'pending' && (
+                        <div className="flex justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-green-600 h-8 w-8"
+                            onClick={() => verifyMutation.mutate({ id: log.id, status: 'approved' })}
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-red-600 h-8 w-8"
+                            onClick={() => setRejectLogId(log.id)}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -373,6 +432,35 @@ export default function DailyProgressPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!rejectLogId} onOpenChange={(open) => !open && setRejectLogId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Reject Work Log</DialogTitle>
+            <DialogDescription>Please provide a reason for rejecting this work log.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="reject-remarks">Remarks / Reason</Label>
+            <Input 
+              id="reject-remarks" 
+              value={rejectRemarks} 
+              onChange={(e) => setRejectRemarks(e.target.value)} 
+              placeholder="e.g., Incorrect quantity, please revise"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectLogId(null)}>Cancel</Button>
+            <Button 
+              variant="destructive" 
+              disabled={!rejectRemarks.trim() || verifyMutation.isPending}
+              onClick={() => rejectLogId && verifyMutation.mutate({ id: rejectLogId, status: 'rejected', remarks: rejectRemarks })}
+            >
+              Confirm Rejection
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

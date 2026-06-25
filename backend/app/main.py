@@ -48,6 +48,10 @@ async def startup():
                 "ALTER TABLE projects ADD COLUMN IF NOT EXISTS members_count INTEGER DEFAULT 0",
                 "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending'",
                 "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS assigned_to_id INTEGER REFERENCES users(id)",
+                "ALTER TABLE daily_work_logs ADD COLUMN IF NOT EXISTS verification_status VARCHAR(50) DEFAULT 'pending'",
+                "ALTER TABLE daily_work_logs ADD COLUMN IF NOT EXISTS verified_by_id INTEGER REFERENCES users(id)",
+                "ALTER TABLE daily_work_logs ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP WITH TIME ZONE",
+                "ALTER TABLE daily_work_logs ADD COLUMN IF NOT EXISTS verification_remarks TEXT",
             ]
             for sql in migrations:
                 try:

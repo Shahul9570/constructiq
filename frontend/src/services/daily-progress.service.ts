@@ -38,4 +38,9 @@ export const dailyProgressService = {
     })
     return response.data
   },
+
+  async verify(id: number, status: 'approved' | 'rejected', remarks?: string): Promise<DailyWorkLog> {
+    const response = await api.post(`/daily-progress/${id}/verify`, { status, remarks })
+    return response.data
+  },
 }

@@ -22,7 +22,10 @@ def _update_project_progress(db: Session, project_id: int):
     overall_progress = 0.0
     
     for task in tasks:
-        logs = db.query(DailyWorkLog).filter(DailyWorkLog.task_id == task.id).all()
+        logs = db.query(DailyWorkLog).filter(
+            DailyWorkLog.task_id == task.id,
+            DailyWorkLog.verification_status == 'approved'
+        ).all()
         if logs:
             total_planned = sum(l.planned_quantity for l in logs)
             total_completed = sum(l.completed_quantity for l in logs)
@@ -88,7 +91,20 @@ def create_log(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    log = DailyWorkLog(**data.model_dump(), project_id=project_id, created_by=current_user.id)
+    from app.models.user import UserRole
+    # Auto-approve if created by a manager/owner
+    status = "approved" if current_user.role in [UserRole.SITE_ENGINEER, UserRole.PROJECT_MANAGER, UserRole.COMPANY_OWNER] else "pending"
+    
+    log = DailyWorkLog(
+        **data.model_dump(), 
+        project_id=project_id, 
+        created_by=current_user.id,
+        verification_status=status
+    )
+    if status == "approved":
+        log.verified_by_id = current_user.id
+        from datetime import datetime, timezone
+        log.verified_at = datetime.now(timezone.utc)
     db.add(log)
     db.commit()
     db.refresh(log)
@@ -143,6 +159,42 @@ def delete_log(
     db.delete(log)
     db.commit()
     _update_project_progress(db, project_id)
+
+
+from app.schemas.daily_progress import VerifyLogRequest
+
+@router.post("/{log_id}/verify", response_model=DailyWorkLogResponse)
+def verify_log(
+    log_id: int,
+    data: VerifyLogRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.models.user import UserRole
+    from datetime import datetime, timezone
+
+    if current_user.role not in [UserRole.SITE_ENGINEER, UserRole.PROJECT_MANAGER, UserRole.COMPANY_OWNER]:
+        raise HTTPException(status_code=403, detail="Not authorized to verify logs")
+
+    log = db.query(DailyWorkLog).filter(DailyWorkLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Work log not found")
+
+    log.verification_status = data.status
+    log.verification_remarks = data.remarks
+    log.verified_by_id = current_user.id
+    log.verified_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(log)
+    
+    # Recalculate progress since an approval status changed
+    _update_project_progress(db, log.project_id)
+    
+    resp = DailyWorkLogResponse.model_validate(log)
+    if log.planned_quantity > 0:
+        resp.progress_percentage = (log.completed_quantity / log.planned_quantity) * 100
+    return resp
 
 
 @router.get("/summary/daily")

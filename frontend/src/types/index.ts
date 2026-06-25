@@ -207,6 +207,10 @@ export interface DailyWorkLog {
   progress_percentage: number
   remarks?: string
   weather_condition?: string
+  verification_status: 'pending' | 'approved' | 'rejected'
+  verified_by_id?: number
+  verified_at?: string
+  verification_remarks?: string
 }
 
 export interface CostRecord {

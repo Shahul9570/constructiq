@@ -43,10 +43,19 @@ class DailyWorkLogResponse(DailyWorkLogBase):
     date: date
     progress_percentage: float = 0.0
     created_by: int
+    verification_status: str
+    verified_by_id: Optional[int] = None
+    verified_at: Optional[datetime] = None
+    verification_remarks: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class VerifyLogRequest(BaseModel):
+    status: str  # 'approved' or 'rejected'
+    remarks: Optional[str] = None
 
 
 class DailyWorkLogList(BaseModel):
