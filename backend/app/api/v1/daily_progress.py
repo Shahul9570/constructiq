@@ -211,6 +211,7 @@ def daily_summary(
     logs = db.query(DailyWorkLog).filter(
         DailyWorkLog.project_id == project_id,
         DailyWorkLog.date == date,
+        DailyWorkLog.verification_status == 'approved'
     ).all()
 
     total_planned = sum(l.planned_quantity for l in logs)
