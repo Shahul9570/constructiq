@@ -38,7 +38,12 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    company_staff = relationship("User", foreign_keys=[company_owner_id], backref="company_owner")
+    company_staff = relationship(
+        "User",
+        foreign_keys="[User.company_owner_id]",
+        primaryjoin="User.company_owner_id == User.id",
+        lazy="dynamic"
+    )
 
     def __repr__(self):
         return f"<User {self.email} ({self.role.value})>"
