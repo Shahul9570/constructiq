@@ -191,35 +191,32 @@ def owner_dashboard(
     current_user: User = Depends(get_current_user),
 ):
     from app.models.project import ProjectMember
-    query = db.query(Project).filter(Project.is_archived == False)
-
-    if project_id:
-        query = query.filter(Project.id == project_id)
+    base_query = db.query(Project).filter(Project.is_archived == False)
 
     if current_user.role == UserRole.COMPANY_OWNER:
-        query = query.filter(Project.company_id == current_user.id)
+        base_query = base_query.filter(Project.company_id == current_user.id)
     elif current_user.role in [UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT, UserRole.CONTRACTOR, UserRole.PROJECT_MANAGER]:
-        query = query.join(ProjectMember, ProjectMember.project_id == Project.id, isouter=True)
-        query = query.filter(
+        base_query = base_query.join(ProjectMember, ProjectMember.project_id == Project.id, isouter=True)
+        base_query = base_query.filter(
             (Project.created_by == current_user.id) | 
             (ProjectMember.user_id == current_user.id)
         )
 
-    projects = query.all()
+    all_projects = base_query.all()
 
-    total_projects = len(projects)
-    active_projects = sum(1 for p in projects if p.status == ProjectStatus.IN_PROGRESS)
-    completed_projects = sum(1 for p in projects if p.status == ProjectStatus.COMPLETED)
+    total_projects = len(all_projects)
+    active_projects = sum(1 for p in all_projects if p.status == ProjectStatus.IN_PROGRESS)
+    completed_projects = sum(1 for p in all_projects if p.status == ProjectStatus.COMPLETED)
+    at_risk = sum(1 for p in all_projects if p.progress_percentage < 50 and p.status == ProjectStatus.IN_PROGRESS)
 
-    total_budget = sum(p.budget for p in projects)
-    total_cost = 0
-    for p in projects:
-        cost = _get_project_total_cost(db, p.id)
-        total_cost += cost
+    if project_id:
+        financial_projects = [p for p in all_projects if p.id == project_id]
+    else:
+        financial_projects = all_projects
 
-    overall_progress = sum(p.progress_percentage for p in projects) / len(projects) if projects else 0
-
-    at_risk = sum(1 for p in projects if p.progress_percentage < 50 and p.status == ProjectStatus.IN_PROGRESS)
+    total_budget = sum(p.budget for p in financial_projects)
+    total_cost = sum(_get_project_total_cost(db, p.id) for p in financial_projects)
+    overall_progress = sum(p.progress_percentage for p in financial_projects) / len(financial_projects) if financial_projects else 0
 
     return {
         "total_projects": total_projects,
