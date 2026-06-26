@@ -23,7 +23,7 @@ def add_cost(
     data: CostRecordCreate,
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     cost = CostRecord(**data.model_dump(), project_id=project_id, created_by=current_user.id)
     db.add(cost)
@@ -39,7 +39,7 @@ def list_costs(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     from app.models.workforce import DailyLabourSummary
     from app.models.material import MaterialArrival, Material

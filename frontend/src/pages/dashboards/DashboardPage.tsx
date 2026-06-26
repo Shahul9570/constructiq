@@ -39,6 +39,13 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { financialService } from '@/services/financial.service'
 import toast from 'react-hot-toast'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
@@ -50,54 +57,176 @@ type RoleSectionProps = {
 }
 
 function SiteEngineerDashboard({ projectId }: RoleSectionProps) {
+  const queryClient = useQueryClient()
+  const [isExpenseOpen, setIsExpenseOpen] = useState(false)
+  const [expenseForm, setExpenseForm] = useState({
+    category: 'material',
+    amount: '',
+    description: '',
+    date: new Date().toISOString().split('T')[0],
+  })
+
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-site-engineer', projectId],
     queryFn: () => dashboardService.getSiteEngineer(Number(projectId)),
     enabled: !!projectId,
   })
 
+  const { data: costs } = useQuery({
+    queryKey: ['dashboard-costs', projectId],
+    queryFn: () => financialService.listCosts(Number(projectId)),
+    enabled: !!projectId,
+  })
+
+  const addExpenseMutation = useMutation({
+    mutationFn: (data: any) => financialService.addCost(Number(projectId), data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard-costs'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-site-engineer'] })
+      setIsExpenseOpen(false)
+      toast.success('Expense logged successfully')
+      setExpenseForm({ category: 'material', amount: '', description: '', date: new Date().toISOString().split('T')[0] })
+    },
+    onError: () => toast.error('Failed to log expense'),
+  })
+
   if (isLoading) return <DashboardSkeleton />
   if (!data) return <EmptyState title="No Data" description="No dashboard data available" />
 
+  const recentExpenses = costs?.filter(c => !c.id.toString().includes('100000')).slice(0, 5) || []
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <StatCard
-        index={0}
-        icon={<Users className="h-5 w-5" />}
-        label="Total Labour Today"
-        value={String(data.total_labour_today)}
-      />
-      <StatCard
-        index={1}
-        icon={<DollarSign className="h-5 w-5" />}
-        label="Labour Cost Today"
-        value={`₹${data.labour_cost_today.toLocaleString()}`}
-      />
-      <StatCard
-        index={2}
-        icon={<ClipboardCheck className="h-5 w-5" />}
-        label="Today's Progress"
-        value={`${data.today_progress.progress_percentage}%`}
-      >
-        <Progress value={data.today_progress.progress_percentage} className="mt-2" />
-        <p className="text-xs text-muted-foreground mt-1">
-          {data.today_progress.completed_quantity} / {data.today_progress.planned_quantity} units
-        </p>
-      </StatCard>
-      <StatCard
-        index={3}
-        icon={<Package className="h-5 w-5" />}
-        label="Material Consumption"
-        value={data.today_material_consumption.toLocaleString()}
-        subtext="units today"
-      />
-      <StatCard
-        index={4}
-        icon={<AlertTriangle className="h-5 w-5 text-red-500" />}
-        label="Low Stock Alerts"
-        value={String(data.low_stock_alerts)}
-        variant={data.low_stock_alerts > 0 ? 'destructive' : 'default'}
-      />
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold tracking-tight">Daily Overview</h2>
+        <Button onClick={() => setIsExpenseOpen(true)}>
+          Log Expense
+        </Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          index={0}
+          icon={<Users className="h-5 w-5" />}
+          label="Total Labour Today"
+          value={String(data.total_labour_today)}
+        />
+        <StatCard
+          index={1}
+          icon={<DollarSign className="h-5 w-5" />}
+          label="Labour Cost Today"
+          value={`$${data.labour_cost_today.toLocaleString()}`}
+        />
+        <StatCard
+          index={2}
+          icon={<ClipboardCheck className="h-5 w-5" />}
+          label="Today's Progress"
+          value={`${data.today_progress.progress_percentage}%`}
+        >
+          <Progress value={data.today_progress.progress_percentage} className="mt-2" />
+          <p className="text-xs text-muted-foreground mt-1">
+            {data.today_progress.completed_quantity} / {data.today_progress.planned_quantity} units
+          </p>
+        </StatCard>
+        <StatCard
+          index={3}
+          icon={<Package className="h-5 w-5" />}
+          label="Material Consumption"
+          value={data.today_material_consumption.toLocaleString()}
+          subtext="units today"
+        />
+        <StatCard
+          index={4}
+          icon={<AlertTriangle className="h-5 w-5 text-red-500" />}
+          label="Low Stock Alerts"
+          value={String(data.low_stock_alerts)}
+          variant={data.low_stock_alerts > 0 ? 'destructive' : 'default'}
+        />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Expenses Logged</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {recentExpenses.length > 0 ? (
+            <div className="space-y-4">
+              {recentExpenses.map((expense: any) => (
+                <div key={expense.id} className="flex justify-between items-center border-b pb-2 last:border-0">
+                  <div>
+                    <p className="font-medium text-sm">{expense.description}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(expense.date).toLocaleDateString()} • <span className="capitalize">{expense.category}</span></p>
+                  </div>
+                  <div className="font-semibold">${expense.amount.toLocaleString()}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">No recent expenses logged.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={isExpenseOpen} onOpenChange={setIsExpenseOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log Daily Expense</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Category</Label>
+              <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="material">Material</SelectItem>
+                  <SelectItem value="contractor">Contractor</SelectItem>
+                  <SelectItem value="equipment">Equipment</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Amount</Label>
+              <Input
+                type="number"
+                value={expenseForm.amount}
+                onChange={(e) => setExpenseForm({ ...expenseForm, amount: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Description</Label>
+              <Input
+                value={expenseForm.description}
+                onChange={(e) => setExpenseForm({ ...expenseForm, description: e.target.value })}
+                placeholder="e.g. Paid contractor for cement delivery"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                value={expenseForm.date}
+                onChange={(e) => setExpenseForm({ ...expenseForm, date: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsExpenseOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => addExpenseMutation.mutate({
+                ...expenseForm,
+                amount: parseFloat(expenseForm.amount)
+              })}
+              disabled={addExpenseMutation.isPending || !expenseForm.amount || !expenseForm.description}
+            >
+              {addExpenseMutation.isPending ? 'Logging...' : 'Log Expense'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
