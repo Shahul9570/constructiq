@@ -81,8 +81,8 @@ export default function FinancialPage() {
     enabled: !!selectedProjectNum,
   })
 
-  const markPaidMutation = useMutation({
-    mutationFn: (id: number) => financialService.updateInvoice(id, { status: 'paid' as any }),
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number; status: string }) => financialService.updateInvoice(id, { status: status as any }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       queryClient.invalidateQueries({ queryKey: ['cost-summary'] })
@@ -353,13 +353,15 @@ export default function FinancialPage() {
                               variant={
                                 inv.status === 'paid'
                                   ? 'default'
-                                  : inv.status === 'overdue'
-                                    ? 'destructive'
-                                    : 'secondary'
+                                  : inv.status === 'pending_verification'
+                                    ? 'outline'
+                                    : inv.status === 'overdue'
+                                      ? 'destructive'
+                                      : 'secondary'
                               }
                               className="capitalize"
                             >
-                              {inv.status}
+                              {inv.status.replace('_', ' ')}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
@@ -368,14 +370,33 @@ export default function FinancialPage() {
                               : '-'}
                           </TableCell>
                           <TableCell className="text-right">
-                            {inv.status !== 'paid' && (
+                            {inv.status === 'pending_verification' && (
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => updateStatusMutation.mutate({ id: inv.id, status: 'paid' })}
+                                  disabled={updateStatusMutation.isPending}
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => updateStatusMutation.mutate({ id: inv.id, status: 'sent' })}
+                                  disabled={updateStatusMutation.isPending}
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                            {(inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'draft') && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => markPaidMutation.mutate(inv.id)}
-                                disabled={markPaidMutation.isPending}
+                                onClick={() => updateStatusMutation.mutate({ id: inv.id, status: 'paid' })}
+                                disabled={updateStatusMutation.isPending}
                               >
-                                {markPaidMutation.isPending ? 'Updating...' : 'Mark Paid'}
+                                {updateStatusMutation.isPending ? 'Updating...' : 'Mark Paid'}
                               </Button>
                             )}
                           </TableCell>

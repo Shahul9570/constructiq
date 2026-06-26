@@ -65,6 +65,7 @@ async def startup():
                 "ALTER TABLE daily_labour_summary ADD COLUMN IF NOT EXISTS verified_by_id INTEGER REFERENCES users(id)",
                 "ALTER TABLE daily_labour_summary ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP WITH TIME ZONE",
                 "ALTER TABLE daily_labour_summary ADD COLUMN IF NOT EXISTS verification_remarks TEXT",
+                "ALTER TYPE invoicestatus ADD VALUE IF NOT EXISTS 'pending_verification'",
             ]
             for sql in migrations:
                 try:

@@ -30,6 +30,18 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { AnimatedCard } from '@/components/ui/animated-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { financialService } from '@/services/financial.service'
+import toast from 'react-hot-toast'
+import { useQueryClient, useMutation } from '@tanstack/react-query'
 import type { UserRole } from '@/types'
 
 type RoleSectionProps = {
@@ -323,9 +335,24 @@ function ContractorDashboard() {
 }
 
 function ClientDashboard() {
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false)
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null)
+  const [paymentForm, setPaymentForm] = useState({ payment_method: 'Bank Transfer', notes: '' })
+  const queryClient = useQueryClient()
+
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-client'],
     queryFn: () => dashboardService.getClient(),
+  })
+
+  const submitPaymentMutation = useMutation({
+    mutationFn: (data: any) => financialService.submitPayment(selectedInvoiceId!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard-client'] })
+      setIsPaymentOpen(false)
+      toast.success('Payment submitted for verification')
+    },
+    onError: () => toast.error('Failed to submit payment'),
   })
 
   if (isLoading) return <DashboardSkeleton />
@@ -478,7 +505,12 @@ function ClientDashboard() {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-medium">${inv.amount.toLocaleString()}</span>
-                        <Badge variant={inv.status === 'paid' ? 'default' : inv.status === 'overdue' ? 'destructive' : 'secondary'} className="capitalize">{inv.status}</Badge>
+                        <Badge variant={inv.status === 'paid' ? 'default' : inv.status === 'pending_verification' ? 'outline' : inv.status === 'overdue' ? 'destructive' : 'secondary'} className="capitalize">{inv.status.replace('_', ' ')}</Badge>
+                        {(inv.status === 'sent' || inv.status === 'overdue') && (
+                          <Button size="sm" onClick={() => { setSelectedInvoiceId(inv.id); setIsPaymentOpen(true); }}>
+                            Pay Now
+                          </Button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -524,6 +556,41 @@ function ClientDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Submit Payment Details</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Payment Method</Label>
+              <Input
+                value={paymentForm.payment_method}
+                onChange={(e) => setPaymentForm({ ...paymentForm, payment_method: e.target.value })}
+                placeholder="Bank Transfer, Credit Card, etc."
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Reference ID / Notes</Label>
+              <Input
+                value={paymentForm.notes}
+                onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                placeholder="e.g. Transaction Ref: TRX12345"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPaymentOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => submitPaymentMutation.mutate(paymentForm)}
+              disabled={submitPaymentMutation.isPending || !paymentForm.payment_method}
+            >
+              {submitPaymentMutation.isPending ? 'Submitting...' : 'Submit Payment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -10,6 +10,7 @@ from app.models.financial import CostRecord, Invoice, CostCategory
 from app.schemas.financial import (
     CostRecordCreate, CostRecordResponse,
     InvoiceCreate, InvoiceUpdate, InvoiceResponse,
+    SubmitPaymentRequest,
     CostSummary, BudgetTracking,
 )
 from app.models.project import Project
@@ -388,6 +389,29 @@ def update_invoice(
     db.commit()
     db.refresh(invoice)
     return invoice
+
+
+@router.post("/invoices/{invoice_id}/submit-payment", response_model=InvoiceResponse)
+def submit_payment(
+    invoice_id: int,
+    data: SubmitPaymentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.CLIENT, UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)),
+):
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+        
+    invoice.status = "pending_verification"
+    invoice.payment_method = data.payment_method
+    if data.notes:
+        existing_notes = invoice.notes or ""
+        invoice.notes = f"{existing_notes}\n[Client Payment Submitted]: {data.notes}".strip()
+        
+    db.commit()
+    db.refresh(invoice)
+    return invoice
+
 
 
 @router.get("/categories")

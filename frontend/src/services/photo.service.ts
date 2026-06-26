@@ -14,7 +14,7 @@ export const photoService = {
   },
 
   async upload(project_id: number, formData: FormData): Promise<Photo> {
-    const response = await api.post('/photos/', formData, {
+    const response = await api.post('/photos/upload', formData, {
       params: { project_id },
       headers: { 'Content-Type': 'multipart/form-data' },
     })

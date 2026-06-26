@@ -49,4 +49,9 @@ export const financialService = {
     const response = await api.patch(`/financial/invoices/${id}`, data)
     return response.data
   },
+
+  async submitPayment(id: number, data: { payment_method: string; notes?: string }): Promise<Invoice> {
+    const response = await api.post(`/financial/invoices/${id}/submit-payment`, data)
+    return response.data
+  },
 }

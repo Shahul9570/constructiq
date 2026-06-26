@@ -48,6 +48,11 @@ class InvoiceUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class SubmitPaymentRequest(BaseModel):
+    payment_method: str
+    notes: Optional[str] = None
+
+
 class InvoiceResponse(InvoiceBase):
     id: int
     project_id: int

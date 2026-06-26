@@ -30,6 +30,7 @@ class InvoiceType(str, enum.Enum):
 class InvoiceStatus(str, enum.Enum):
     DRAFT = "draft"
     SENT = "sent"
+    PENDING_VERIFICATION = "pending_verification"
     PAID = "paid"
     OVERDUE = "overdue"
     CANCELLED = "cancelled"
