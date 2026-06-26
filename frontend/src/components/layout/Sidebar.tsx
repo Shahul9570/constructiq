@@ -92,17 +92,36 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const { user } = useAuth()
   const role = user?.role
 
-  // Filter groups based on role
+  // Define allowed labels per role (if they are not super_admin or company_owner)
+  const allowedItemsPerRole: Record<string, string[]> = {
+    project_manager: [
+      'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 
+      'Contractors', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
+    ],
+    accountant: [
+      'Dashboard', 'Projects', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings'
+    ],
+    site_engineer: [
+      'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 
+      'Contractors', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
+    ],
+    contractor: [
+      'Dashboard', 'Projects', 'Daily Progress', 'Documents', 'Photos', 'Settings'
+    ],
+    client: [
+      'Dashboard', 'Reports', 'Photos', 'Documents', 'Settings'
+    ]
+  };
+
   let filteredNavGroups = navGroups;
 
-  if (role === 'super_admin') {
-    filteredNavGroups = adminNavGroups;
-  } else if (role === 'client') {
+  if (role === 'super_admin' || role === 'company_owner') {
+    filteredNavGroups = role === 'super_admin' ? adminNavGroups : navGroups;
+  } else if (role && allowedItemsPerRole[role]) {
+    const allowed = allowedItemsPerRole[role];
     filteredNavGroups = navGroups.map(group => ({
       ...group,
-      items: group.items.filter(item => 
-        item.label === 'Dashboard' || item.label === 'Settings'
-      )
+      items: group.items.filter(item => allowed.includes(item.label))
     })).filter(group => group.items.length > 0);
   }
 

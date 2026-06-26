@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from app.models.user import User
+from app.core.security import get_current_user, require_roles
+from app.models.user import User, UserRole
 from app.models.financial import CostRecord, Invoice, CostCategory
 from app.schemas.financial import (
     CostRecordCreate, CostRecordResponse,
@@ -22,7 +22,7 @@ def add_cost(
     data: CostRecordCreate,
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
 ):
     cost = CostRecord(**data.model_dump(), project_id=project_id, created_by=current_user.id)
     db.add(cost)
@@ -38,7 +38,7 @@ def list_costs(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
 ):
     from app.models.workforce import DailyLabourSummary
     from app.models.material import MaterialArrival, Material
@@ -133,7 +133,7 @@ def cost_summary(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
 ):
     from app.models.workforce import DailyLabourSummary
     from app.models.material import MaterialArrival, Material
@@ -233,7 +233,7 @@ def cost_summary(
 def budget_tracking(
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
 ):
     from app.models.workforce import DailyLabourSummary
     from app.models.material import MaterialArrival, Material
@@ -309,7 +309,7 @@ def create_invoice(
     data: InvoiceCreate,
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
 ):
     invoice = Invoice(
         **data.model_dump(),
@@ -328,7 +328,7 @@ def list_invoices(
     project_id: int,
     status: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
 ):
     from app.models.material import MaterialArrival, Material
     from datetime import datetime
@@ -377,7 +377,7 @@ def update_invoice(
     invoice_id: int,
     data: InvoiceUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
 ):
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:

@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.database import get_db
-from app.core.security import get_current_user
-from app.models.user import User
+from app.core.security import get_current_user, require_roles
+from app.models.user import User, UserRole
 from app.models.equipment import Equipment, EquipmentUsage
 from app.schemas.equipment import (
     EquipmentCreate, EquipmentUpdate, EquipmentResponse, EquipmentList,
@@ -24,7 +24,7 @@ def list_equipment(
     status: Optional[str] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     company_id = current_user.company_owner_id if current_user.company_owner_id else current_user.id
     query = db.query(Equipment).filter(Equipment.company_id == company_id)
@@ -51,7 +51,7 @@ def list_equipment(
 def create_equipment(
     data: EquipmentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     company_id = current_user.company_owner_id if current_user.company_owner_id else current_user.id
     equipment = Equipment(**data.model_dump(), company_id=company_id)
@@ -69,7 +69,7 @@ def create_equipment(
 def get_equipment(
     equipment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if not equipment:
@@ -86,7 +86,7 @@ def update_equipment(
     equipment_id: int,
     data: EquipmentUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if not equipment:
@@ -107,7 +107,7 @@ def update_equipment(
 def delete_equipment(
     equipment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if not equipment:
@@ -122,7 +122,7 @@ def record_usage(
     data: EquipmentUsageCreate,
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if not equipment:
@@ -148,7 +148,7 @@ def record_usage(
 def list_usage(
     equipment_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     return (
         db.query(EquipmentUsage)
