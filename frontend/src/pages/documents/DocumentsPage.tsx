@@ -42,6 +42,7 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { getFileUrl } from '@/lib/utils'
 
 const projectId = () => Number(localStorage.getItem('selected_project_id') || 0)
 
@@ -250,7 +251,7 @@ export default function DocumentsPage() {
                     <div className="flex justify-end gap-1">
                       {doc.file_url && (
                         <Button variant="ghost" size="sm" asChild>
-                          <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                          <a href={getFileUrl(doc.file_url)} target="_blank" rel="noopener noreferrer">
                             <Download className="h-3 w-3" />
                           </a>
                         </Button>

@@ -42,6 +42,7 @@ import { Input } from '@/components/ui/input'
 import { financialService } from '@/services/financial.service'
 import toast from 'react-hot-toast'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
+import { getFileUrl } from '@/lib/utils'
 import type { UserRole } from '@/types'
 
 type RoleSectionProps = {
@@ -453,7 +454,7 @@ function ClientDashboard() {
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {data.recent_photos.map((photo: any, i: number) => (
                 <div key={i} className="group relative aspect-square rounded-lg overflow-hidden border bg-muted">
-                  <img src={photo.url} alt={photo.caption || 'Project photo'} className="w-full h-full object-cover" />
+                  <img src={getFileUrl(photo.url)} alt={photo.caption || 'Project photo'} className="w-full h-full object-cover" />
                   {photo.caption && (
                     <div className="absolute inset-x-0 bottom-0 bg-black/60 p-2 text-xs text-white truncate">
                       {photo.caption}
@@ -540,7 +541,7 @@ function ClientDashboard() {
                       </div>
                     </div>
                     <Button variant="ghost" size="icon" asChild>
-                      <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                      <a href={getFileUrl(doc.url)} target="_blank" rel="noopener noreferrer">
                         <Download className="h-4 w-4" />
                       </a>
                     </Button>

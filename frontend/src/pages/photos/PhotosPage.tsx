@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { getFileUrl } from '@/lib/utils'
 import type { Photo } from '@/types'
 
 const projectId = () => Number(localStorage.getItem('selected_project_id') || 0)
@@ -168,7 +169,7 @@ export default function PhotosPage() {
               onClick={() => { setSelectedPhoto(photo); setIsViewOpen(true) }}
             >
               <img
-                src={photo.thumbnail_url || photo.file_url}
+                src={getFileUrl(photo.thumbnail_url || photo.file_url)}
                 alt={photo.caption || 'Photo'}
                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 loading="lazy"
@@ -193,7 +194,7 @@ export default function PhotosPage() {
               <div className="space-y-4">
                 <div className="rounded-lg overflow-hidden bg-muted">
                   <img
-                    src={selectedPhoto.file_url}
+                    src={getFileUrl(selectedPhoto.file_url)}
                     alt={selectedPhoto.caption || 'Photo'}
                     className="w-full h-auto max-h-[500px] object-contain"
                   />
