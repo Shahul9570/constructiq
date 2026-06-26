@@ -9,6 +9,7 @@ import {
   Clock,
   Fuel,
   Filter,
+  Edit2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
@@ -51,6 +52,7 @@ export default function EquipmentPage() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [page, setPage] = useState(1)
   const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
   const [isUsageOpen, setIsUsageOpen] = useState(false)
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null)
 
@@ -110,6 +112,27 @@ export default function EquipmentPage() {
       resetForm()
     },
     onError: () => toast.error('Failed to add equipment'),
+  })
+
+  const editMutation = useMutation({
+    mutationFn: () =>
+      equipmentService.update(selectedEquipment!.id, {
+        name: form.name,
+        equipment_type: form.equipment_type,
+        model_number: form.model_number || undefined,
+        status: form.status,
+        hourly_rate: Number(form.hourly_rate),
+        operator_name: form.operator_name || undefined,
+        project_id: (form.project_id && form.project_id !== 'unassigned') ? Number(form.project_id) : null,
+      } as any), // Cast to any because we are passing project_id as null to unset it, which might not be strictly typed
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] })
+      toast.success('Equipment updated successfully')
+      setIsEditOpen(false)
+      setSelectedEquipment(null)
+      resetForm()
+    },
+    onError: () => toast.error('Failed to update equipment'),
   })
 
   const statusMutation = useMutation({
@@ -314,6 +337,26 @@ export default function EquipmentPage() {
                         size="sm"
                         onClick={() => {
                           setSelectedEquipment(eq)
+                          setForm({
+                            name: eq.name,
+                            equipment_type: eq.equipment_type,
+                            model_number: eq.model_number || '',
+                            status: eq.status,
+                            hourly_rate: eq.hourly_rate || 0,
+                            operator_name: eq.operator_name || '',
+                            project_id: eq.project_id ? eq.project_id.toString() : 'unassigned',
+                          })
+                          setIsEditOpen(true)
+                        }}
+                      >
+                        <Edit2 className="h-3 w-3 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedEquipment(eq)
                           setIsUsageOpen(true)
                         }}
                       >
@@ -415,6 +458,98 @@ export default function EquipmentPage() {
               </Button>
               <Button type="submit" disabled={createMutation.isPending}>
                 {createMutation.isPending ? 'Adding...' : 'Add Equipment'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <form onSubmit={(e) => { e.preventDefault(); editMutation.mutate() }}>
+            <DialogHeader>
+              <DialogTitle>Edit Equipment</DialogTitle>
+              <DialogDescription>Update equipment details and assignment.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-eq-name">Name *</Label>
+                  <Input id="edit-eq-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-eq-type">Type *</Label>
+                  <Select required value={form.equipment_type} onValueChange={(v) => setForm({ ...form, equipment_type: v })}>
+                    <SelectTrigger id="edit-eq-type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="excavator">Excavator</SelectItem>
+                      <SelectItem value="crane">Crane</SelectItem>
+                      <SelectItem value="concrete_mixer">Concrete Mixer</SelectItem>
+                      <SelectItem value="compressor">Compressor</SelectItem>
+                      <SelectItem value="generator">Generator</SelectItem>
+                      <SelectItem value="welding">Welding</SelectItem>
+                      <SelectItem value="pump">Pump</SelectItem>
+                      <SelectItem value="vehicle">Vehicle</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-eq-model">Model Number</Label>
+                  <Input id="edit-eq-model" value={form.model_number} onChange={(e) => setForm({ ...form, model_number: e.target.value })} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-eq-rate">Hourly Rate ($)</Label>
+                  <Input id="edit-eq-rate" type="number" min="0" step="0.01" value={form.hourly_rate || ''} onChange={(e) => setForm({ ...form, hourly_rate: Number(e.target.value) })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-eq-status">Status</Label>
+                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                    <SelectTrigger id="edit-eq-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="in_use">In Use</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="out_of_service">Out of Service</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-eq-operator">Operator</Label>
+                  <Input id="edit-eq-operator" value={form.operator_name} onChange={(e) => setForm({ ...form, operator_name: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-eq-project">Assign to Project (Current Site)</Label>
+                <Select value={form.project_id} onValueChange={(v) => setForm({ ...form, project_id: v })}>
+                  <SelectTrigger id="edit-eq-project">
+                    <SelectValue placeholder="Unassigned (Available in Yard)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned (Available in Yard)</SelectItem>
+                    {projectsData?.items?.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id.toString()}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={editMutation.isPending}>
+                {editMutation.isPending ? 'Updating...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>
