@@ -6,6 +6,10 @@ export const financialService = {
     const response = await api.post('/financial/costs', data, { params: { project_id } })
     return response.data
   },
+  async updateCostStatus(cost_id: number, status: string): Promise<CostRecord> {
+    const response = await api.post(`/financial/costs/${cost_id}/status`, null, { params: { status } })
+    return response.data
+  },
 
   async listCosts(project_id: number, params?: {
     page?: number

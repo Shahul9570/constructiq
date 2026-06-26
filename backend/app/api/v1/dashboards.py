@@ -22,7 +22,10 @@ from app.models.user import User, UserRole
 router = APIRouter()
     
 def _get_project_total_cost(db: Session, project_id: int) -> float:
-    manual_cost = db.query(func.coalesce(func.sum(CostRecord.amount), 0)).filter(CostRecord.project_id == project_id).scalar() or 0
+    manual_cost = db.query(func.coalesce(func.sum(CostRecord.amount), 0)).filter(
+        CostRecord.project_id == project_id,
+        CostRecord.status == 'approved'
+    ).scalar() or 0
     labour_cost = db.query(func.coalesce(func.sum(DailyLabourSummary.workers_count * DailyLabourSummary.daily_rate), 0)).filter(
         DailyLabourSummary.project_id == project_id,
         DailyLabourSummary.verification_status == 'approved'
@@ -183,11 +186,15 @@ def project_manager_dashboard(
 
 @router.get("/owner")
 def owner_dashboard(
+    project_id: int | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     from app.models.project import ProjectMember
     query = db.query(Project).filter(Project.is_archived == False)
+
+    if project_id:
+        query = query.filter(Project.id == project_id)
 
     if current_user.role == UserRole.COMPANY_OWNER:
         query = query.filter(Project.company_id == current_user.id)

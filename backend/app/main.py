@@ -48,6 +48,7 @@ async def startup():
                 "ALTER TABLE projects ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES users(id)",
                 "ALTER TABLE projects ADD COLUMN IF NOT EXISTS members_count INTEGER DEFAULT 0",
                 "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending'",
+                "ALTER TABLE cost_records ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'approved'",
                 "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS assigned_to_id INTEGER REFERENCES users(id)",
                 "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS area VARCHAR(255)",
                 "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS quantity DOUBLE PRECISION",

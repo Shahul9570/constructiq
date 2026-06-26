@@ -232,80 +232,132 @@ function SiteEngineerDashboard({ projectId }: RoleSectionProps) {
 }
 
 function ProjectManagerDashboard({ projectId }: RoleSectionProps) {
+  const queryClient = useQueryClient()
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-project-manager', projectId],
     queryFn: () => dashboardService.getProjectManager(Number(projectId)),
     enabled: !!projectId,
   })
 
+  const { data: costs } = useQuery({
+    queryKey: ['dashboard-costs', projectId],
+    queryFn: () => financialService.listCosts(Number(projectId)),
+    enabled: !!projectId,
+  })
+
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number, status: string }) => financialService.updateCostStatus(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard-costs'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-project-manager'] })
+      toast.success('Cost status updated successfully')
+    },
+    onError: () => toast.error('Failed to update status'),
+  })
+
   if (isLoading) return <DashboardSkeleton />
   if (!data) return <EmptyState title="No Data" description="No dashboard data available" />
 
+  const pendingExpenses = costs?.filter((c: any) => c.status === 'pending') || []
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <StatCard
-        index={0}
-        icon={<Activity className="h-5 w-5" />}
-        label="Project Status"
-        value={data.project_status.replace('_', ' ')}
-      >
-        <Badge
-          variant={
-            data.project_status === 'completed'
-              ? 'default'
-              : data.project_status === 'in_progress'
-                ? 'secondary'
-                : 'outline'
-          }
-          className="mt-1 capitalize"
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          index={0}
+          icon={<Activity className="h-5 w-5" />}
+          label="Project Status"
+          value={data.project_status.replace('_', ' ')}
         >
-          {data.project_status.replace('_', ' ')}
-        </Badge>
-      </StatCard>
-      <StatCard
-        icon={<BarChart3 className="h-5 w-5" />}
-        label="Progress"
-        value={`${data.progress_percentage}%`}
-      >
-        <Progress value={data.progress_percentage} className="mt-2" />
-      </StatCard>
-      <StatCard
-        icon={<Clock className="h-5 w-5" />}
-        label="Delays"
-        value={`${data.delays_days} days`}
-        variant={data.delays_days > 0 ? 'destructive' : 'default'}
-      />
-      <StatCard
-        icon={<DollarSign className="h-5 w-5" />}
-        label="Budget Utilization"
-        value={`${data.budget_utilization}%`}
-        variant={data.is_over_budget ? 'destructive' : 'default'}
-      >
-        <Progress value={data.budget_utilization} className="mt-2" />
-        {data.is_over_budget && (
-          <p className="text-xs text-red-500 mt-1">Over budget!</p>
-        )}
-      </StatCard>
-      <StatCard
-        icon={<TrendingUp className="h-5 w-5" />}
-        label="Weekly Progress"
-        value={`${data.weekly_progress}%`}
-      >
-        <Progress value={data.weekly_progress} className="mt-2" />
-      </StatCard>
-      <StatCard
-        icon={<Users className="h-5 w-5" />}
-        label="Total Workers"
-        value={String(data.total_workers)}
-      />
+          <Badge
+            variant={
+              data.project_status === 'completed'
+                ? 'default'
+                : data.project_status === 'in_progress'
+                  ? 'secondary'
+                  : 'outline'
+            }
+            className="mt-1 capitalize"
+          >
+            {data.project_status.replace('_', ' ')}
+          </Badge>
+        </StatCard>
+        <StatCard
+          icon={<BarChart3 className="h-5 w-5" />}
+          label="Progress"
+          value={`${data.progress_percentage}%`}
+        >
+          <Progress value={data.progress_percentage} className="mt-2" />
+        </StatCard>
+        <StatCard
+          icon={<Clock className="h-5 w-5" />}
+          label="Delays"
+          value={`${data.delays_days} days`}
+          variant={data.delays_days > 0 ? 'destructive' : 'default'}
+        />
+        <StatCard
+          icon={<DollarSign className="h-5 w-5" />}
+          label="Budget Utilization"
+          value={`${data.budget_utilization}%`}
+          variant={data.is_over_budget ? 'destructive' : 'default'}
+        >
+          <Progress value={data.budget_utilization} className="mt-2" />
+          {data.is_over_budget && (
+            <p className="text-xs text-red-500 mt-1">Over budget!</p>
+          )}
+        </StatCard>
+        <StatCard
+          icon={<TrendingUp className="h-5 w-5" />}
+          label="Weekly Progress"
+          value={`${data.weekly_progress}%`}
+        >
+          <Progress value={data.weekly_progress} className="mt-2" />
+        </StatCard>
+        <StatCard
+          icon={<Users className="h-5 w-5" />}
+          label="Total Workers"
+          value={String(data.total_workers)}
+        />
+      </div>
+
+      {pendingExpenses.length > 0 && (
+        <Card className="border-yellow-500/20 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Pending Expenses for Approval
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {pendingExpenses.map((expense: any) => (
+                <div key={expense.id} className="flex justify-between items-center p-3 border rounded-lg bg-muted/30">
+                  <div>
+                    <p className="font-medium text-sm">{expense.description}</p>
+                    <p className="text-xs text-muted-foreground">{new Date(expense.date).toLocaleDateString()} • <span className="capitalize">{expense.category}</span></p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-semibold">${expense.amount.toLocaleString()}</span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="h-8 border-red-200 text-red-600 hover:bg-red-50" onClick={() => updateStatusMutation.mutate({ id: expense.id, status: 'rejected' })}>Reject</Button>
+                      <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700" onClick={() => updateStatusMutation.mutate({ id: expense.id, status: 'approved' })}>Approve</Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
 
-function OwnerDashboard() {
+function OwnerDashboard({ projectId }: RoleSectionProps) {
   const { data, isLoading } = useQuery({
-    queryKey: ['dashboard-owner'],
-    queryFn: () => dashboardService.getOwner(),
+    queryKey: ['dashboard-owner', projectId],
+    queryFn: () => dashboardService.getOwner(Number(projectId)),
+    enabled: !!projectId,
   })
 
   if (isLoading) return <DashboardSkeleton />
@@ -856,7 +908,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {!selectedProjectId && role !== 'company_owner' && role !== 'super_admin' && role !== 'client' ? (
+      {!selectedProjectId && role !== 'super_admin' && role !== 'client' ? (
         <EmptyState title="No Project Selected" description="Please select a project from the top navigation to view its dashboard." />
       ) : RoleComponent ? (
         <RoleComponent projectId={selectedProjectId} />

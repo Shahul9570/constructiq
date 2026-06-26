@@ -48,6 +48,7 @@ class CostRecord(Base):
     reference_type = Column(String(50))
     reference_id = Column(Integer)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(String(20), default="approved")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):

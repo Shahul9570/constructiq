@@ -12,8 +12,9 @@ export const dashboardService = {
     return response.data
   },
 
-  async getOwner(): Promise<DashboardOwner> {
-    const response = await api.get('/dashboards/owner')
+  async getOwner(project_id?: number): Promise<DashboardOwner> {
+    const params = project_id ? { project_id } : undefined
+    const response = await api.get('/dashboards/owner', { params })
     return response.data
   },
 
