@@ -65,6 +65,13 @@ def create_labour_summary(
         summary.verified_by_id = current_user.id
         from datetime import datetime, timezone
         summary.verified_at = datetime.now(timezone.utc)
+        
+        if summary.contractor_id:
+            from app.models.contractor import Contractor
+            contractor = db.query(Contractor).filter(Contractor.id == summary.contractor_id).first()
+            if contractor:
+                contractor.contract_amount += (summary.workers_count * summary.daily_rate)
+                contractor.pending_amount = contractor.contract_amount - contractor.paid_amount
 
     db.add(summary)
     db.commit()
@@ -123,6 +130,14 @@ def verify_labour_summary(
     summary = db.query(DailyLabourSummary).filter(DailyLabourSummary.id == summary_id).first()
     if not summary:
         raise HTTPException(status_code=404, detail="Labour summary not found")
+
+    if data.status == 'approved' and summary.verification_status != 'approved':
+        if summary.contractor_id:
+            from app.models.contractor import Contractor
+            contractor = db.query(Contractor).filter(Contractor.id == summary.contractor_id).first()
+            if contractor:
+                contractor.contract_amount += (summary.workers_count * summary.daily_rate)
+                contractor.pending_amount = contractor.contract_amount - contractor.paid_amount
 
     summary.verification_status = data.status
     summary.verification_remarks = data.remarks

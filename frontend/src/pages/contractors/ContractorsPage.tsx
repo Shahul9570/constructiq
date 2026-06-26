@@ -303,8 +303,12 @@ export default function ContractorsPage() {
                   <TableCell className="text-right text-green-600">
                     ${c.paid_amount.toLocaleString()}
                   </TableCell>
-                  <TableCell className="text-right text-orange-600">
-                    ${c.pending_amount.toLocaleString()}
+                  <TableCell className="text-right font-medium">
+                    {c.pending_amount < 0 ? (
+                      <span className="text-red-500 whitespace-nowrap">Advance: ${Math.abs(c.pending_amount).toLocaleString()}</span>
+                    ) : (
+                      <span className="text-orange-600 whitespace-nowrap">${c.pending_amount.toLocaleString()}</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-center">
                     <div className="flex items-center justify-center gap-1">

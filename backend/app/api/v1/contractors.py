@@ -114,7 +114,7 @@ def create_payment(
         status=PaymentStatus.PAID,
     )
     contractor.paid_amount += data.amount
-    contractor.pending_amount = max(0, contractor.contract_amount - contractor.paid_amount)
+    contractor.pending_amount = contractor.contract_amount - contractor.paid_amount
     db.add(payment)
     db.commit()
     db.refresh(payment)
