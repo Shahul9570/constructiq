@@ -14,14 +14,15 @@ export interface EquipmentUsage {
 }
 
 export const equipmentService = {
-  async list(project_id: number, params?: {
+  async list(params?: {
+    project_id?: number
     page?: number
     size?: number
     equipment_type?: string
     status?: string
     search?: string
   }): Promise<PaginatedResponse<Equipment>> {
-    const response = await api.get('/equipment/', { params: { project_id, ...params } })
+    const response = await api.get('/equipment/', { params })
     return response.data
   },
 
@@ -30,8 +31,8 @@ export const equipmentService = {
     return response.data
   },
 
-  async create(project_id: number, data: Partial<Equipment>): Promise<Equipment> {
-    const response = await api.post('/equipment/', data, { params: { project_id } })
+  async create(data: Partial<Equipment>): Promise<Equipment> {
+    const response = await api.post('/equipment/', data)
     return response.data
   },
 

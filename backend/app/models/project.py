@@ -63,6 +63,7 @@ class Project(Base):
     tasks = relationship("ProjectTask", back_populates="project", cascade="all, delete-orphan")
     client = relationship("User", foreign_keys=[client_id])
     members = relationship("ProjectMember", back_populates="project", cascade="all, delete-orphan")
+    equipment_list = relationship("Equipment", back_populates="project")
 
     def __repr__(self):
         return f"<Project {self.name}>"

@@ -33,7 +33,8 @@ class Equipment(Base):
     __tablename__ = "equipment"
 
     id = Column(Integer, primary_key=True, index=True)
-    project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    company_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
     name = Column(String(255), nullable=False)
     equipment_type = Column(SAEnum(EquipmentType), nullable=False)
     model_number = Column(String(100))
@@ -55,6 +56,7 @@ class Equipment(Base):
     )
 
     usage_records = relationship("EquipmentUsage", back_populates="equipment", cascade="all, delete-orphan")
+    project = relationship("Project", back_populates="equipment_list")
 
     def __repr__(self):
         return f"<Equipment {self.name} ({self.equipment_type.value})>"

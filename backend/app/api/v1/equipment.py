@@ -17,7 +17,7 @@ router = APIRouter()
 
 @router.get("/", response_model=EquipmentList)
 def list_equipment(
-    project_id: int,
+    project_id: Optional[int] = None,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     equipment_type: Optional[str] = None,
@@ -26,7 +26,11 @@ def list_equipment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    query = db.query(Equipment).filter(Equipment.project_id == project_id)
+    company_id = current_user.company_owner_id if current_user.company_owner_id else current_user.id
+    query = db.query(Equipment).filter(Equipment.company_id == company_id)
+    
+    if project_id:
+        query = query.filter(Equipment.project_id == project_id)
     if equipment_type:
         query = query.filter(Equipment.equipment_type == equipment_type)
     if status:
@@ -35,20 +39,29 @@ def list_equipment(
         query = query.filter(Equipment.name.ilike(f"%{search}%"))
     total = query.count()
     items = query.order_by(Equipment.name).offset((page - 1) * size).limit(size).all()
+    
+    for item in items:
+        if item.project:
+            item.project_name = item.project.name
+            
     return {"items": items, "total": total, "page": page, "size": size}
 
 
 @router.post("/", response_model=EquipmentResponse, status_code=201)
 def create_equipment(
     data: EquipmentCreate,
-    project_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    equipment = Equipment(**data.model_dump(), project_id=project_id)
+    company_id = current_user.company_owner_id if current_user.company_owner_id else current_user.id
+    equipment = Equipment(**data.model_dump(), company_id=company_id)
     db.add(equipment)
     db.commit()
     db.refresh(equipment)
+    
+    if equipment.project:
+        equipment.project_name = equipment.project.name
+        
     return equipment
 
 
@@ -61,6 +74,10 @@ def get_equipment(
     equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if not equipment:
         raise HTTPException(status_code=404, detail="Equipment not found")
+        
+    if equipment.project:
+        equipment.project_name = equipment.project.name
+        
     return equipment
 
 
@@ -79,6 +96,10 @@ def update_equipment(
         setattr(equipment, key, value)
     db.commit()
     db.refresh(equipment)
+    
+    if equipment.project:
+        equipment.project_name = equipment.project.name
+        
     return equipment
 
 

@@ -38,7 +38,7 @@ class EquipmentBase(BaseModel):
 
 
 class EquipmentCreate(EquipmentBase):
-    pass
+    project_id: Optional[int] = None
 
 
 class EquipmentUpdate(BaseModel):
@@ -59,7 +59,9 @@ class EquipmentUpdate(BaseModel):
 
 class EquipmentResponse(EquipmentBase):
     id: int
-    project_id: int
+    company_id: int
+    project_id: Optional[int] = None
+    project_name: Optional[str] = None
     status: str
     total_hours_used: float
     total_fuel_used: float

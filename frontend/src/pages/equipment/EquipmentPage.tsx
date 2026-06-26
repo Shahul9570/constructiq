@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { equipmentService } from '@/services/equipment.service'
+import { projectService } from '@/services/project.service'
 import {
   Wrench,
   Search,
@@ -60,6 +61,7 @@ export default function EquipmentPage() {
     status: 'available',
     hourly_rate: 0,
     operator_name: '',
+    project_id: '',
   })
 
   const [usageForm, setUsageForm] = useState({
@@ -73,28 +75,33 @@ export default function EquipmentPage() {
 
   const pid = projectId()
 
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => projectService.list(),
+  })
+
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['equipment', pid, page, search, statusFilter, typeFilter],
+    queryKey: ['equipment', page, search, statusFilter, typeFilter],
     queryFn: () =>
-      equipmentService.list(pid, {
+      equipmentService.list({
         page,
         size: 50,
         search: search || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
         equipment_type: typeFilter !== 'all' ? typeFilter : undefined,
       }),
-    enabled: !!pid,
   })
 
   const createMutation = useMutation({
     mutationFn: () =>
-      equipmentService.create(pid, {
+      equipmentService.create({
         name: form.name,
         equipment_type: form.equipment_type,
         model_number: form.model_number || undefined,
         status: form.status,
         hourly_rate: Number(form.hourly_rate),
         operator_name: form.operator_name || undefined,
+        project_id: (form.project_id && form.project_id !== 'unassigned') ? Number(form.project_id) : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['equipment'] })
@@ -117,7 +124,7 @@ export default function EquipmentPage() {
 
   const usageMutation = useMutation({
     mutationFn: () =>
-      equipmentService.recordUsage(selectedEquipment!.id, pid, {
+      equipmentService.recordUsage(selectedEquipment!.id, selectedEquipment!.project_id || 0, {
         hours_used: Number(usageForm.hours_used),
         fuel_used: Number(usageForm.fuel_used) || undefined,
         date: usageForm.date,
@@ -143,6 +150,7 @@ export default function EquipmentPage() {
       status: 'available',
       hourly_rate: 0,
       operator_name: '',
+      project_id: '',
     })
   }
 
@@ -172,21 +180,6 @@ export default function EquipmentPage() {
   }
 
   const equipmentList = data?.items || []
-
-  if (!pid) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Equipment</h1>
-          <p className="text-muted-foreground">Track project equipment and machinery</p>
-        </div>
-        <div className="flex flex-col items-center justify-center py-12">
-          <Wrench className="h-12 w-12 text-muted-foreground mb-4" />
-          <p className="text-muted-foreground">Select a project to view equipment</p>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-6">
@@ -265,6 +258,7 @@ export default function EquipmentPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Model</TableHead>
+                <TableHead>Current Site</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Hours Used</TableHead>
                 <TableHead className="text-right">Fuel Used</TableHead>
@@ -273,11 +267,14 @@ export default function EquipmentPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {equipmentList.map((eq) => (
+              {equipmentList.map((eq: any) => (
                 <TableRow key={eq.id}>
                   <TableCell className="font-medium">{eq.name}</TableCell>
                   <TableCell className="capitalize">{eq.equipment_type}</TableCell>
                   <TableCell className="text-muted-foreground">{eq.model_number || '-'}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {eq.project_name || 'Unassigned (Available)'}
+                  </TableCell>
                   <TableCell>{getStatusBadge(eq.status)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -394,6 +391,22 @@ export default function EquipmentPage() {
                   <Label htmlFor="eq-operator">Operator</Label>
                   <Input id="eq-operator" value={form.operator_name} onChange={(e) => setForm({ ...form, operator_name: e.target.value })} />
                 </div>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="eq-project">Assign to Project (Current Site)</Label>
+                <Select value={form.project_id} onValueChange={(v) => setForm({ ...form, project_id: v })}>
+                  <SelectTrigger id="eq-project">
+                    <SelectValue placeholder="Unassigned (Available in Yard)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned (Available in Yard)</SelectItem>
+                    {projectsData?.items?.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id.toString()}>
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <DialogFooter>
