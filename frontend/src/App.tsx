@@ -21,6 +21,7 @@ import SettingsPage from '@/pages/settings/SettingsPage'
 import UsersPage from '@/pages/users/UsersPage'
 
 import RequireRole from '@/components/auth/RequireRole'
+import { UserRole } from '@/types'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -55,28 +56,28 @@ export default function App() {
         <Route path="projects/:id" element={<ProjectDetailPage />} />
         
         {/* Only admins/owners/managers can view users */}
-        <Route path="users" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager']}><UsersPage /></RequireRole>} />
+        <Route path="users" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER]}><UsersPage /></RequireRole>} />
         
         {/* Operations - exclude contractors & accountants */}
-        <Route path="labour" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager', 'site_engineer']}><LabourSummaryPage /></RequireRole>} />
-        <Route path="contractors" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager', 'site_engineer']}><ContractorsPage /></RequireRole>} />
-        <Route path="materials" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager', 'site_engineer']}><MaterialsPage /></RequireRole>} />
-        <Route path="equipment" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager', 'site_engineer']}><EquipmentPage /></RequireRole>} />
+        <Route path="labour" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><LabourSummaryPage /></RequireRole>} />
+        <Route path="contractors" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><ContractorsPage /></RequireRole>} />
+        <Route path="materials" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><MaterialsPage /></RequireRole>} />
+        <Route path="equipment" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><EquipmentPage /></RequireRole>} />
         
         {/* Daily Progress - everyone except accountant & client */}
-        <Route path="daily-progress" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager', 'site_engineer', 'contractor']}><DailyProgressPage /></RequireRole>} />
+        <Route path="daily-progress" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR]}><DailyProgressPage /></RequireRole>} />
         
         {/* Financials - only admins, owners, and accountants */}
-        <Route path="financial" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'accountant']}><FinancialPage /></RequireRole>} />
+        <Route path="financial" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT]}><FinancialPage /></RequireRole>} />
         
         {/* Records - widely accessible */}
-        <Route path="documents" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager', 'site_engineer', 'contractor', 'accountant', 'client']}><DocumentsPage /></RequireRole>} />
-        <Route path="photos" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager', 'site_engineer', 'contractor', 'accountant', 'client']}><PhotosPage /></RequireRole>} />
-        <Route path="reports" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager', 'site_engineer', 'accountant', 'client']}><ReportsPage /></RequireRole>} />
+        <Route path="documents" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR, UserRole.ACCOUNTANT, UserRole.CLIENT]}><DocumentsPage /></RequireRole>} />
+        <Route path="photos" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR, UserRole.ACCOUNTANT, UserRole.CLIENT]}><PhotosPage /></RequireRole>} />
+        <Route path="reports" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT, UserRole.CLIENT]}><ReportsPage /></RequireRole>} />
         
         {/* System */}
-        <Route path="ai" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager', 'site_engineer']}><AIAssistantPage /></RequireRole>} />
-        <Route path="settings" element={<RequireRole allowedRoles={['super_admin', 'company_owner', 'project_manager', 'site_engineer', 'accountant']}><SettingsPage /></RequireRole>} />
+        <Route path="ai" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><AIAssistantPage /></RequireRole>} />
+        <Route path="settings" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT]}><SettingsPage /></RequireRole>} />
       </Route>
     </Routes>
   )
