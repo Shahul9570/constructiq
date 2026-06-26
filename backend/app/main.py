@@ -69,9 +69,9 @@ async def startup():
             for sql in migrations:
                 try:
                     conn.execute(text(sql))
+                    conn.commit()
                 except Exception:
-                    pass  # Column likely already exists
-            conn.commit()
+                    conn.rollback()
         logger.info("Database column migrations applied")
     except Exception as e:
         logger.error(f"Migration error: {e}")
