@@ -8,6 +8,7 @@ export interface DailyLabourSummary {
   trade: string
   workers_count: number
   daily_rate: number
+  paid_amount?: number
   contractor_id?: number
   remarks?: string
   verification_status: 'pending' | 'approved' | 'rejected'

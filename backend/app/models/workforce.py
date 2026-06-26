@@ -29,6 +29,7 @@ class DailyLabourSummary(Base):
     trade = Column(String(50), nullable=False)
     workers_count = Column(Integer, default=0)
     daily_rate = Column(Float, default=0.0)
+    paid_amount = Column(Float, default=0.0)
     contractor_id = Column(Integer, ForeignKey("contractors.id"), nullable=True)
     remarks = Column(Text)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)

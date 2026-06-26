@@ -10,6 +10,7 @@ class DailyLabourSummaryBase(BaseModel):
     trade: str
     workers_count: int = Field(..., ge=0)
     daily_rate: float = Field(..., ge=0.0)
+    paid_amount: float = Field(0.0, ge=0.0)
     contractor_id: Optional[int] = None
     remarks: Optional[str] = None
 
@@ -23,6 +24,7 @@ class DailyLabourSummaryUpdate(BaseModel):
     trade: Optional[str] = None
     workers_count: Optional[int] = Field(None, ge=0)
     daily_rate: Optional[float] = Field(None, ge=0.0)
+    paid_amount: Optional[float] = Field(None, ge=0.0)
     contractor_id: Optional[int] = None
     remarks: Optional[str] = None
 

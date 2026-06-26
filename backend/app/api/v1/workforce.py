@@ -71,7 +71,22 @@ def create_labour_summary(
             contractor = db.query(Contractor).filter(Contractor.id == summary.contractor_id).first()
             if contractor:
                 contractor.contract_amount += (summary.workers_count * summary.daily_rate)
+                contractor.paid_amount += summary.paid_amount
                 contractor.pending_amount = contractor.contract_amount - contractor.paid_amount
+                
+                # Automatically log payment if paid_amount > 0
+                if summary.paid_amount > 0:
+                    from app.models.contractor import ContractorPayment, PaymentStatus
+                    payment = ContractorPayment(
+                        contractor_id=contractor.id,
+                        amount=summary.paid_amount,
+                        payment_date=summary.date,
+                        payment_method="cash",
+                        status=PaymentStatus.PAID,
+                        notes=f"Auto-generated payment from Daily Labour entry",
+                        created_by=current_user.id
+                    )
+                    db.add(payment)
 
     db.add(summary)
     db.commit()
@@ -137,7 +152,22 @@ def verify_labour_summary(
             contractor = db.query(Contractor).filter(Contractor.id == summary.contractor_id).first()
             if contractor:
                 contractor.contract_amount += (summary.workers_count * summary.daily_rate)
+                contractor.paid_amount += summary.paid_amount
                 contractor.pending_amount = contractor.contract_amount - contractor.paid_amount
+                
+                # Automatically log payment if paid_amount > 0
+                if summary.paid_amount > 0:
+                    from app.models.contractor import ContractorPayment, PaymentStatus
+                    payment = ContractorPayment(
+                        contractor_id=contractor.id,
+                        amount=summary.paid_amount,
+                        payment_date=summary.date,
+                        payment_method="cash",
+                        status=PaymentStatus.PAID,
+                        notes=f"Auto-generated payment from Daily Labour entry verification",
+                        created_by=current_user.id
+                    )
+                    db.add(payment)
 
     summary.verification_status = data.status
     summary.verification_remarks = data.remarks

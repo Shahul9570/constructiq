@@ -67,6 +67,7 @@ const navGroups = [
       { label: 'Materials',      href: '/materials',      icon: Package },
       { label: 'Equipment',      href: '/equipment',      icon: Wrench },
       { label: 'Contractors',    href: '/contractors',    icon: Building2 },
+      { label: 'Daily Expenses', href: '/daily-expenses', icon: DollarSign },
     ],
   },
   {
@@ -96,14 +97,14 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const allowedItemsPerRole: Record<string, string[]> = {
     project_manager: [
       'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 
-      'Contractors', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
+      'Contractors', 'Daily Expenses', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
     ],
     accountant: [
-      'Dashboard', 'Projects', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings'
+      'Dashboard', 'Projects', 'Daily Expenses', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings'
     ],
     site_engineer: [
       'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 
-      'Contractors', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
+      'Contractors', 'Daily Expenses', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
     ],
     contractor: [
       'Dashboard', 'Projects', 'Daily Progress', 'Documents', 'Photos', 'Settings'
