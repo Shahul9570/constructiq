@@ -17,13 +17,9 @@ import {
 } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Calendar } from '@/components/ui/calendar'
-import { cn } from '@/lib/utils'
-
-import { labourService } from '@/services/labour.service'
+import { labourService, type DailyLabourSummary } from '@/services/labour.service'
 import { contractorService } from '@/services/contractor.service'
-import type { DailyLabourSummary, Contractor } from '@/types'
+import type { Contractor } from '@/types'
 
 const projectId = () => Number(localStorage.getItem('selected_project_id') || 0)
 
@@ -101,6 +97,15 @@ export default function DailyExpensesPage() {
     }
   }, [labourData])
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value) {
+      // Create date object and adjust for timezone offset so the local date matches the input string
+      const selectedDate = new Date(e.target.value)
+      const userTimezoneOffset = selectedDate.getTimezoneOffset() * 60000
+      setDate(new Date(selectedDate.getTime() + userTimezoneOffset))
+    }
+  }
+
   if (!pid) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -121,28 +126,12 @@ export default function DailyExpensesPage() {
         </div>
         
         <div className="flex items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[240px] justify-start text-left font-normal",
-                  !date && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, "PPP") : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="end">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={(d) => d && setDate(d)}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <Input 
+            type="date"
+            value={format(date, 'yyyy-MM-dd')}
+            onChange={handleDateChange}
+            className="w-auto"
+          />
         </div>
       </div>
 
