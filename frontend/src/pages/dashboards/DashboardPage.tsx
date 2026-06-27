@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { financialService } from '@/services/financial.service'
+import { labourService } from '@/services/labour.service'
 import toast from 'react-hot-toast'
 import { useQueryClient, useMutation } from '@tanstack/react-query'
 import { getFileUrl } from '@/lib/utils'
@@ -245,6 +246,12 @@ function ProjectManagerDashboard({ projectId }: RoleSectionProps) {
     enabled: !!projectId,
   })
 
+  const { data: labourData } = useQuery({
+    queryKey: ['dashboard-labour', projectId],
+    queryFn: () => labourService.list(Number(projectId), { size: 100 }),
+    enabled: !!projectId,
+  })
+
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number, status: string }) => financialService.updateCostStatus(id, status),
     onSuccess: () => {
@@ -255,10 +262,20 @@ function ProjectManagerDashboard({ projectId }: RoleSectionProps) {
     onError: () => toast.error('Failed to update status'),
   })
 
+  const verifyLabourMutation = useMutation({
+    mutationFn: ({ id, status }: { id: number, status: 'approved' | 'rejected' }) => labourService.verify(id, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard-labour'] })
+      toast.success('Labour status updated successfully')
+    },
+    onError: () => toast.error('Failed to update labour status'),
+  })
+
   if (isLoading) return <DashboardSkeleton />
   if (!data) return <EmptyState title="No Data" description="No dashboard data available" />
 
   const pendingExpenses = costs?.filter((c: any) => c.status === 'pending') || []
+  const pendingLabour = labourData?.items?.filter((l: any) => l.verification_status === 'pending') || []
 
   return (
     <div className="space-y-6">
@@ -341,6 +358,36 @@ function ProjectManagerDashboard({ projectId }: RoleSectionProps) {
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" className="h-8 border-red-200 text-red-600 hover:bg-red-50" onClick={() => updateStatusMutation.mutate({ id: expense.id, status: 'rejected' })}>Reject</Button>
                       <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700" onClick={() => updateStatusMutation.mutate({ id: expense.id, status: 'approved' })}>Approve</Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {pendingLabour.length > 0 && (
+        <Card className="border-blue-500/20 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-500" />
+              Pending Labour Logs for Approval
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {pendingLabour.map((labour: any) => (
+                <div key={labour.id} className="flex justify-between items-center p-3 border rounded-lg bg-muted/30">
+                  <div>
+                    <p className="font-medium text-sm capitalize">{labour.trade} Team</p>
+                    <p className="text-xs text-muted-foreground">{new Date(labour.date).toLocaleDateString()} • {labour.workers_count} workers</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-semibold text-muted-foreground">${(labour.workers_count * labour.daily_rate).toLocaleString()}</span>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="h-8 border-red-200 text-red-600 hover:bg-red-50" onClick={() => verifyLabourMutation.mutate({ id: labour.id, status: 'rejected' })}>Reject</Button>
+                      <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700" onClick={() => verifyLabourMutation.mutate({ id: labour.id, status: 'approved' })}>Approve</Button>
                     </div>
                   </div>
                 </div>
