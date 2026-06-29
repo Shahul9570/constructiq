@@ -38,7 +38,13 @@ export default function DailyExpensesPage() {
 
   // Modal state for Other Expenses
   const [isExpenseOpen, setIsExpenseOpen] = useState(false)
-  const [expenseForm, setExpenseForm] = useState({
+  const [expenseForm, setExpenseForm] = useState<{
+    category: string
+    amount: string
+    description: string
+    date: string
+    reference_id?: string
+  }>({
     category: 'material',
     amount: '',
     description: '',
@@ -347,7 +353,7 @@ export default function DailyExpensesPage() {
           <div className="grid gap-5 py-4">
             <div className="grid gap-2">
               <Label className="text-slate-400">Category</Label>
-              <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v })}>
+              <Select value={expenseForm.category} onValueChange={(v) => setExpenseForm({ ...expenseForm, category: v, reference_id: undefined })}>
                 <SelectTrigger className="bg-slate-800 border-slate-700">
                   <SelectValue />
                 </SelectTrigger>
@@ -359,6 +365,26 @@ export default function DailyExpensesPage() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {expenseForm.category === 'contractor' && (
+              <div className="grid gap-2">
+                <Label className="text-slate-400">Select Contractor</Label>
+                <Select 
+                  value={expenseForm.reference_id} 
+                  onValueChange={(v) => setExpenseForm({ ...expenseForm, reference_id: v })}
+                >
+                  <SelectTrigger className="bg-slate-800 border-slate-700">
+                    <SelectValue placeholder="Select a contractor" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700 text-slate-200">
+                    {contractors.map(c => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="grid gap-2">
               <Label className="text-slate-400">Amount ($)</Label>
               <Input
@@ -395,9 +421,11 @@ export default function DailyExpensesPage() {
             <Button
               onClick={() => addExpenseMutation.mutate({
                 ...expenseForm,
-                amount: parseFloat(expenseForm.amount)
+                amount: parseFloat(expenseForm.amount),
+                reference_type: expenseForm.category === 'contractor' ? 'contractor' : undefined,
+                reference_id: expenseForm.reference_id ? parseInt(expenseForm.reference_id) : undefined
               })}
-              disabled={addExpenseMutation.isPending || !expenseForm.amount || !expenseForm.description}
+              disabled={addExpenseMutation.isPending || !expenseForm.amount || !expenseForm.description || (expenseForm.category === 'contractor' && !expenseForm.reference_id)}
               className="bg-orange-500 hover:bg-orange-600 text-white"
             >
               {addExpenseMutation.isPending ? 'Logging...' : 'Log Expense'}

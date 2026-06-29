@@ -106,6 +106,18 @@ def update_labour_summary(
         raise HTTPException(status_code=404, detail="Labour summary not found")
         
     update_data = data.model_dump(exclude_unset=True)
+    
+    # If the summary is already approved and we are updating paid_amount, we must sync the ledger
+    if summary.verification_status == 'approved' and 'paid_amount' in update_data:
+        old_paid = summary.paid_amount or 0
+        new_paid = update_data['paid_amount']
+        if old_paid != new_paid and summary.contractor_id:
+            from app.models.contractor import Contractor
+            contractor = db.query(Contractor).filter(Contractor.id == summary.contractor_id).first()
+            if contractor:
+                contractor.paid_amount += (new_paid - old_paid)
+                contractor.pending_amount = contractor.contract_amount - contractor.paid_amount
+
     for key, value in update_data.items():
         setattr(summary, key, value)
         

@@ -46,6 +46,25 @@ def update_cost_status(
     if status not in ['approved', 'rejected']:
         raise HTTPException(status_code=400, detail="Invalid status")
         
+    # If approving a contractor expense with a reference, sync the ledger
+    if status == 'approved' and cost.status != 'approved' and cost.category == 'contractor' and cost.reference_id:
+        from app.models.contractor import Contractor, ContractorPayment, PaymentStatus
+        contractor = db.query(Contractor).filter(Contractor.id == cost.reference_id).first()
+        if contractor:
+            # For general contractor costs, we assume it's a payment made to them, so we add to paid_amount
+            contractor.paid_amount += cost.amount
+            contractor.pending_amount = contractor.contract_amount - contractor.paid_amount
+            payment = ContractorPayment(
+                contractor_id=contractor.id,
+                amount=cost.amount,
+                payment_date=cost.date,
+                payment_method="cash",
+                status=PaymentStatus.PAID,
+                notes=cost.description or "Manual Contractor Expense",
+                created_by=current_user.id
+            )
+            db.add(payment)
+
     cost.status = status
     db.commit()
     db.refresh(cost)
