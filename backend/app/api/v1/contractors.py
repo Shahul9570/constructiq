@@ -116,6 +116,19 @@ def create_payment(
     contractor.paid_amount += data.amount
     contractor.pending_amount = contractor.contract_amount - contractor.paid_amount
     db.add(payment)
+    
+    # Also log this payment in the general financial ledger
+    from app.models.financial import CostRecord, CostCategory
+    cost_record = CostRecord(
+        project_id=contractor.project_id,
+        category=CostCategory.CONTRACTOR,
+        amount=data.amount,
+        date=data.payment_date,
+        description=f"Payment to contractor: {contractor.name} ({data.notes or 'No notes'})",
+        status="approved",
+        created_by=current_user.id,
+    )
+    db.add(cost_record)
     db.commit()
     db.refresh(payment)
     return payment
