@@ -169,7 +169,7 @@ export default function DailyExpensesPage() {
   }
 
   const labourItems = labourData?.items || []
-  const costItems = costsData || []
+  const costItems = (costsData || []).filter((c: any) => c.category !== 'labour' && c.category !== 'labour_payout')
 
   return (
     <div className="space-y-6">
