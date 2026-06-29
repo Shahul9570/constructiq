@@ -45,6 +45,7 @@ const adminNavGroups = [
     title: 'System',
     items: [
       { label: 'Financial Overview', href: '/financial', icon: DollarSign },
+      { label: 'Client Billing', href: '/client-billing', icon: FileText },
       { label: 'AI Analytics', href: '/ai', icon: Bot },
       { label: 'Settings', href: '/settings', icon: Settings },
     ],
@@ -74,6 +75,7 @@ const navGroups = [
     title: 'Records',
     items: [
       { label: 'Financial',  href: '/financial',  icon: DollarSign },
+      { label: 'Client Billing', href: '/client-billing', icon: FileText },
       { label: 'Documents',  href: '/documents',  icon: FileText },
       { label: 'Photos',     href: '/photos',     icon: Camera },
       { label: 'Reports',    href: '/reports',    icon: FileBarChart },
@@ -100,7 +102,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       'Contractors', 'Daily Expenses', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
     ],
     accountant: [
-      'Dashboard', 'Projects', 'Daily Expenses', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings'
+      'Dashboard', 'Projects', 'Daily Expenses', 'Financial', 'Client Billing', 'Documents', 'Photos', 'Reports', 'Settings'
     ],
     site_engineer: [
       'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 

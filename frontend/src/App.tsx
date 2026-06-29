@@ -13,6 +13,7 @@ import EquipmentPage from '@/pages/equipment/EquipmentPage'
 import DailyProgressPage from '@/pages/daily-progress/DailyProgressPage'
 import DailyExpensesPage from '@/pages/expenses/DailyExpensesPage'
 import FinancialPage from '@/pages/financial/FinancialPage'
+import ClientBillingPage from '@/pages/financial/ClientBillingPage'
 import DocumentsPage from '@/pages/documents/DocumentsPage'
 import PhotosPage from '@/pages/photos/PhotosPage'
 import ReportsPage from '@/pages/reports/ReportsPage'
@@ -71,6 +72,7 @@ export default function App() {
         
         {/* Financials - admins, owners, PMs, and accountants */}
         <Route path="financial" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.ACCOUNTANT]}><FinancialPage /></RequireRole>} />
+        <Route path="client-billing" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT]}><ClientBillingPage /></RequireRole>} />
         
         {/* Records - widely accessible */}
         <Route path="documents" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR, UserRole.ACCOUNTANT, UserRole.CLIENT]}><DocumentsPage /></RequireRole>} />
