@@ -308,7 +308,7 @@ export default function ClientBillingPage() {
               <Label>Notes</Label>
               <Textarea
                 value={invoiceForm.notes}
-                onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
                 placeholder="Details of services rendered..."
               />
             </div>

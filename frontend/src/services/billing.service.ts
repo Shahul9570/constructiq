@@ -1,5 +1,5 @@
 import api from './api'
-import { Invoice } from '../types/financial'
+import { Invoice } from '../types'
 
 export interface BillingSummary {
   total_billed: number
