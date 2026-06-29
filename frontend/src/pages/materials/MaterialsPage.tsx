@@ -587,7 +587,7 @@ export default function MaterialsPage() {
                     type="number"
                     min="0"
                     required
-                    value={createForm.current_stock || ''}
+                    value={createForm.current_stock === 0 ? 0 : createForm.current_stock || ''}
                     onChange={(e) =>
                       setCreateForm({ ...createForm, current_stock: Number(e.target.value) })
                     }
@@ -600,7 +600,7 @@ export default function MaterialsPage() {
                     type="number"
                     min="0"
                     required
-                    value={createForm.reorder_level || ''}
+                    value={createForm.reorder_level === 0 ? 0 : createForm.reorder_level || ''}
                     onChange={(e) =>
                       setCreateForm({ ...createForm, reorder_level: Number(e.target.value) })
                     }
@@ -616,7 +616,7 @@ export default function MaterialsPage() {
                     min="0"
                     step="0.01"
                     required
-                    value={createForm.unit_price || ''}
+                    value={createForm.unit_price === 0 ? 0 : createForm.unit_price || ''}
                     onChange={(e) =>
                       setCreateForm({ ...createForm, unit_price: Number(e.target.value) })
                     }
