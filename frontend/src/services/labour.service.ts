@@ -25,7 +25,18 @@ export interface LabourMetrics {
   by_contractor: Record<string, { count: number; cost: number }>
 }
 
+export interface DirectLabourSummary {
+  total_accrued: number
+  total_paid: number
+  pending_amount: number
+}
+
 export const labourService = {
+  async getDirectLabourSummary(project_id: number): Promise<DirectLabourSummary> {
+    const response = await api.get('/labour/direct-labour/summary', { params: { project_id } })
+    return response.data
+  },
+
   async list(project_id: number, params?: {
     page?: number
     size?: number

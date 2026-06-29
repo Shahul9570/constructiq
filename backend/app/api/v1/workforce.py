@@ -15,6 +15,43 @@ from app.schemas.workforce import (
 
 router = APIRouter()
 
+@router.get("/direct-labour/summary")
+def get_direct_labour_summary(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Calculate total outstanding balance for direct labour (contractor_id IS NULL)
+    # only counting approved logs.
+    from sqlalchemy import func
+    
+    # Total Accrued
+    accrued_q = db.query(
+        func.sum(DailyLabourSummary.workers_count * DailyLabourSummary.daily_rate)
+    ).filter(
+        DailyLabourSummary.project_id == project_id,
+        DailyLabourSummary.contractor_id.is_(None),
+        DailyLabourSummary.verification_status == 'approved'
+    )
+    total_accrued = accrued_q.scalar() or 0
+    
+    # Total Paid
+    paid_q = db.query(
+        func.sum(DailyLabourSummary.paid_amount)
+    ).filter(
+        DailyLabourSummary.project_id == project_id,
+        DailyLabourSummary.contractor_id.is_(None),
+        DailyLabourSummary.verification_status == 'approved'
+    )
+    total_paid = paid_q.scalar() or 0
+    
+    pending_amount = total_accrued - total_paid
+    return {
+        "total_accrued": total_accrued,
+        "total_paid": total_paid,
+        "pending_amount": pending_amount
+    }
+
 
 @router.get("/", response_model=DailyLabourSummaryList)
 def list_labour_summaries(

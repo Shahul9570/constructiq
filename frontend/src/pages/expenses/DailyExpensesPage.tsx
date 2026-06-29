@@ -51,6 +51,13 @@ export default function DailyExpensesPage() {
     date: format(new Date(), 'yyyy-MM-dd')
   })
 
+  // Fetch Direct Labour Summary
+  const { data: directLabourSummary } = useQuery({
+    queryKey: ['direct-labour-summary', pid],
+    queryFn: () => labourService.getDirectLabourSummary(pid),
+    enabled: !!pid,
+  })
+
   // Fetch Labour Summaries for the selected date
   const { data: labourData, isLoading: isLoadingLabour } = useQuery({
     queryKey: ['labour-expenses', pid, format(date, 'yyyy-MM-dd')],
@@ -93,6 +100,7 @@ export default function DailyExpensesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['labour-expenses'] })
       queryClient.invalidateQueries({ queryKey: ['contractors'] }) // Invalidate ledger
+      queryClient.invalidateQueries({ queryKey: ['direct-labour-summary'] }) // Invalidate direct labour ledger
       toast.success('Payment recorded successfully')
     },
     onError: () => toast.error('Failed to record payment'),
@@ -171,14 +179,22 @@ export default function DailyExpensesPage() {
           <p className="text-muted-foreground">Manage and track all daily outlays for your project</p>
         </div>
         
-        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1.5 rounded-lg">
-          <CalendarIcon className="h-4 w-4 text-slate-400 ml-2" />
-          <Input 
-            type="date"
-            value={format(date, 'yyyy-MM-dd')}
-            onChange={handleDateChange}
-            className="w-auto border-0 bg-transparent focus-visible:ring-0 text-sm font-medium"
-          />
+        <div className="flex items-center gap-4">
+          {directLabourSummary && (
+            <div className="bg-orange-500/10 border border-orange-500/20 text-orange-500 px-4 py-2 rounded-lg flex flex-col items-end">
+              <span className="text-xs uppercase font-semibold tracking-wider opacity-80">Direct Labour Pending</span>
+              <span className="text-lg font-bold">${directLabourSummary.pending_amount.toLocaleString()}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1.5 rounded-lg h-[46px]">
+            <CalendarIcon className="h-4 w-4 text-slate-400 ml-2" />
+            <Input 
+              type="date"
+              value={format(date, 'yyyy-MM-dd')}
+              onChange={handleDateChange}
+              className="w-auto border-0 bg-transparent focus-visible:ring-0 text-sm font-medium"
+            />
+          </div>
         </div>
       </div>
 
