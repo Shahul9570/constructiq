@@ -71,6 +71,7 @@ class MaterialArrival(Base):
     supplier_name = Column(String(255))
     invoice_number = Column(String(100))
     invoice_amount = Column(Float, default=0.0)
+    paid_amount = Column(Float, default=0.0)
     arrival_date = Column(Date, nullable=False)
     received_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     notes = Column(Text)

@@ -163,7 +163,11 @@ export interface MaterialArrival {
   supplier_name?: string
   invoice_number?: string
   invoice_amount: number
+  paid_amount: number
   arrival_date: string
+  received_by: number
+  notes?: string
+  created_at: string
 }
 
 export interface MaterialConsumption {

@@ -9,7 +9,7 @@ from app.models.user import User
 from app.models.material import Material, MaterialArrival, MaterialConsumption
 from app.schemas.material import (
     MaterialCreate, MaterialUpdate, MaterialResponse, MaterialList,
-    MaterialArrivalCreate, MaterialArrivalResponse,
+    MaterialArrivalCreate, MaterialArrivalUpdate, MaterialArrivalResponse,
     MaterialConsumptionCreate, MaterialConsumptionResponse,
 )
 
@@ -153,6 +153,25 @@ def list_arrivals(
         .order_by(MaterialArrival.arrival_date.desc())
         .all()
     )
+
+@router.patch("/arrivals/{arrival_id}", response_model=MaterialArrivalResponse)
+def update_arrival(
+    arrival_id: int,
+    data: MaterialArrivalUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    arrival = db.query(MaterialArrival).filter(MaterialArrival.id == arrival_id).first()
+    if not arrival:
+        raise HTTPException(status_code=404, detail="Arrival not found")
+        
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(arrival, key, value)
+        
+    db.commit()
+    db.refresh(arrival)
+    return arrival
 
 
 @router.get("/{material_id}/consumptions", response_model=list[MaterialConsumptionResponse])

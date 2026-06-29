@@ -35,12 +35,16 @@ class MaterialArrivalBase(BaseModel):
     supplier_name: Optional[str] = None
     invoice_number: Optional[str] = None
     invoice_amount: float = 0.0
+    paid_amount: float = 0.0
     notes: Optional[str] = None
-
 
 class MaterialArrivalCreate(MaterialArrivalBase):
     arrival_date: date
 
+class MaterialArrivalUpdate(BaseModel):
+    paid_amount: Optional[float] = None
+    invoice_amount: Optional[float] = None
+    notes: Optional[str] = None
 
 class MaterialArrivalResponse(MaterialArrivalBase):
     id: int

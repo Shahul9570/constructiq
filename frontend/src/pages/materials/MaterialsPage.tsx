@@ -51,6 +51,10 @@ export default function MaterialsPage() {
   const [isArrivalOpen, setIsArrivalOpen] = useState(false)
   const [isConsumptionOpen, setIsConsumptionOpen] = useState(false)
   const [selectedMaterial, setSelectedMaterial] = useState<number | null>(null)
+  
+  const [expandedMaterial, setExpandedMaterial] = useState<number | null>(null)
+  const [settleArrivalId, setSettleArrivalId] = useState<number | null>(null)
+  const [settleAmount, setSettleAmount] = useState<number>(0)
 
   const [createForm, setCreateForm] = useState({
     name: '',
@@ -67,6 +71,7 @@ export default function MaterialsPage() {
     supplier_name: '',
     invoice_number: '',
     invoice_amount: 0,
+    paid_amount: 0,
     arrival_date: new Date().toISOString().split('T')[0],
   })
 
@@ -121,6 +126,7 @@ export default function MaterialsPage() {
         supplier_name: arrivalForm.supplier_name || undefined,
         invoice_number: arrivalForm.invoice_number || undefined,
         invoice_amount: Number(arrivalForm.invoice_amount),
+        paid_amount: Number(arrivalForm.paid_amount),
         arrival_date: arrivalForm.arrival_date,
       }),
     onSuccess: () => {
@@ -147,6 +153,25 @@ export default function MaterialsPage() {
     },
   })
 
+  const settleMutation = useMutation({
+    mutationFn: () => {
+      // Find the arrival to get its current paid amount
+      let currentPaid = 0;
+      materials.forEach(m => {
+        const arrival = m.arrivals.find(a => a.id === settleArrivalId);
+        if (arrival) currentPaid = arrival.paid_amount;
+      });
+      return materialService.updateArrival(settleArrivalId!, {
+        paid_amount: currentPaid + Number(settleAmount),
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['materials'] })
+      setSettleArrivalId(null)
+      setSettleAmount(0)
+    },
+  })
+
   const resetCreateForm = () => {
     setCreateForm({
       name: '',
@@ -165,6 +190,7 @@ export default function MaterialsPage() {
       supplier_name: '',
       invoice_number: '',
       invoice_amount: 0,
+      paid_amount: 0,
       arrival_date: new Date().toISOString().split('T')[0],
     })
   }
@@ -327,67 +353,129 @@ export default function MaterialsPage() {
                   material.reorder_level > 0
                     ? Math.min(100, (material.current_stock / (material.reorder_level * 2)) * 100)
                     : 50
+                const isExpanded = expandedMaterial === material.id
                 return (
-                  <TableRow
-                    key={material.id}
-                    className={material.is_low_stock ? 'bg-red-50 dark:bg-red-950/20' : ''}
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {material.name}
-                        {material.is_low_stock && (
-                          <AlertTriangle className="h-3 w-3 text-red-500" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="capitalize">{material.material_type}</TableCell>
-                    <TableCell>
-                      <span className={material.is_low_stock ? 'text-red-600 font-medium' : ''}>
-                        {material.current_stock} {material.unit}
-                      </span>
-                    </TableCell>
-                    <TableCell className="min-w-[120px]">
-                      <div className="flex items-center gap-2">
-                        <Progress
-                          value={stockPercent}
-                          className={`h-2 w-16 ${
-                            material.is_low_stock ? 'bg-red-200' : ''
-                          }`}
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {material.current_stock}/{material.reorder_level * 2} {material.unit}
+                  <React.Fragment key={material.id}>
+                    <TableRow
+                      className={`cursor-pointer ${material.is_low_stock ? 'bg-red-50 dark:bg-red-950/20' : ''}`}
+                      onClick={() => setExpandedMaterial(isExpanded ? null : material.id)}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {material.name}
+                          {material.is_low_stock && (
+                            <AlertTriangle className="h-3 w-3 text-red-500" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="capitalize">{material.material_type}</TableCell>
+                      <TableCell>
+                        <span className={material.is_low_stock ? 'text-red-600 font-medium' : ''}>
+                          {material.current_stock} {material.unit}
                         </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>${material.unit_price.toFixed(2)}</TableCell>
-                    <TableCell>{material.supplier_name || '-'}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedMaterial(material.id)
-                            setIsArrivalOpen(true)
-                          }}
-                        >
-                          <Truck className="h-3 w-3 mr-1" />
-                          Arrival
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedMaterial(material.id)
-                            setIsConsumptionOpen(true)
-                          }}
-                        >
-                          <MinusCircle className="h-3 w-3 mr-1" />
-                          Use
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                      </TableCell>
+                      <TableCell className="min-w-[120px]">
+                        <div className="flex items-center gap-2">
+                          <Progress
+                            value={stockPercent}
+                            className={`h-2 w-16 ${
+                              material.is_low_stock ? 'bg-red-200' : ''
+                            }`}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {material.current_stock}/{material.reorder_level * 2} {material.unit}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>${material.unit_price.toFixed(2)}</TableCell>
+                      <TableCell>{material.supplier_name || '-'}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedMaterial(material.id)
+                              setIsArrivalOpen(true)
+                            }}
+                          >
+                            <Truck className="h-3 w-3 mr-1" />
+                            Arrival
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedMaterial(material.id)
+                              setIsConsumptionOpen(true)
+                            }}
+                          >
+                            <MinusCircle className="h-3 w-3 mr-1" />
+                            Use
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    {isExpanded && (
+                      <TableRow className="bg-muted/30">
+                        <TableCell colSpan={7} className="p-0">
+                          <div className="p-4 border-b">
+                            <h4 className="font-semibold mb-2">Deliveries Ledger</h4>
+                            {material.arrivals && material.arrivals.length > 0 ? (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Supplier & Invoice</TableHead>
+                                    <TableHead>Qty</TableHead>
+                                    <TableHead>Invoice Amt</TableHead>
+                                    <TableHead>Paid</TableHead>
+                                    <TableHead>Pending</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {material.arrivals.map((arrival) => {
+                                    const pending = arrival.invoice_amount - arrival.paid_amount
+                                    return (
+                                      <TableRow key={arrival.id}>
+                                        <TableCell>{arrival.arrival_date}</TableCell>
+                                        <TableCell>
+                                          <div className="font-medium">{arrival.supplier_name || '-'}</div>
+                                          <div className="text-xs text-muted-foreground">{arrival.invoice_number || 'No invoice'}</div>
+                                        </TableCell>
+                                        <TableCell>{arrival.quantity} {material.unit}</TableCell>
+                                        <TableCell>${arrival.invoice_amount.toLocaleString()}</TableCell>
+                                        <TableCell>${arrival.paid_amount.toLocaleString()}</TableCell>
+                                        <TableCell>
+                                          {pending > 0 ? (
+                                            <span className="text-red-500 font-medium">${pending.toLocaleString()}</span>
+                                          ) : (
+                                            <span className="text-green-500">Settled</span>
+                                          )}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                          {pending > 0 && (
+                                            <Button size="sm" variant="outline" onClick={() => setSettleArrivalId(arrival.id)}>
+                                              Settle Payment
+                                            </Button>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    )
+                                  })}
+                                </TableBody>
+                              </Table>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">No deliveries recorded yet.</p>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
                 )
               })}
             </TableBody>
@@ -610,6 +698,18 @@ export default function MaterialsPage() {
                     }
                   />
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="arr-paid">Paid Amount ($)</Label>
+                  <Input
+                    id="arr-paid"
+                    type="number"
+                    min="0"
+                    value={arrivalForm.paid_amount || ''}
+                    onChange={(e) =>
+                      setArrivalForm({ ...arrivalForm, paid_amount: Number(e.target.value) })
+                    }
+                  />
+                </div>
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="arr-date">Arrival Date</Label>
@@ -696,6 +796,39 @@ export default function MaterialsPage() {
               </Button>
               <Button type="submit" disabled={consumptionMutation.isPending}>
                 {consumptionMutation.isPending ? 'Recording...' : 'Record Consumption'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={settleArrivalId !== null} onOpenChange={(open) => !open && setSettleArrivalId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <form onSubmit={(e) => { e.preventDefault(); settleMutation.mutate(); }}>
+            <DialogHeader>
+              <DialogTitle>Settle Delivery Payment</DialogTitle>
+              <DialogDescription>Enter the amount you are paying today towards this delivery.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="settle-amt">Payment Amount ($)</Label>
+                <Input
+                  id="settle-amt"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  value={settleAmount || ''}
+                  onChange={(e) => setSettleAmount(Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setSettleArrivalId(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={settleMutation.isPending || !settleAmount}>
+                {settleMutation.isPending ? 'Processing...' : 'Settle Payment'}
               </Button>
             </DialogFooter>
           </form>

@@ -31,6 +31,10 @@ export const materialService = {
     const response = await api.post(`/materials/${material_id}/arrivals`, data)
     return response.data
   },
+  async updateArrival(arrival_id: number, data: Partial<MaterialArrival>): Promise<MaterialArrival> {
+    const response = await api.patch(`/materials/arrivals/${arrival_id}`, data)
+    return response.data
+  },
 
   async addConsumption(material_id: number, data: Partial<MaterialConsumption>): Promise<MaterialConsumption> {
     const response = await api.post(`/materials/${material_id}/consumptions`, data)
