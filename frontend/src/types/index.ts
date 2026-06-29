@@ -251,6 +251,12 @@ export interface Invoice {
   issue_date: string
   due_date?: string
   paid_date?: string
+  payment_method?: string
+  notes?: string
+  file_url?: string
+  created_by?: number
+  created_at?: string
+  updated_at?: string
 }
 
 export interface Document {
