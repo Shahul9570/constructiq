@@ -36,6 +36,11 @@ export const materialService = {
     return response.data
   },
 
+  async addPayment(arrival_id: number, data: { amount: number; payment_date: string; notes?: string }): Promise<any> {
+    const response = await api.post(`/materials/arrivals/${arrival_id}/payments`, data)
+    return response.data
+  },
+
   async addConsumption(material_id: number, data: Partial<MaterialConsumption>): Promise<MaterialConsumption> {
     const response = await api.post(`/materials/${material_id}/consumptions`, data)
     return response.data

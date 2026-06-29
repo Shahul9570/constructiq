@@ -46,12 +46,32 @@ class MaterialArrivalUpdate(BaseModel):
     invoice_amount: Optional[float] = None
     notes: Optional[str] = None
 
+class MaterialPaymentBase(BaseModel):
+    amount: float = Field(..., gt=0)
+    notes: Optional[str] = None
+
+
+class MaterialPaymentCreate(MaterialPaymentBase):
+    payment_date: date
+
+
+class MaterialPaymentResponse(MaterialPaymentBase):
+    id: int
+    arrival_id: int
+    payment_date: date
+    created_by: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class MaterialArrivalResponse(MaterialArrivalBase):
     id: int
     material_id: int
     arrival_date: date
     received_by: int
     created_at: datetime
+    payments: list[MaterialPaymentResponse] = []
 
     model_config = {"from_attributes": True}
 

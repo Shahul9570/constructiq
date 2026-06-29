@@ -6,11 +6,12 @@ from sqlalchemy import func
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
-from app.models.material import Material, MaterialArrival, MaterialConsumption
+from app.models.material import Material, MaterialArrival, MaterialConsumption, MaterialPayment
 from app.schemas.material import (
     MaterialCreate, MaterialUpdate, MaterialResponse, MaterialList,
     MaterialArrivalCreate, MaterialArrivalUpdate, MaterialArrivalResponse,
     MaterialConsumptionCreate, MaterialConsumptionResponse,
+    MaterialPaymentCreate, MaterialPaymentResponse,
 )
 
 router = APIRouter()
@@ -139,6 +140,29 @@ def add_consumption(
     db.commit()
     db.refresh(consumption)
     return consumption
+
+
+@router.post("/arrivals/{arrival_id}/payments", response_model=MaterialPaymentResponse, status_code=201)
+def add_arrival_payment(
+    arrival_id: int,
+    data: MaterialPaymentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    arrival = db.query(MaterialArrival).filter(MaterialArrival.id == arrival_id).first()
+    if not arrival:
+        raise HTTPException(status_code=404, detail="Arrival not found")
+
+    payment = MaterialPayment(
+        **data.model_dump(),
+        arrival_id=arrival_id,
+        created_by=current_user.id,
+    )
+    arrival.paid_amount += data.amount
+    db.add(payment)
+    db.commit()
+    db.refresh(payment)
+    return payment
 
 
 @router.get("/{material_id}/arrivals", response_model=list[MaterialArrivalResponse])

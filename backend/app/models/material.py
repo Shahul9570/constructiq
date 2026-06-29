@@ -78,6 +78,21 @@ class MaterialArrival(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     material = relationship("Material", back_populates="arrivals")
+    payments = relationship("MaterialPayment", back_populates="arrival", cascade="all, delete-orphan")
+
+
+class MaterialPayment(Base):
+    __tablename__ = "material_payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    arrival_id = Column(Integer, ForeignKey("material_arrivals.id"), nullable=False)
+    amount = Column(Float, nullable=False)
+    payment_date = Column(Date, nullable=False)
+    notes = Column(Text)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    arrival = relationship("MaterialArrival", back_populates="payments")
 
 
 class MaterialConsumption(Base):

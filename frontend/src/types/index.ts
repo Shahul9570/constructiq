@@ -168,6 +168,17 @@ export interface MaterialArrival {
   received_by: number
   notes?: string
   created_at: string
+  payments: MaterialPayment[]
+}
+
+export interface MaterialPayment {
+  id: number
+  arrival_id: number
+  amount: number
+  payment_date: string
+  notes?: string
+  created_by: number
+  created_at: string
 }
 
 export interface MaterialConsumption {

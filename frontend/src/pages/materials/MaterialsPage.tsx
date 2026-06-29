@@ -55,6 +55,7 @@ export default function MaterialsPage() {
   const [expandedMaterial, setExpandedMaterial] = useState<number | null>(null)
   const [settleArrivalId, setSettleArrivalId] = useState<number | null>(null)
   const [settleAmount, setSettleAmount] = useState<number>(0)
+  const [historyArrivalId, setHistoryArrivalId] = useState<number | null>(null)
 
   const [createForm, setCreateForm] = useState({
     name: '',
@@ -155,14 +156,10 @@ export default function MaterialsPage() {
 
   const settleMutation = useMutation({
     mutationFn: () => {
-      // Find the arrival to get its current paid amount
-      let currentPaid = 0;
-      materials.forEach(m => {
-        const arrival = m.arrivals.find(a => a.id === settleArrivalId);
-        if (arrival) currentPaid = arrival.paid_amount;
-      });
-      return materialService.updateArrival(settleArrivalId!, {
-        paid_amount: currentPaid + Number(settleAmount),
+      return materialService.addPayment(settleArrivalId!, {
+        amount: Number(settleAmount),
+        payment_date: new Date().toISOString().split('T')[0],
+        notes: 'Manual payment settlement',
       })
     },
     onSuccess: () => {
@@ -457,17 +454,21 @@ export default function MaterialsPage() {
                                           )}
                                         </TableCell>
                                         <TableCell className="text-right">
+                                        <div className="flex justify-end gap-2">
+                                          <Button size="sm" variant="ghost" className="text-blue-600 h-8" onClick={() => setHistoryArrivalId(arrival.id)}>
+                                            History
+                                          </Button>
                                           {pending > 0 && (
-                                            <Button size="sm" variant="outline" onClick={() => setSettleArrivalId(arrival.id)}>
-                                              Settle Payment
+                                            <Button size="sm" variant="outline" className="h-8" onClick={() => setSettleArrivalId(arrival.id)}>
+                                              Pay
                                             </Button>
                                           )}
-                                        </TableCell>
-                                      </TableRow>
-                                    )
-                                  })}
-                                </TableBody>
-                              </Table>
+                                        </div>
+                                      </TableCell>
+                                    </TableRow>
+                                  )
+                                })}
+                              </TableBody>
                             ) : (
                               <p className="text-sm text-muted-foreground">No deliveries recorded yet.</p>
                             )}
@@ -832,6 +833,48 @@ export default function MaterialsPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={historyArrivalId !== null} onOpenChange={(open) => !open && setHistoryArrivalId(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Payment History</DialogTitle>
+            <DialogDescription>A log of all payments made for this delivery.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {historyArrivalId && (
+              (() => {
+                const arrival = materials.flatMap(m => m.arrivals).find(a => a.id === historyArrivalId)
+                if (!arrival || !arrival.payments || arrival.payments.length === 0) {
+                  return <p className="text-muted-foreground text-center py-4">No payments recorded yet.</p>
+                }
+                return (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Amount Paid</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {arrival.payments.map((payment) => (
+                        <TableRow key={payment.id}>
+                          <TableCell>{payment.payment_date}</TableCell>
+                          <TableCell className="text-right font-medium text-green-600">
+                            ${payment.amount.toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )
+              })()
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoryArrivalId(null)}>Close</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
