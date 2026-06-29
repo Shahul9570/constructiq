@@ -220,6 +220,7 @@ export interface CostRecord {
   description?: string
   amount: number
   date: string
+  status: 'pending' | 'approved' | 'rejected'
 }
 
 export interface Invoice {
