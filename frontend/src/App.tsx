@@ -69,8 +69,8 @@ export default function App() {
         {/* Daily Progress - everyone except accountant & client */}
         <Route path="daily-progress" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR]}><DailyProgressPage /></RequireRole>} />
         
-        {/* Financials - only admins, owners, and accountants */}
-        <Route path="financial" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT]}><FinancialPage /></RequireRole>} />
+        {/* Financials - admins, owners, PMs, and accountants */}
+        <Route path="financial" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.ACCOUNTANT]}><FinancialPage /></RequireRole>} />
         
         {/* Records - widely accessible */}
         <Route path="documents" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR, UserRole.ACCOUNTANT, UserRole.CLIENT]}><DocumentsPage /></RequireRole>} />
