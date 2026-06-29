@@ -1,3 +1,4 @@
+import os
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
@@ -13,7 +14,7 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
+    url = os.environ.get("DATABASE_URL", config.get_main_option("sqlalchemy.url")).replace("postgres://", "postgresql://", 1)
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -24,9 +25,15 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
+import os
+
 def run_migrations_online() -> None:
+    configuration = config.get_section(config.config_ini_section, {})
+    if os.environ.get("DATABASE_URL"):
+        configuration["sqlalchemy.url"] = os.environ.get("DATABASE_URL").replace("postgres://", "postgresql://", 1)
+        
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
