@@ -117,6 +117,20 @@ def update_labour_summary(
             if contractor:
                 contractor.paid_amount += (new_paid - old_paid)
                 contractor.pending_amount = contractor.contract_amount - contractor.paid_amount
+                
+                # If paid amount increased, log a payment
+                if new_paid > old_paid:
+                    from app.models.contractor import ContractorPayment, PaymentStatus
+                    payment = ContractorPayment(
+                        contractor_id=contractor.id,
+                        amount=new_paid - old_paid,
+                        payment_date=summary.date,
+                        payment_method="cash",
+                        status=PaymentStatus.PAID,
+                        notes=f"Updated payment from Daily Labour entry",
+                        created_by=current_user.id
+                    )
+                    db.add(payment)
 
     for key, value in update_data.items():
         setattr(summary, key, value)
