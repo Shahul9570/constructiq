@@ -151,12 +151,15 @@ def project_manager_dashboard(
         return {"error": "Project not found"}
 
     delays = 0
-    if project.expected_end_date and project.expected_end_date < date.today():
-        delays = (date.today() - project.expected_end_date).days
+    if project.expected_end_date:
+        end_date = project.expected_end_date.date() if hasattr(project.expected_end_date, 'date') else project.expected_end_date
+        if end_date < date.today():
+            delays = (date.today() - end_date).days
 
     total_cost = _get_project_total_cost(db, project_id)
+    budget = project.budget or 0.0
 
-    budget_utilization = (total_cost / project.budget * 100) if project.budget > 0 else 0
+    budget_utilization = (total_cost / budget * 100) if budget > 0 else 0
 
     weekly_logs = db.query(DailyWorkLog).filter(
         DailyWorkLog.project_id == project_id,
@@ -176,9 +179,9 @@ def project_manager_dashboard(
         "progress_percentage": project.progress_percentage,
         "delays_days": delays,
         "total_cost": total_cost,
-        "budget": project.budget,
+        "budget": budget,
         "budget_utilization": budget_utilization,
-        "is_over_budget": total_cost > project.budget,
+        "is_over_budget": total_cost > budget,
         "weekly_progress": weekly_progress,
         "total_workers": total_workers,
     }
@@ -214,7 +217,7 @@ def owner_dashboard(
     else:
         financial_projects = all_projects
 
-    total_budget = sum(p.budget for p in financial_projects)
+    total_budget = sum((p.budget or 0.0) for p in financial_projects)
     total_cost = sum(_get_project_total_cost(db, p.id) for p in financial_projects)
     overall_progress = sum(p.progress_percentage for p in financial_projects) / len(financial_projects) if financial_projects else 0
 
