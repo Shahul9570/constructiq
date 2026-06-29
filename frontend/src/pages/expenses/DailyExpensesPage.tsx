@@ -211,8 +211,8 @@ export default function DailyExpensesPage() {
                         <TableHead>Team / Contractor</TableHead>
                         <TableHead>Trade</TableHead>
                         <TableHead className="text-center">Workers</TableHead>
-                        <TableHead className="text-right">Daily Rate</TableHead>
-                        <TableHead className="text-right">Accrued Cost</TableHead>
+                        <TableHead className="text-right">Daily Cost</TableHead>
+                        <TableHead className="text-right">Total Pending Balance</TableHead>
                         <TableHead className="text-center">Status</TableHead>
                         <TableHead className="w-[200px]">Amount Paid Today</TableHead>
                       </TableRow>
@@ -221,6 +221,8 @@ export default function DailyExpensesPage() {
                       {labourItems.map((item) => {
                         const accruedCost = item.workers_count * item.daily_rate
                         const currentPaidValue = paidAmounts[item.id] !== undefined ? paidAmounts[item.id] : (item.paid_amount || 0)
+                        const contractor = contractors.find(c => c.id === item.contractor_id)
+                        const pendingBalance = contractor ? contractor.pending_amount : accruedCost - currentPaidValue
                         
                         return (
                           <TableRow key={item.id} className="border-slate-800 hover:bg-slate-800/30">
@@ -229,8 +231,10 @@ export default function DailyExpensesPage() {
                             </TableCell>
                             <TableCell className="capitalize">{item.trade}</TableCell>
                             <TableCell className="text-center">{item.workers_count}</TableCell>
-                            <TableCell className="text-right">${item.daily_rate.toLocaleString()}</TableCell>
-                            <TableCell className="text-right font-semibold text-orange-400">${accruedCost.toLocaleString()}</TableCell>
+                            <TableCell className="text-right">${accruedCost.toLocaleString()}</TableCell>
+                            <TableCell className="text-right font-semibold text-orange-400">
+                              ${pendingBalance.toLocaleString()}
+                            </TableCell>
                             <TableCell className="text-center">
                               <Badge 
                                 variant={item.verification_status === 'approved' ? 'default' : 'secondary'}
