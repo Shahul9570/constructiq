@@ -171,7 +171,8 @@ def project_manager_dashboard(
 
     total_workers = db.query(func.coalesce(func.sum(DailyLabourSummary.workers_count), 0)).filter(
         DailyLabourSummary.project_id == project_id,
-        DailyLabourSummary.verification_status == 'approved'
+        DailyLabourSummary.verification_status == 'approved',
+        DailyLabourSummary.date == date.today()
     ).scalar() or 0
 
     return {

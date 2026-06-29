@@ -332,7 +332,7 @@ function ProjectManagerDashboard({ projectId }: RoleSectionProps) {
         </StatCard>
         <StatCard
           icon={<Users className="h-5 w-5" />}
-          label="Total Workers"
+          label="Workers Today"
           value={String(data.total_workers)}
         />
       </div>
