@@ -38,6 +38,14 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
+        # Auto-stamp the database if daily_labour_summary exists to bypass the DuplicateTable error
+        from sqlalchemy import text
+        res = connection.execute(text("SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = 'daily_labour_summary');")).scalar()
+        if res:
+            connection.execute(text("CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(32) PRIMARY KEY);"))
+            connection.execute(text("INSERT INTO alembic_version (version_num) VALUES ('32917632ac02') ON CONFLICT DO NOTHING;"))
+            connection.commit()
+            
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
