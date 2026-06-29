@@ -12,7 +12,7 @@ from app.models.project import Project
 from app.schemas.financial import InvoiceCreate, InvoiceResponse, InvoiceUpdate
 from app.api.v1.dashboards import _get_project_total_cost
 
-router = APIRouter(prefix="/billing", tags=["billing"])
+router = APIRouter()
 
 # Only Admin, Owner, and Accountant can access these endpoints
 billing_roles = [UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT]
