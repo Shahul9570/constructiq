@@ -43,7 +43,12 @@ def run_migrations_online() -> None:
         res = connection.execute(text("SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = 'daily_labour_summary');")).scalar()
         if res:
             connection.execute(text("CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(32) PRIMARY KEY);"))
-            connection.execute(text("INSERT INTO alembic_version (version_num) VALUES ('32917632ac02') ON CONFLICT DO NOTHING;"))
+            count = connection.execute(text("SELECT COUNT(*) FROM alembic_version;")).scalar()
+            if count == 0:
+                connection.execute(text("INSERT INTO alembic_version (version_num) VALUES ('32917632ac02');"))
+            elif count > 1:
+                # If there are multiple rows, remove the older one to resolve multiple heads
+                connection.execute(text("DELETE FROM alembic_version WHERE version_num = '32917632ac02';"))
             connection.commit()
             
         context.configure(
