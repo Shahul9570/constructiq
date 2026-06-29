@@ -469,6 +469,7 @@ export default function MaterialsPage() {
                                   )
                                 })}
                               </TableBody>
+                            </Table>
                             ) : (
                               <p className="text-sm text-muted-foreground">No deliveries recorded yet.</p>
                             )}
