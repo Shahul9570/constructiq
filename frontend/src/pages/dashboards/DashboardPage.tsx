@@ -315,7 +315,7 @@ function ProjectManagerDashboard({ projectId }: RoleSectionProps) {
         <StatCard
           icon={<DollarSign className="h-5 w-5" />}
           label="Budget Utilization"
-          value={`${data.budget_utilization}%`}
+          value={`${Number(data.budget_utilization).toFixed(1)}%`}
           variant={data.is_over_budget ? 'destructive' : 'default'}
         >
           <Progress value={data.budget_utilization} className="mt-2" />
@@ -459,7 +459,7 @@ function OwnerDashboard({ projectId }: RoleSectionProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {data.budget_health_percentage}%
+              {Number(data.budget_health_percentage).toFixed(1)}%
             </div>
             <Progress value={data.budget_health_percentage} className="mt-2" />
           </CardContent>
@@ -512,7 +512,7 @@ function AccountantDashboard() {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {data.budget_health_percentage}%
+            {Number(data.budget_health_percentage).toFixed(1)}%
           </div>
           <Progress value={data.budget_health_percentage} className="mt-2" />
         </CardContent>
