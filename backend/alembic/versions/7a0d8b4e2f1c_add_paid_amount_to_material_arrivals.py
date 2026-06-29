@@ -15,7 +15,7 @@ branch_labels = None
 depends_on = None
 
 def upgrade():
-    op.add_column('material_arrivals', sa.Column('paid_amount', sa.Float(), nullable=True))
+    op.execute('ALTER TABLE material_arrivals ADD COLUMN IF NOT EXISTS paid_amount FLOAT')
     # Fill existing rows with 0.0 or invoice_amount (defaulting to 0.0 to be safe)
     op.execute("UPDATE material_arrivals SET paid_amount = 0.0 WHERE paid_amount IS NULL")
 
