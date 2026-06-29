@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   XCircle,
   IndianRupee,
+  Wallet,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuth } from '@/hooks/useAuth'
@@ -51,6 +52,8 @@ export default function LabourSummaryPage() {
   const [trades, setTrades] = useState<string[]>([])
   const [rejectLogId, setRejectLogId] = useState<number | null>(null)
   const [rejectRemarks, setRejectRemarks] = useState('')
+  const [paymentLogId, setPaymentLogId] = useState<number | null>(null)
+  const [paymentAmount, setPaymentAmount] = useState<string>('')
 
   const pid = Number(localStorage.getItem('selected_project_id')) || 0
 
@@ -117,6 +120,18 @@ export default function LabourSummaryPage() {
       setRejectRemarks('')
     },
     onError: () => toast.error('Failed to verify labour entry'),
+  })
+
+  const updatePaymentMutation = useMutation({
+    mutationFn: ({ id, paid_amount }: { id: number, paid_amount: number }) =>
+      labourService.update(id, { paid_amount }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['labour'] })
+      toast.success('Payment updated successfully')
+      setPaymentLogId(null)
+      setPaymentAmount('')
+    },
+    onError: () => toast.error('Failed to update payment'),
   })
 
   const canManage = ['site_engineer', 'project_manager', 'company_owner'].includes(user?.role || '')
@@ -216,6 +231,8 @@ export default function LabourSummaryPage() {
                 <TableHead className="text-right font-semibold">Workers</TableHead>
                 <TableHead className="text-right font-semibold">Daily Rate</TableHead>
                 <TableHead className="text-right font-semibold">Total Cost</TableHead>
+                <TableHead className="text-right font-semibold">Paid</TableHead>
+                <TableHead className="text-right font-semibold">Pending</TableHead>
                 <TableHead className="font-semibold">Contractor</TableHead>
                 <TableHead className="font-semibold">Remarks</TableHead>
                 {canManage && <TableHead className="text-right font-semibold">Actions</TableHead>}
@@ -250,6 +267,18 @@ export default function LabourSummaryPage() {
                       <span>{(l.workers_count * l.daily_rate).toFixed(2)}</span>
                     </div>
                   </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1 text-muted-foreground">
+                      <IndianRupee className="h-3 w-3" />
+                      <span>{(l.paid_amount || 0).toFixed(2)}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1 text-orange-500">
+                      <IndianRupee className="h-3 w-3" />
+                      <span>{((l.workers_count * l.daily_rate) - (l.paid_amount || 0)).toFixed(2)}</span>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-muted-foreground">{getContractorName(l.contractor_id)}</TableCell>
                   <TableCell className="text-muted-foreground max-w-[200px] truncate">
                     {l.remarks || <span className="text-muted-foreground/40">—</span>}
@@ -276,6 +305,17 @@ export default function LabourSummaryPage() {
                             <XCircle className="h-4 w-4" />
                           </Button>
                         </div>
+                      )}
+                      {l.verification_status === 'approved' && !l.contractor_id && (
+                        <Button
+                          variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 h-8"
+                          onClick={() => {
+                            setPaymentLogId(l.id)
+                            setPaymentAmount(((l.workers_count * l.daily_rate) - (l.paid_amount || 0)).toString())
+                          }}
+                        >
+                          <Wallet className="h-4 w-4 mr-1" /> Pay
+                        </Button>
                       )}
                     </TableCell>
                   )}
@@ -380,6 +420,37 @@ export default function LabourSummaryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!paymentLogId} onOpenChange={(open) => !open && setPaymentLogId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>Enter the total amount paid so far for this direct labour entry.</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="payment-amount">Total Paid Amount (₹)</Label>
+            <Input 
+              id="payment-amount" 
+              type="number"
+              min="0"
+              step="0.01"
+              value={paymentAmount} 
+              onChange={(e) => setPaymentAmount(e.target.value)} 
+              placeholder="e.g., 1000"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentLogId(null)}>Cancel</Button>
+            <Button 
+              disabled={!paymentAmount || updatePaymentMutation.isPending}
+              onClick={() => paymentLogId && updatePaymentMutation.mutate({ id: paymentLogId, paid_amount: Number(paymentAmount) })}
+            >
+              Save Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -400,6 +471,8 @@ function LabourSkeleton() {
             <Skeleton className="h-4 w-12 ml-auto" />
             <Skeleton className="h-4 w-20" />
             <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-4 w-20" />
             <Skeleton className="h-4 w-28" />
           </div>
         ))}
