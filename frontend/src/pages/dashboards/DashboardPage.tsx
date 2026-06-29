@@ -720,9 +720,9 @@ function ClientDashboard() {
                 <span className="text-muted-foreground">Next Payment Due</span>
                 <span className="font-semibold text-orange-500">${(data.total_pending || 0).toLocaleString()}</span>
               </div>
-              
+
               <Progress value={data.budget ? ((data.total_paid || 0) / data.budget) * 100 : 0} className="h-2" />
-              
+
               {data.invoices && data.invoices.length > 0 && (
                 <div className="pt-4 mt-4 border-t space-y-3">
                   <p className="text-sm font-medium">Recent Invoices</p>
@@ -987,30 +987,27 @@ function StatCard({
   return (
     <AnimatedCard
       index={index}
-      className={`stat-card group ${
-        isDestructive
+      className={`stat-card group ${isDestructive
           ? 'border-red-500/20 dark:border-red-500/20'
           : 'border-border/50'
-      }`}
+        }`}
     >
       <CardHeader className="flex flex-row items-start justify-between pb-3">
         <CardTitle className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
           {label}
         </CardTitle>
         <div
-          className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:scale-110 ${
-            isDestructive
+          className={`h-10 w-10 rounded-xl flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:scale-110 ${isDestructive
               ? 'bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400'
               : 'bg-primary/10 text-primary shadow-primary/10'
-          }`}
+            }`}
         >
           {icon}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className={`text-3xl font-bold tracking-tight mb-1 ${
-          isDestructive ? 'text-red-600 dark:text-red-400' : ''
-        }`}>{value}</div>
+        <div className={`text-3xl font-bold tracking-tight mb-1 ${isDestructive ? 'text-red-600 dark:text-red-400' : ''
+          }`}>{value}</div>
         {subtext && (
           <p className="text-xs text-muted-foreground">{subtext}</p>
         )}
