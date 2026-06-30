@@ -11,7 +11,7 @@ from app.core.config import settings
 from app.models.user import User, UserRole
 from app.schemas.user import (
     UserCreate, UserResponse, UserLogin, TokenResponse,
-    RefreshTokenRequest, PasswordChange
+    RefreshTokenRequest, PasswordChange, UserUpdate
 )
 
 router = APIRouter()
@@ -133,6 +133,21 @@ def refresh(data: RefreshTokenRequest, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+def update_me(
+    data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    update_data = data.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(current_user, field, value)
+    
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 
