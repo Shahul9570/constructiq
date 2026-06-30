@@ -188,7 +188,7 @@ def delete_project(
     from app.models.contractor import Contractor
     from app.models.financial import Invoice, CostRecord
     from app.models.workforce import DailyLabourSummary
-    from app.models.daily_progress import DailyProgress
+    from app.models.daily_progress import DailyWorkLog
     from app.models.equipment import EquipmentUsage, Equipment
     from app.models.material import MaterialArrival
     from app.models.document import Document
@@ -201,7 +201,7 @@ def delete_project(
     db.query(EquipmentUsage).filter(EquipmentUsage.project_id == project_id).delete(synchronize_session=False)
     db.query(Invoice).filter(Invoice.project_id == project_id).delete(synchronize_session=False)
     db.query(CostRecord).filter(CostRecord.project_id == project_id).delete(synchronize_session=False)
-    db.query(DailyProgress).filter(DailyProgress.project_id == project_id).delete(synchronize_session=False)
+    db.query(DailyWorkLog).filter(DailyWorkLog.project_id == project_id).delete(synchronize_session=False)
     db.query(MaterialArrival).filter(MaterialArrival.project_id == project_id).delete(synchronize_session=False)
     db.query(Document).filter(Document.project_id == project_id).delete(synchronize_session=False)
     db.query(Photo).filter(Photo.project_id == project_id).delete(synchronize_session=False)
