@@ -226,7 +226,7 @@ def submit_client_payment(
     )
 
 
-@router.post("/invoices/{invoice_id}/verify-payment", response_model=InvoiceResponse)
+@router.post("/verify-payment/{invoice_id}", response_model=InvoiceResponse)
 def verify_client_payment(
     invoice_id: int,
     db: Session = Depends(get_db),

@@ -58,7 +58,7 @@ export const billingService = {
   },
 
   verifyPayment: async (invoiceId: number): Promise<Invoice> => {
-    const response = await api.post(`/billing/invoices/${invoiceId}/verify-payment`)
+    const response = await api.post(`/billing/verify-payment/${invoiceId}`)
     return response.data
   }
 }
