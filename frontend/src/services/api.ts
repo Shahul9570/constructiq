@@ -48,7 +48,19 @@ api.interceptors.response.use(
       }
     }
 
-    const message = (error.response?.data as any)?.detail || error.message
+    let message = error.message
+    const detail = (error.response?.data as any)?.detail
+    
+    if (detail) {
+      if (typeof detail === 'string') {
+        message = detail
+      } else if (Array.isArray(detail)) {
+        message = detail.map(d => d.msg).join(', ')
+      } else {
+        message = JSON.stringify(detail)
+      }
+    }
+
     if (error.response?.status !== 401) {
       toast.error(message)
     }
