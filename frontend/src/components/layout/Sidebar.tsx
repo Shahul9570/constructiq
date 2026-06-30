@@ -122,6 +122,12 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
   if (role === 'super_admin' || role === 'company_owner') {
     filteredNavGroups = role === 'super_admin' ? adminNavGroups : navGroups;
+    if (role === 'company_owner') {
+      filteredNavGroups = filteredNavGroups.map(group => ({
+        ...group,
+        items: group.items.filter(item => item.label !== 'Client Portal')
+      })).filter(group => group.items.length > 0);
+    }
   } else if (role && allowedItemsPerRole[role]) {
     const allowed = allowedItemsPerRole[role];
     filteredNavGroups = navGroups.map(group => ({
