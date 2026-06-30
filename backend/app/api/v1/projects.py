@@ -190,7 +190,7 @@ def delete_project(
     from app.models.workforce import DailyLabourSummary
     from app.models.daily_progress import DailyWorkLog
     from app.models.equipment import EquipmentUsage, Equipment
-    from app.models.material import MaterialArrival
+    from app.models.material import Material
     from app.models.document import Document
     from app.models.photo import Photo
 
@@ -202,17 +202,20 @@ def delete_project(
     db.query(Invoice).filter(Invoice.project_id == project_id).delete(synchronize_session=False)
     db.query(CostRecord).filter(CostRecord.project_id == project_id).delete(synchronize_session=False)
     db.query(DailyWorkLog).filter(DailyWorkLog.project_id == project_id).delete(synchronize_session=False)
-    db.query(MaterialArrival).filter(MaterialArrival.project_id == project_id).delete(synchronize_session=False)
     db.query(Document).filter(Document.project_id == project_id).delete(synchronize_session=False)
     db.query(Photo).filter(Photo.project_id == project_id).delete(synchronize_session=False)
     
     # 3. Delete labour summaries (depends on contractor_id but no children)
     db.query(DailyLabourSummary).filter(DailyLabourSummary.project_id == project_id).delete(synchronize_session=False)
     
-    # 4. Delete contractors using ORM so it cascades to ContractorPayment
+    # 4. Delete contractors and materials using ORM so it cascades to their children
     contractors = db.query(Contractor).filter(Contractor.project_id == project_id).all()
     for c in contractors:
         db.delete(c)
+        
+    materials = db.query(Material).filter(Material.project_id == project_id).all()
+    for m in materials:
+        db.delete(m)
 
     db.delete(project)
     db.commit()
