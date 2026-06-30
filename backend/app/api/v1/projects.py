@@ -185,6 +185,35 @@ def delete_project(
     if current_user.role != UserRole.SUPER_ADMIN and project.created_by != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to delete this project")
         
+    from app.models.contractor import Contractor
+    from app.models.financial import Invoice, CostRecord
+    from app.models.workforce import DailyLabourSummary
+    from app.models.daily_progress import DailyProgress
+    from app.models.equipment import EquipmentUsage, Equipment
+    from app.models.material import MaterialArrival
+    from app.models.document import Document
+    from app.models.photo import Photo
+
+    # 1. Clear equipment assignments to this project
+    db.query(Equipment).filter(Equipment.project_id == project_id).update({"project_id": None}, synchronize_session=False)
+    
+    # 2. Delete child records that don't have further dependencies
+    db.query(EquipmentUsage).filter(EquipmentUsage.project_id == project_id).delete(synchronize_session=False)
+    db.query(Invoice).filter(Invoice.project_id == project_id).delete(synchronize_session=False)
+    db.query(CostRecord).filter(CostRecord.project_id == project_id).delete(synchronize_session=False)
+    db.query(DailyProgress).filter(DailyProgress.project_id == project_id).delete(synchronize_session=False)
+    db.query(MaterialArrival).filter(MaterialArrival.project_id == project_id).delete(synchronize_session=False)
+    db.query(Document).filter(Document.project_id == project_id).delete(synchronize_session=False)
+    db.query(Photo).filter(Photo.project_id == project_id).delete(synchronize_session=False)
+    
+    # 3. Delete labour summaries (depends on contractor_id but no children)
+    db.query(DailyLabourSummary).filter(DailyLabourSummary.project_id == project_id).delete(synchronize_session=False)
+    
+    # 4. Delete contractors using ORM so it cascades to ContractorPayment
+    contractors = db.query(Contractor).filter(Contractor.project_id == project_id).all()
+    for c in contractors:
+        db.delete(c)
+
     db.delete(project)
     db.commit()
 
