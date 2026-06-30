@@ -103,7 +103,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       'Contractors', 'Daily Expenses', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
     ],
     accountant: [
-      'Dashboard', 'Projects', 'Daily Expenses', 'Financial', 'Client Billing', 'Documents', 'Photos', 'Reports', 'Settings'
+      'Dashboard', 'Projects', 'Labour', 'Materials', 'Equipment', 'Contractors',
+      'Daily Expenses', 'Financial', 'Client Billing', 'Documents', 'Photos', 'Reports', 'Settings'
     ],
     site_engineer: [
       'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 

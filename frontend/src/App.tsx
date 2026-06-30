@@ -61,11 +61,11 @@ export default function App() {
         {/* Only admins/owners/managers can view users */}
         <Route path="users" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER]}><UsersPage /></RequireRole>} />
         
-        {/* Operations - exclude contractors & accountants */}
-        <Route path="labour" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><LabourSummaryPage /></RequireRole>} />
-        <Route path="contractors" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><ContractorsPage /></RequireRole>} />
-        <Route path="materials" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><MaterialsPage /></RequireRole>} />
-        <Route path="equipment" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><EquipmentPage /></RequireRole>} />
+        {/* Operations - exclude contractors */}
+        <Route path="labour" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT]}><LabourSummaryPage /></RequireRole>} />
+        <Route path="contractors" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT]}><ContractorsPage /></RequireRole>} />
+        <Route path="materials" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT]}><MaterialsPage /></RequireRole>} />
+        <Route path="equipment" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT]}><EquipmentPage /></RequireRole>} />
         <Route path="daily-expenses" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT]}><DailyExpensesPage /></RequireRole>} />
         
         {/* Daily Progress - everyone except accountant & client */}
