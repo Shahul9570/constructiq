@@ -46,7 +46,7 @@ class Equipment(Base):
     model_number = Column(String(100))
     serial_number = Column(String(100))
     status = Column(SAEnum(EquipmentStatus), default=EquipmentStatus.AVAILABLE)
-    ownership_type = Column(SAEnum(OwnershipType), default=OwnershipType.OWNED)
+    ownership_type = Column(SAEnum(OwnershipType, values_callable=lambda x: [e.value for e in x]), default=OwnershipType.OWNED)
     vendor_name = Column(String(255), nullable=True)
     purchase_date = Column(Date)
     purchase_cost = Column(Float, default=0.0)
