@@ -139,6 +139,22 @@ def record_usage(
     equipment.status = "in_use"
 
     db.add(usage)
+    
+    # Automatically generate a CostRecord for Rented Equipment
+    if equipment.ownership_type.value == "rented" and equipment.hourly_rate > 0:
+        from app.models.financial import CostRecord, CostCategory
+        cost_amount = data.hours_used * equipment.hourly_rate
+        if cost_amount > 0:
+            cost_record = CostRecord(
+                project_id=project_id,
+                category=CostCategory.EQUIPMENT,
+                description=f"Rented Equipment Usage: {equipment.name} ({data.hours_used} hours)",
+                amount=cost_amount,
+                date=data.date,
+                created_by=current_user.id
+            )
+            db.add(cost_record)
+
     db.commit()
     db.refresh(usage)
     return usage

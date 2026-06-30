@@ -196,6 +196,8 @@ export interface Equipment {
   project_id: number
   name: string
   equipment_type: string
+  ownership_type?: string
+  vendor_name?: string
   model_number?: string
   status: string
   total_hours_used: number

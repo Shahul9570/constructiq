@@ -28,6 +28,8 @@ class EquipmentUsageResponse(EquipmentUsageBase):
 class EquipmentBase(BaseModel):
     name: str
     equipment_type: str = "other"
+    ownership_type: str = "owned"
+    vendor_name: Optional[str] = None
     model_number: Optional[str] = None
     serial_number: Optional[str] = None
     purchase_date: Optional[date] = None
@@ -44,6 +46,8 @@ class EquipmentCreate(EquipmentBase):
 class EquipmentUpdate(BaseModel):
     name: Optional[str] = None
     equipment_type: Optional[str] = None
+    ownership_type: Optional[str] = None
+    vendor_name: Optional[str] = None
     model_number: Optional[str] = None
     serial_number: Optional[str] = None
     status: Optional[str] = None

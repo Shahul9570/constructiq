@@ -61,6 +61,8 @@ export default function EquipmentPage() {
     equipment_type: '',
     model_number: '',
     status: 'available',
+    ownership_type: 'owned',
+    vendor_name: '',
     hourly_rate: 0,
     operator_name: '',
     project_id: '',
@@ -99,6 +101,8 @@ export default function EquipmentPage() {
       equipmentService.create({
         name: form.name,
         equipment_type: form.equipment_type,
+        ownership_type: form.ownership_type,
+        vendor_name: form.ownership_type === 'rented' ? form.vendor_name : undefined,
         model_number: form.model_number || undefined,
         status: form.status,
         hourly_rate: Number(form.hourly_rate),
@@ -119,6 +123,8 @@ export default function EquipmentPage() {
       equipmentService.update(selectedEquipment!.id, {
         name: form.name,
         equipment_type: form.equipment_type,
+        ownership_type: form.ownership_type,
+        vendor_name: form.ownership_type === 'rented' ? form.vendor_name : undefined,
         model_number: form.model_number || undefined,
         status: form.status,
         hourly_rate: Number(form.hourly_rate),
@@ -292,7 +298,16 @@ export default function EquipmentPage() {
             <TableBody>
               {equipmentList.map((eq: any) => (
                 <TableRow key={eq.id}>
-                  <TableCell className="font-medium">{eq.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col gap-1">
+                      <span>{eq.name}</span>
+                      {eq.ownership_type === 'rented' && (
+                        <Badge variant="outline" className="w-fit text-[10px] bg-orange-500/10 text-orange-500 border-orange-500/20">
+                          Rented from {eq.vendor_name || 'Vendor'}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="capitalize">{eq.equipment_type}</TableCell>
                   <TableCell className="text-muted-foreground">{eq.model_number || '-'}</TableCell>
                   <TableCell className="text-muted-foreground">
@@ -340,6 +355,8 @@ export default function EquipmentPage() {
                           setForm({
                             name: eq.name,
                             equipment_type: eq.equipment_type,
+                            ownership_type: eq.ownership_type || 'owned',
+                            vendor_name: eq.vendor_name || '',
                             model_number: eq.model_number || '',
                             status: eq.status,
                             hourly_rate: eq.hourly_rate || 0,
@@ -404,6 +421,26 @@ export default function EquipmentPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="eq-ownership">Ownership</Label>
+                  <Select required value={form.ownership_type} onValueChange={(v) => setForm({ ...form, ownership_type: v })}>
+                    <SelectTrigger id="eq-ownership">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="owned">Owned</SelectItem>
+                      <SelectItem value="rented">Rented</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.ownership_type === 'rented' && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="eq-vendor">Vendor Name *</Label>
+                    <Input id="eq-vendor" required value={form.vendor_name} onChange={(e) => setForm({ ...form, vendor_name: e.target.value })} />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
@@ -496,6 +533,26 @@ export default function EquipmentPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-eq-ownership">Ownership</Label>
+                  <Select required value={form.ownership_type} onValueChange={(v) => setForm({ ...form, ownership_type: v })}>
+                    <SelectTrigger id="edit-eq-ownership">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="owned">Owned</SelectItem>
+                      <SelectItem value="rented">Rented</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.ownership_type === 'rented' && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="edit-eq-vendor">Vendor Name *</Label>
+                    <Input id="edit-eq-vendor" required value={form.vendor_name} onChange={(e) => setForm({ ...form, vendor_name: e.target.value })} />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">

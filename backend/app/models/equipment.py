@@ -29,6 +29,12 @@ class EquipmentStatus(str, enum.Enum):
     OUT_OF_SERVICE = "out_of_service"
 
 
+class OwnershipType(str, enum.Enum):
+    OWNED = "owned"
+    RENTED = "rented"
+
+
+
 class Equipment(Base):
     __tablename__ = "equipment"
 
@@ -40,6 +46,8 @@ class Equipment(Base):
     model_number = Column(String(100))
     serial_number = Column(String(100))
     status = Column(SAEnum(EquipmentStatus), default=EquipmentStatus.AVAILABLE)
+    ownership_type = Column(SAEnum(OwnershipType), default=OwnershipType.OWNED)
+    vendor_name = Column(String(255), nullable=True)
     purchase_date = Column(Date)
     purchase_cost = Column(Float, default=0.0)
     hourly_rate = Column(Float, default=0.0)
