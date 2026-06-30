@@ -47,6 +47,7 @@ class EquipmentUpdate(BaseModel):
     model_number: Optional[str] = None
     serial_number: Optional[str] = None
     status: Optional[str] = None
+    project_id: Optional[int] = None
     purchase_date: Optional[date] = None
     purchase_cost: Optional[float] = None
     hourly_rate: Optional[float] = None
