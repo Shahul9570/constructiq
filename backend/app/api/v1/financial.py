@@ -440,7 +440,7 @@ def submit_payment(
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
         
-    invoice.status = "pending_verification"
+    invoice.status = "PENDING_VERIFICATION"
     invoice.payment_method = data.payment_method
     if data.notes:
         existing_notes = invoice.notes or ""

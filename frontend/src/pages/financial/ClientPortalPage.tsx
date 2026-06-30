@@ -80,9 +80,9 @@ export default function ClientPortalPage() {
   }
 
   // Calculate totals
-  const totalDue = invoices?.filter(i => i.status !== 'paid' && i.status !== 'pending_verification').reduce((acc, curr) => acc + curr.total_amount, 0) || 0
-  const totalPending = invoices?.filter(i => i.status === 'pending_verification').reduce((acc, curr) => acc + curr.total_amount, 0) || 0
-  const totalPaid = invoices?.filter(i => i.status === 'paid').reduce((acc, curr) => acc + curr.total_amount, 0) || 0
+  const totalDue = invoices?.filter(i => i.status !== 'PAID' && i.status !== 'PENDING_VERIFICATION').reduce((acc, curr) => acc + curr.total_amount, 0) || 0
+  const totalPending = invoices?.filter(i => i.status === 'PENDING_VERIFICATION').reduce((acc, curr) => acc + curr.total_amount, 0) || 0
+  const totalPaid = invoices?.filter(i => i.status === 'PAID').reduce((acc, curr) => acc + curr.total_amount, 0) || 0
 
   return (
     <div className="space-y-6">
@@ -165,17 +165,17 @@ export default function ClientPortalPage() {
                       <TableCell>{inv.due_date || '-'}</TableCell>
                       <TableCell className="text-center">
                         <Badge 
-                          variant={inv.status === 'paid' ? 'default' : inv.status === 'pending_verification' ? 'secondary' : 'destructive'} 
-                          className={`capitalize ${inv.status === 'pending_verification' ? 'bg-blue-500/20 text-blue-400' : ''}`}
+                          variant={inv.status === 'PAID' ? 'default' : inv.status === 'PENDING_VERIFICATION' ? 'secondary' : 'destructive'} 
+                          className={`capitalize ${inv.status === 'PENDING_VERIFICATION' ? 'bg-blue-500/20 text-blue-400' : ''}`}
                         >
-                          {inv.status.replace('_', ' ')}
+                          {inv.status.replace(/_/g, ' ').toLowerCase()}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         ${inv.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right">
-                        {inv.status !== 'paid' && inv.status !== 'pending_verification' && (
+                        {inv.status !== 'PAID' && inv.status !== 'PENDING_VERIFICATION' && (
                           <Button 
                             size="sm"
                             className="bg-emerald-600 hover:bg-emerald-700"

@@ -72,7 +72,7 @@ export default function ClientBillingPage() {
         issue_date: invoiceForm.issue_date,
         due_date: invoiceForm.due_date || undefined,
         notes: invoiceForm.notes,
-        status: 'draft',
+        status: 'DRAFT',
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing-summary'] })
@@ -92,7 +92,7 @@ export default function ClientBillingPage() {
 
   const markPaidMutation = useMutation({
     mutationFn: (invoiceId: number) =>
-      billingService.updateInvoice(invoiceId, { status: 'paid', paid_date: format(new Date(), 'yyyy-MM-dd') }),
+      billingService.updateInvoice(invoiceId, { status: 'PAID', paid_date: format(new Date(), 'yyyy-MM-dd') }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing-summary'] })
       queryClient.invalidateQueries({ queryKey: ['client-invoices'] })
@@ -209,17 +209,17 @@ export default function ClientBillingPage() {
                       <TableCell>{inv.due_date || '-'}</TableCell>
                       <TableCell className="text-center">
                         <Badge 
-                          variant={inv.status === 'paid' ? 'default' : inv.status === 'draft' || inv.status === 'sent' ? 'secondary' : 'destructive'} 
-                          className={`capitalize ${inv.status === 'pending_verification' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : ''}`}
+                          variant={inv.status === 'PAID' ? 'default' : inv.status === 'DRAFT' || inv.status === 'SENT' ? 'secondary' : 'destructive'} 
+                          className={`capitalize ${inv.status === 'PENDING_VERIFICATION' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : ''}`}
                         >
-                          {inv.status.replace('_', ' ')}
+                          {inv.status.replace(/_/g, ' ').toLowerCase()}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-semibold text-emerald-400">
                         ${inv.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right">
-                        {inv.status === 'pending_verification' && (
+                        {inv.status === 'PENDING_VERIFICATION' && (
                           <Button 
                             variant="default" 
                             size="sm"
@@ -230,7 +230,7 @@ export default function ClientBillingPage() {
                             Verify Payment
                           </Button>
                         )}
-                        {inv.status !== 'paid' && inv.status !== 'pending_verification' && (
+                        {inv.status !== 'PAID' && inv.status !== 'PENDING_VERIFICATION' && (
                           <Button 
                             variant="outline" 
                             size="sm"
