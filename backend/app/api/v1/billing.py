@@ -224,3 +224,39 @@ def submit_client_payment(
         file_url=invoice.file_url, created_by=invoice.created_by, created_at=invoice.created_at,
         updated_at=invoice.updated_at or datetime.now()
     )
+
+
+@router.post("/invoices/{invoice_id}/verify-payment", response_model=InvoiceResponse)
+def verify_client_payment(
+    invoice_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(
+        UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT
+    )),
+):
+    """Accountant/Owner verifies a client's submitted payment and marks it as PAID."""
+    invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    from sqlalchemy import text
+    db.execute(
+        text(
+            "UPDATE invoices SET status='PAID', paid_date=CURRENT_DATE, updated_at=now() WHERE id=:id"
+        ),
+        {"id": invoice_id}
+    )
+    db.commit()
+    db.refresh(invoice)
+
+    return InvoiceResponse(
+        id=invoice.id, project_id=invoice.project_id, invoice_number=invoice.invoice_number,
+        invoice_type=invoice.invoice_type.value if hasattr(invoice.invoice_type, 'value') else str(invoice.invoice_type),
+        vendor_name=invoice.vendor_name, total_amount=invoice.total_amount, amount=invoice.amount,
+        tax_amount=invoice.tax_amount, issue_date=invoice.issue_date, due_date=invoice.due_date,
+        status=invoice.status.value if hasattr(invoice.status, 'value') else str(invoice.status),
+        paid_date=invoice.paid_date, payment_method=invoice.payment_method, notes=invoice.notes,
+        file_url=invoice.file_url, created_by=invoice.created_by, created_at=invoice.created_at,
+        updated_at=invoice.updated_at or datetime.now()
+    )
+

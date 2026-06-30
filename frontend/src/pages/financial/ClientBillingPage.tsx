@@ -99,6 +99,14 @@ export default function ClientBillingPage() {
     },
   })
 
+  const verifyPaymentMutation = useMutation({
+    mutationFn: (invoiceId: number) => billingService.verifyPayment(invoiceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['billing-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['client-invoices'] })
+    },
+  })
+
   if (!selectedProjectNum) {
     return (
       <div className="flex flex-col items-center justify-center py-12 space-y-4">
@@ -224,10 +232,10 @@ export default function ClientBillingPage() {
                             variant="default" 
                             size="sm"
                             className="bg-blue-600 hover:bg-blue-700"
-                            onClick={() => markPaidMutation.mutate(inv.id)}
-                            disabled={markPaidMutation.isPending}
+                            onClick={() => verifyPaymentMutation.mutate(inv.id)}
+                            disabled={verifyPaymentMutation.isPending}
                           >
-                            Verify Payment
+                            ✓ Confirm Payment
                           </Button>
                         )}
                         {inv.status !== 'PAID' && inv.status !== 'PENDING_VERIFICATION' && (
