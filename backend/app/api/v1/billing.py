@@ -9,6 +9,7 @@ from app.core.security import get_current_user, require_roles
 from app.models.user import User, UserRole
 from app.models.financial import Invoice, InvoiceType, InvoiceStatus
 from app.models.project import Project
+from app.models.notification import Notification, NotificationType
 from app.schemas.financial import InvoiceCreate, InvoiceResponse, InvoiceUpdate, SubmitPaymentRequest
 from app.api.v1.dashboards import _get_project_total_cost
 
@@ -214,6 +215,22 @@ def submit_client_payment(
     db.commit()
     db.refresh(invoice)
     
+    # Send notification to Owner and Accountants of the same company
+    project = db.query(Project).filter(Project.id == invoice.project_id).first()
+    if project and project.company_id:
+        admins = db.query(User).filter(
+            User.company_code == current_user.company_code,
+            User.role.in_([UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT])
+        ).all()
+        for admin in admins:
+            db.add(Notification(
+                user_id=admin.id,
+                type=NotificationType.PAYMENT_SUBMITTED,
+                message=f"Payment submitted for Invoice #{invoice.invoice_number} by client.",
+                invoice_id=invoice.id
+            ))
+        db.commit()
+    
     return InvoiceResponse(
         id=invoice.id, project_id=invoice.project_id, invoice_number=invoice.invoice_number,
         invoice_type=invoice.invoice_type.value if hasattr(invoice.invoice_type, 'value') else str(invoice.invoice_type),
@@ -248,6 +265,17 @@ def verify_client_payment(
     )
     db.commit()
     db.refresh(invoice)
+
+    # Send notification to Client
+    project = db.query(Project).filter(Project.id == invoice.project_id).first()
+    if project and project.client_id:
+        db.add(Notification(
+            user_id=project.client_id,
+            type=NotificationType.PAYMENT_VERIFIED,
+            message=f"Payment verified and accepted for Invoice #{invoice.invoice_number}.",
+            invoice_id=invoice.id
+        ))
+        db.commit()
 
     return InvoiceResponse(
         id=invoice.id, project_id=invoice.project_id, invoice_number=invoice.invoice_number,

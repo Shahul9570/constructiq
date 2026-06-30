@@ -8,6 +8,7 @@ from app.models.daily_progress import DailyWorkLog
 from app.models.financial import CostRecord, Invoice
 from app.models.document import Document
 from app.models.photo import Photo
+from app.models.notification import Notification
 
 __all__ = [
     "User",
@@ -27,4 +28,5 @@ __all__ = [
     "Invoice",
     "Document",
     "Photo",
+    "Notification",
 ]

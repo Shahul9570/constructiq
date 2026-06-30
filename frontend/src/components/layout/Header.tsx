@@ -12,6 +12,7 @@ import {
 import { Menu, User, Settings, LogOut, Bell, Search, ChevronDown } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { ProjectSwitcher } from './ProjectSwitcher'
+import { NotificationBell } from './NotificationBell'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -89,14 +90,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       </div>
 
       {/* Bell */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="relative rounded-xl text-slate-400 hover:text-white hover:bg-slate-800"
-      >
-        <Bell className="h-5 w-5" />
-        <span className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-orange-500 shadow-[0_0_6px_rgba(249,115,22,0.7)]" />
-      </Button>
+      <NotificationBell />
 
       {/* User menu */}
       <DropdownMenu>

@@ -395,3 +395,20 @@ export interface PaginatedResponse<T> {
   page: number
   size: number
 }
+
+export enum NotificationType {
+  PAYMENT_SUBMITTED = 'payment_submitted',
+  PAYMENT_VERIFIED = 'payment_verified',
+  INVOICE_OVERDUE = 'invoice_overdue',
+  INVOICE_PENDING = 'invoice_pending',
+}
+
+export interface Notification {
+  id: number
+  user_id: number
+  type: NotificationType
+  message: string
+  is_read: boolean
+  invoice_id?: number
+  created_at: string
+}
