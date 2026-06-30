@@ -203,11 +203,11 @@ def submit_client_payment(
     if data.notes:
         notes_val = f"{notes_val}\n[Client Payment Submitted]: {data.notes}".strip()
 
-    # Use raw SQL to bypass SQLAlchemy enum name vs value serialization issue
+    # Use raw SQL to guarantee correct uppercase enum value matching the DB
     from sqlalchemy import text
     db.execute(
         text(
-            "UPDATE invoices SET status='pending_verification', payment_method=:pm, notes=:notes, updated_at=now() WHERE id=:id"
+            "UPDATE invoices SET status='PENDING_VERIFICATION', payment_method=:pm, notes=:notes, updated_at=now() WHERE id=:id"
         ),
         {"pm": data.payment_method, "notes": notes_val, "id": invoice_id}
     )

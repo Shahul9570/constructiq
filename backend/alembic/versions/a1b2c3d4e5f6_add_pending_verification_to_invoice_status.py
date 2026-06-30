@@ -16,7 +16,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Add 'pending_verification' to the invoicestatus enum in PostgreSQL
-    op.execute("ALTER TYPE invoicestatus ADD VALUE IF NOT EXISTS 'pending_verification'")
+    op.execute("ALTER TYPE invoicestatus ADD VALUE IF NOT EXISTS 'PENDING_VERIFICATION'")
 
 
 def downgrade() -> None:

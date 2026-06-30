@@ -19,21 +19,21 @@ class CostCategory(str, enum.Enum):
 
 
 class InvoiceType(str, enum.Enum):
-    MATERIAL = "material"
-    CONTRACTOR = "contractor"
-    EQUIPMENT = "equipment"
-    LABOUR = "labour"
-    CLIENT = "client"
-    OTHER = "other"
+    MATERIAL = "MATERIAL"
+    CONTRACTOR = "CONTRACTOR"
+    EQUIPMENT = "EQUIPMENT"
+    LABOUR = "LABOUR"
+    CLIENT = "CLIENT"
+    OTHER = "OTHER"
 
 
 class InvoiceStatus(str, enum.Enum):
-    DRAFT = "draft"
-    SENT = "sent"
-    PENDING_VERIFICATION = "pending_verification"
-    PAID = "paid"
-    OVERDUE = "overdue"
-    CANCELLED = "cancelled"
+    DRAFT = "DRAFT"
+    SENT = "SENT"
+    PENDING_VERIFICATION = "PENDING_VERIFICATION"
+    PAID = "PAID"
+    OVERDUE = "OVERDUE"
+    CANCELLED = "CANCELLED"
 
 
 class CostRecord(Base):
