@@ -10,6 +10,13 @@ from app.api.v1 import api_router
 
 logger = structlog.get_logger()
 
+if settings.SENTRY_DSN:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        traces_sample_rate=1.0,
+        environment=settings.ENVIRONMENT,
+    )
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
