@@ -177,6 +177,8 @@ export default function EquipmentPage() {
       equipment_type: '',
       model_number: '',
       status: 'available',
+      ownership_type: 'owned',
+      vendor_name: '',
       hourly_rate: 0,
       operator_name: '',
       project_id: '',
