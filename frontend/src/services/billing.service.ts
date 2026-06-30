@@ -36,5 +36,32 @@ export const billingService = {
   ): Promise<Invoice> => {
     const response = await api.patch(`/billing/invoices/${invoiceId}`, data)
     return response.data
+  },
+
+  getClientInvoices: async (projectId: number, status?: string): Promise<Invoice[]> => {
+    const params = new URLSearchParams({ project_id: projectId.toString() })
+    if (status) params.append('status', status)
+    const response = await api.get(`/billing/client-portal/invoices?${params.toString()}`)
+    return response.data
+  },
+
+  submitClientPayment: async (
+    invoiceId: number,
+    paymentMethod: string,
+    notes?: string
+  ): Promise<Invoice> => {
+    const response = await api.post(`/billing/client-portal/invoices/${invoiceId}/submit-payment`, {
+      payment_method: paymentMethod,
+      notes: notes
+    })
+    return response.data
+  },
+
+  verifyPayment: async (invoiceId: number, paidDate: string): Promise<Invoice> => {
+    const response = await api.patch(`/billing/invoices/${invoiceId}`, {
+      status: 'paid',
+      paid_date: paidDate
+    })
+    return response.data
   }
 }

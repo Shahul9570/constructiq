@@ -9,7 +9,7 @@ from app.core.security import get_current_user, require_roles
 from app.models.user import User, UserRole
 from app.models.financial import Invoice, InvoiceType, InvoiceStatus
 from app.models.project import Project
-from app.schemas.financial import InvoiceCreate, InvoiceResponse, InvoiceUpdate
+from app.schemas.financial import InvoiceCreate, InvoiceResponse, InvoiceUpdate, SubmitPaymentRequest
 from app.api.v1.dashboards import _get_project_total_cost
 
 router = APIRouter()
@@ -136,6 +136,75 @@ def update_client_invoice(
     for key, value in update_data.items():
         setattr(invoice, key, value)
 
+    db.commit()
+    db.refresh(invoice)
+    
+    return InvoiceResponse(
+        id=invoice.id, project_id=invoice.project_id, invoice_number=invoice.invoice_number,
+        invoice_type=invoice.invoice_type.value if hasattr(invoice.invoice_type, 'value') else str(invoice.invoice_type),
+        vendor_name=invoice.vendor_name, total_amount=invoice.total_amount, amount=invoice.amount,
+        tax_amount=invoice.tax_amount, issue_date=invoice.issue_date, due_date=invoice.due_date,
+        status=invoice.status.value if hasattr(invoice.status, 'value') else str(invoice.status),
+        paid_date=invoice.paid_date, payment_method=invoice.payment_method, notes=invoice.notes,
+        file_url=invoice.file_url, created_by=invoice.created_by, created_at=invoice.created_at,
+        updated_at=invoice.updated_at or datetime.now()
+    )
+
+
+# --- Client Portal Endpoints ---
+client_roles = [UserRole.CLIENT]
+
+@router.get("/client-portal/invoices", response_model=List[InvoiceResponse])
+def get_client_portal_invoices(
+    project_id: int,
+    status: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(*client_roles)),
+):
+    query = db.query(Invoice).filter(
+        Invoice.project_id == project_id,
+        Invoice.invoice_type == InvoiceType.CLIENT
+    )
+    if status:
+        query = query.filter(Invoice.status == status)
+        
+    invoices = query.order_by(Invoice.issue_date.desc()).all()
+    
+    results = []
+    for inv in invoices:
+        results.append(InvoiceResponse(
+            id=inv.id, project_id=inv.project_id, invoice_number=inv.invoice_number,
+            invoice_type=inv.invoice_type.value if hasattr(inv.invoice_type, 'value') else str(inv.invoice_type),
+            vendor_name=inv.vendor_name, total_amount=inv.total_amount, amount=inv.amount,
+            tax_amount=inv.tax_amount, issue_date=inv.issue_date, due_date=inv.due_date,
+            status=inv.status.value if hasattr(inv.status, 'value') else str(inv.status),
+            paid_date=inv.paid_date, payment_method=inv.payment_method, notes=inv.notes,
+            file_url=inv.file_url, created_by=inv.created_by, created_at=inv.created_at,
+            updated_at=inv.updated_at or datetime.now()
+        ))
+    return results
+
+@router.post("/client-portal/invoices/{invoice_id}/submit-payment", response_model=InvoiceResponse)
+def submit_client_payment(
+    invoice_id: int,
+    data: SubmitPaymentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(*client_roles)),
+):
+    invoice = db.query(Invoice).filter(
+        Invoice.id == invoice_id,
+        Invoice.invoice_type == InvoiceType.CLIENT
+    ).first()
+    
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Client invoice not found")
+        
+    invoice.status = InvoiceStatus.PENDING_VERIFICATION.value
+    invoice.payment_method = data.payment_method
+    if data.notes:
+        existing_notes = invoice.notes or ""
+        invoice.notes = f"{existing_notes}\n[Client Payment Submitted]: {data.notes}".strip()
+        
     db.commit()
     db.refresh(invoice)
     

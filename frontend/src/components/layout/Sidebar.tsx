@@ -76,6 +76,7 @@ const navGroups = [
     items: [
       { label: 'Financial',  href: '/financial',  icon: DollarSign },
       { label: 'Client Billing', href: '/client-billing', icon: FileText },
+      { label: 'Client Portal', href: '/client-portal', icon: FileText },
       { label: 'Documents',  href: '/documents',  icon: FileText },
       { label: 'Photos',     href: '/photos',     icon: Camera },
       { label: 'Reports',    href: '/reports',    icon: FileBarChart },
@@ -112,7 +113,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       'Dashboard', 'Projects', 'Daily Progress', 'Documents', 'Photos', 'Settings'
     ],
     client: [
-      'Dashboard', 'Reports', 'Photos', 'Documents', 'Settings'
+      'Dashboard', 'Client Portal', 'Reports', 'Photos', 'Documents', 'Settings'
     ]
   };
 

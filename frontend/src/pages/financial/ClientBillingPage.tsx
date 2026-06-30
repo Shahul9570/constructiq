@@ -208,15 +208,29 @@ export default function ClientBillingPage() {
                       <TableCell>{inv.issue_date}</TableCell>
                       <TableCell>{inv.due_date || '-'}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={inv.status === 'paid' ? 'default' : inv.status === 'draft' ? 'secondary' : 'destructive'} className="capitalize">
-                          {inv.status}
+                        <Badge 
+                          variant={inv.status === 'paid' ? 'default' : inv.status === 'draft' || inv.status === 'sent' ? 'secondary' : 'destructive'} 
+                          className={`capitalize ${inv.status === 'pending_verification' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : ''}`}
+                        >
+                          {inv.status.replace('_', ' ')}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-semibold text-emerald-400">
                         ${inv.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right">
-                        {inv.status !== 'paid' && (
+                        {inv.status === 'pending_verification' && (
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={() => markPaidMutation.mutate(inv.id)}
+                            disabled={markPaidMutation.isPending}
+                          >
+                            Verify Payment
+                          </Button>
+                        )}
+                        {inv.status !== 'paid' && inv.status !== 'pending_verification' && (
                           <Button 
                             variant="outline" 
                             size="sm"
