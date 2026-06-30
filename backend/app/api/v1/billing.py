@@ -198,13 +198,19 @@ def submit_client_payment(
     
     if not invoice:
         raise HTTPException(status_code=404, detail="Client invoice not found")
-        
-    invoice.status = InvoiceStatus.PENDING_VERIFICATION
-    invoice.payment_method = data.payment_method
+    
+    notes_val = invoice.notes or ""
     if data.notes:
-        existing_notes = invoice.notes or ""
-        invoice.notes = f"{existing_notes}\n[Client Payment Submitted]: {data.notes}".strip()
-        
+        notes_val = f"{notes_val}\n[Client Payment Submitted]: {data.notes}".strip()
+
+    # Use raw SQL to bypass SQLAlchemy enum name vs value serialization issue
+    from sqlalchemy import text
+    db.execute(
+        text(
+            "UPDATE invoices SET status='pending_verification', payment_method=:pm, notes=:notes, updated_at=now() WHERE id=:id"
+        ),
+        {"pm": data.payment_method, "notes": notes_val, "id": invoice_id}
+    )
     db.commit()
     db.refresh(invoice)
     
