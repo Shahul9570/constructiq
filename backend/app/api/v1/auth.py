@@ -170,7 +170,7 @@ from app.core.security import require_roles
 
 @router.delete("/system/wipe-mock-data", status_code=status.HTTP_200_OK)
 def wipe_mock_data(
-    current_user: User = Depends(require_roles("owner")),
+    current_user: User = Depends(require_roles("company_owner")),
 ):
     """
     DANGEROUS: Wipes all mock data from the database.

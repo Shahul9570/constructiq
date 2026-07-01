@@ -287,7 +287,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {user?.role === 'owner' && (
+      {user?.role === 'company_owner' && (
         <Card className="border-destructive/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-destructive">
