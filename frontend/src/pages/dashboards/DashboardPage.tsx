@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { dashboardService } from '@/services/dashboard.service'
 import { projectService } from '@/services/project.service'
+import { adminService } from '@/services/admin.service'
 import {
   Users,
   ClipboardCheck,
@@ -26,7 +27,16 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { Switch } from '@/components/ui/switch'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 import { AnimatedCard } from '@/components/ui/animated-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Button } from '@/components/ui/button'
@@ -825,12 +835,30 @@ function ClientDashboard() {
 }
 
 function SuperAdminDashboard() {
+  const queryClient = useQueryClient()
+  
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard-super-admin'],
     queryFn: () => dashboardService.getSuperAdmin(),
   })
 
-  if (isLoading) return <DashboardSkeleton />
+  const { data: users, isLoading: usersLoading } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: () => adminService.listUsers(),
+  })
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, is_active }: { id: number, is_active: boolean }) => 
+      adminService.updateUserStatus(id, is_active),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-super-admin'] })
+      toast.success('User status updated')
+    },
+    onError: (err: any) => toast.error(err.message || 'Failed to update user status'),
+  })
+
+  if (isLoading || usersLoading) return <DashboardSkeleton />
   if (!data) return <EmptyState title="No Data" description="No dashboard data available" />
 
   return (
@@ -922,6 +950,59 @@ function SuperAdminDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Global User Directory</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Active</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users?.map((u: any) => (
+                  <TableRow key={u.id}>
+                    <TableCell>
+                      <div className="font-medium">{u.full_name}</div>
+                      <div className="text-sm text-muted-foreground">{u.email}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize">
+                        {u.role.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(u.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      {u.is_active ? (
+                        <Badge className="bg-green-500">Active</Badge>
+                      ) : (
+                        <Badge variant="destructive">Disabled</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Switch 
+                        checked={u.is_active}
+                        disabled={toggleStatusMutation.isPending || u.role === 'super_admin'}
+                        onCheckedChange={(checked) => 
+                          toggleStatusMutation.mutate({ id: u.id, is_active: checked })
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
