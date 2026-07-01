@@ -10,8 +10,10 @@ import {
   Sun,
   Save,
   Loader2,
+  Trash2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import api from '@/services/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -86,6 +88,15 @@ export default function SettingsPage() {
       setPasswordForm({ current_password: '', new_password: '', confirm_password: '' })
     },
     onError: () => toast.error('Failed to change password'),
+  })
+
+  const wipeDataMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.delete('/auth/system/wipe-mock-data')
+      return response.data
+    },
+    onSuccess: () => toast.success('Mock data wiped successfully. Please refresh the page.'),
+    onError: () => toast.error('Failed to wipe mock data. Ensure you have Owner privileges.'),
   })
 
   const handleProfileSubmit = (e: React.FormEvent) => {
@@ -275,6 +286,38 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {user?.role === 'owner' && (
+        <Card className="border-destructive/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Danger Zone
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-destructive">Wipe Mock Data</p>
+                <p className="text-sm text-muted-foreground">
+                  Permanently deletes all projects, invoices, materials, and equipment. User accounts remain active.
+                </p>
+              </div>
+              <Button 
+                variant="destructive" 
+                disabled={wipeDataMutation.isPending}
+                onClick={() => {
+                  if (window.confirm("Are you SURE you want to wipe all database records? This cannot be undone!")) {
+                    wipeDataMutation.mutate()
+                  }
+                }}
+              >
+                {wipeDataMutation.isPending ? 'Wiping...' : 'Clear Database'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

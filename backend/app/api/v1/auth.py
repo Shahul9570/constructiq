@@ -165,3 +165,21 @@ def change_password(
     current_user.hashed_password = hash_password(data.new_password)
     db.commit()
     return {"message": "Password changed successfully"}
+
+from app.core.security import require_roles
+
+@router.delete("/system/wipe-mock-data", status_code=status.HTTP_200_OK)
+def wipe_mock_data(
+    current_user: User = Depends(require_roles("owner")),
+):
+    """
+    DANGEROUS: Wipes all mock data from the database.
+    Only accessible by users with 'owner' role.
+    """
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+    from scripts.clear_data import clear_all_mock_data
+    
+    clear_all_mock_data()
+    return {"message": "All mock data has been wiped successfully."}
