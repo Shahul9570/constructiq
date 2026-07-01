@@ -47,6 +47,7 @@ export default function LabourSummaryPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [tradeFilter, setTradeFilter] = useState('all')
+  const [dateFilter, setDateFilter] = useState('')
   const [page] = useState(1)
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [trades, setTrades] = useState<string[]>([])
@@ -79,12 +80,14 @@ export default function LabourSummaryPage() {
   const contractors = contractorsData?.items || []
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['labour', pid, page, tradeFilter],
+    queryKey: ['labour', pid, page, tradeFilter, dateFilter],
     queryFn: () =>
       labourService.list(pid, {
         page,
         size: 50,
         trade: tradeFilter !== 'all' ? tradeFilter : undefined,
+        date_from: dateFilter || undefined,
+        date_to: dateFilter || undefined,
       }),
     enabled: !!pid,
   })
@@ -186,7 +189,7 @@ export default function LabourSummaryPage() {
         </Button>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         <Select value={tradeFilter} onValueChange={(v) => setTradeFilter(v)}>
           <SelectTrigger className="w-[200px] rounded-xl">
             <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -199,6 +202,20 @@ export default function LabourSummaryPage() {
             ))}
           </SelectContent>
         </Select>
+
+        <div className="flex items-center gap-2">
+          <Input 
+            type="date" 
+            value={dateFilter} 
+            onChange={(e) => setDateFilter(e.target.value)} 
+            className="w-[200px] rounded-xl"
+          />
+          {dateFilter && (
+            <Button variant="ghost" size="sm" onClick={() => setDateFilter('')} className="rounded-xl">
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {isLoading ? (
