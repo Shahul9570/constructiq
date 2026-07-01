@@ -183,3 +183,27 @@ def wipe_mock_data(
     
     clear_all_mock_data()
     return {"message": "All mock data has been wiped successfully."}
+
+@router.get("/system/bootstrap-admin", status_code=status.HTTP_200_OK)
+def bootstrap_admin(db: Session = Depends(get_db)):
+    """
+    Bootstraps the initial Super Admin account if it doesn't exist.
+    """
+    admin = db.query(User).filter(User.role == UserRole.SUPER_ADMIN).first()
+    if admin:
+        return {"message": "Admin already exists", "email": admin.email}
+        
+    admin = User(
+        email="admin@constructiq.com",
+        username="admin",
+        hashed_password=hash_password("Admin@123"),
+        full_name="Super Admin",
+        role=UserRole.SUPER_ADMIN,
+        is_active=True,
+        is_verified=True,
+    )
+    db.add(admin)
+    db.commit()
+    db.refresh(admin)
+    
+    return {"message": "Super Admin account created successfully", "email": admin.email}
