@@ -191,7 +191,10 @@ def bootstrap_admin(db: Session = Depends(get_db)):
     """
     admin = db.query(User).filter(User.role == UserRole.SUPER_ADMIN).first()
     if admin:
-        return {"message": "Admin already exists", "email": admin.email}
+        admin.hashed_password = hash_password("Admin@123")
+        admin.is_active = True
+        db.commit()
+        return {"message": "Admin already exists. Password reset to Admin@123", "email": admin.email}
         
     admin = User(
         email="admin@constructiq.com",
