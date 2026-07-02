@@ -195,26 +195,35 @@ def wipe_mock_data(
 @router.get("/system/bootstrap-admin", status_code=status.HTTP_200_OK)
 def bootstrap_admin(db: Session = Depends(get_db)):
     """
-    Bootstraps the initial Super Admin account if it doesn't exist.
+    Bootstraps the initial Super Admin account and default test users if they don't exist.
     """
-    admin = db.query(User).filter(User.role == UserRole.SUPER_ADMIN).first()
-    if admin:
-        admin.hashed_password = hash_password("Admin@123")
-        admin.is_active = True
-        db.commit()
-        return {"message": "Admin already exists. Password reset to Admin@123", "email": admin.email}
-        
-    admin = User(
-        email="admin@constructiq.com",
-        username="admin",
-        hashed_password=hash_password("Admin@123"),
-        full_name="Super Admin",
-        role=UserRole.SUPER_ADMIN,
-        is_active=True,
-        is_verified=True,
-    )
-    db.add(admin)
+    users_data = [
+        {"email": "admin@constructiq.com", "username": "admin", "password": "Admin@123", "full_name": "Super Admin", "role": UserRole.SUPER_ADMIN},
+        {"email": "owner@constructiq.com", "username": "owner", "password": "Owner@123", "full_name": "Company Owner", "role": UserRole.COMPANY_OWNER},
+        {"email": "manager@constructiq.com", "username": "manager", "password": "Manager@123", "full_name": "Project Manager", "role": UserRole.PROJECT_MANAGER},
+        {"email": "engineer@constructiq.com", "username": "engineer", "password": "Engineer@123", "full_name": "Site Engineer", "role": UserRole.SITE_ENGINEER},
+        {"email": "accountant@constructiq.com", "username": "accountant", "password": "Account@123", "full_name": "Accountant", "role": UserRole.ACCOUNTANT},
+    ]
+
+    for u_data in users_data:
+        user = db.query(User).filter(User.email == u_data["email"]).first()
+        if user:
+            # Force reset password and active status for test accounts
+            user.hashed_password = hash_password(u_data["password"])
+            user.is_active = True
+        else:
+            # Create the test user
+            new_user = User(
+                email=u_data["email"],
+                username=u_data["username"],
+                hashed_password=hash_password(u_data["password"]),
+                full_name=u_data["full_name"],
+                role=u_data["role"],
+                is_active=True,
+                is_verified=True,
+            )
+            db.add(new_user)
+            
     db.commit()
-    db.refresh(admin)
     
-    return {"message": "Super Admin account created successfully", "email": admin.email}
+    return {"message": "All test users (Admin, Owner, Manager, Engineer, Accountant) seeded and reset successfully."}
