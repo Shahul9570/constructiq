@@ -12,8 +12,8 @@ import { HardHat, Eye, EyeOff } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'Username or email is required'),
-  password: z.string().min(1, 'Password is required'),
+  username: z.string().trim().min(1, 'Username or email is required'),
+  password: z.string().trim().min(1, 'Password is required'),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
