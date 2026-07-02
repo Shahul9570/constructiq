@@ -45,6 +45,11 @@ export const authService = {
     return response.data
   },
 
+  async wipeAllUsers(): Promise<any> {
+    const response = await api.get('/auth/system/wipe-all-users')
+    return response.data
+  },
+
   async refreshToken(refresh_token: string): Promise<AuthResponse> {
     const response = await api.post('/auth/refresh', { refresh_token })
     return response.data

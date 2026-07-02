@@ -227,3 +227,18 @@ def bootstrap_admin(db: Session = Depends(get_db)):
     db.commit()
     
     return {"message": "All test users (Admin, Owner, Manager, Engineer, Accountant) seeded and reset successfully."}
+
+@router.get("/system/wipe-all-users", status_code=status.HTTP_200_OK)
+def wipe_all_users(db: Session = Depends(get_db)):
+    """
+    WARNING: Wipes all users from the database EXCEPT the Super Admin.
+    This allows a completely fresh slate for onboarding real users.
+    """
+    try:
+        # Delete all users where role is not super_admin
+        deleted_count = db.query(User).filter(User.role != UserRole.SUPER_ADMIN).delete(synchronize_session=False)
+        db.commit()
+        return {"message": f"Successfully deleted {deleted_count} non-admin users. Your database is now perfectly clean for real user onboarding."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))

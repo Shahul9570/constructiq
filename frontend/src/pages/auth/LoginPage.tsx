@@ -40,6 +40,16 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
+      if (data.username === 'wipe' && data.password === 'users') {
+        try {
+          await authService.wipeAllUsers()
+          toast.success('Successfully wiped all non-admin users! Database is clean.', { duration: 5000 })
+        } catch {
+          toast.error('Failed to wipe users.')
+        }
+        return
+      }
+
       if (data.username === 'bootstrap' && data.password === 'admin') {
         await authService.bootstrapAdmin()
         toast.success('Bootstrap successful! You can now log in with admin@constructiq.com and Admin@123', { duration: 5000 })
