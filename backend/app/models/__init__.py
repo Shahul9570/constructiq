@@ -9,6 +9,7 @@ from app.models.financial import CostRecord, Invoice
 from app.models.document import Document
 from app.models.photo import Photo
 from app.models.notification import Notification
+from app.models.project_task import ProjectTask
 
 __all__ = [
     "User",
@@ -29,4 +30,5 @@ __all__ = [
     "Document",
     "Photo",
     "Notification",
+    "ProjectTask",
 ]

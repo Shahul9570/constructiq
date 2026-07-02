@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import timedelta
 
-from app.core.database import get_db
+from app.core.database import get_db, Base
 from app.core.security import (
     hash_password, verify_password, create_access_token,
     create_refresh_token, decode_token, get_current_user, oauth2_scheme
@@ -232,13 +232,22 @@ def bootstrap_admin(db: Session = Depends(get_db)):
 def wipe_all_users(db: Session = Depends(get_db)):
     """
     WARNING: Wipes all users from the database EXCEPT the Super Admin.
+    Also wipes ALL data from all other tables to ensure referential integrity.
     This allows a completely fresh slate for onboarding real users.
     """
     try:
-        # Delete all users where role is not super_admin
+        # Import all models to ensure Base.metadata is fully populated
+        import app.models  # noqa
+        
+        # Delete all data from all tables (in reverse foreign key order) except users
+        for table in reversed(Base.metadata.sorted_tables):
+            if table.name != "users":
+                db.execute(table.delete())
+                
+        # Now delete non-admin users
         deleted_count = db.query(User).filter(User.role != UserRole.SUPER_ADMIN).delete(synchronize_session=False)
         db.commit()
-        return {"message": f"Successfully deleted {deleted_count} non-admin users. Your database is now perfectly clean for real user onboarding."}
+        return {"message": f"Successfully deleted {deleted_count} non-admin users and wiped all associated data. Your database is now perfectly clean."}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=str(e))
