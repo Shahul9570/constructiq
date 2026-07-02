@@ -161,7 +161,7 @@ export default function PhotosPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
           {photos.map((photo: Photo) => (
             <div
               key={photo.id}
@@ -288,7 +288,7 @@ export default function PhotosPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium mb-1 block">Area</label>
                 <Input
@@ -358,7 +358,7 @@ export default function PhotosPage() {
 
 function PhotosSkeleton() {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
       {Array.from({ length: 10 }).map((_, i) => (
         <Skeleton key={i} className="aspect-square rounded-lg" />
       ))}

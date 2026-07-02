@@ -351,7 +351,7 @@ export default function LabourSummaryPage() {
               <DialogDescription>Record the workforce on site for a given day.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-6">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="l-date">Date *</Label>
                   <Input id="l-date" type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
@@ -370,7 +370,7 @@ export default function LabourSummaryPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="l-count">Worker Count *</Label>
                   <Input id="l-count" type="number" min="0" required value={form.workers_count || ''} onChange={(e) => setForm({ ...form, workers_count: Number(e.target.value) })} />

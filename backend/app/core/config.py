@@ -1,6 +1,6 @@
 from typing import Optional
 from pydantic_settings import BaseSettings
-from pydantic import ConfigDict
+from pydantic import ConfigDict, model_validator
 
 
 class Settings(BaseSettings):
@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
 
     SENTRY_DSN: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> 'Settings':
+        if self.ENVIRONMENT == "production":
+            if self.SECRET_KEY == "change-this-to-a-very-long-random-secret-key":
+                raise ValueError("SECRET_KEY must be changed from default in production")
+        return self
 
 
 settings = Settings()

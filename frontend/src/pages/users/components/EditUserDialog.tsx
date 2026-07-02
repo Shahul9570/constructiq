@@ -50,7 +50,7 @@ export function EditUserDialog({ user, open, onClose, onSave, isLoading }: EditU
         </DialogHeader>
         
         <div className="grid gap-6 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 items-center gap-4">
             <Label htmlFor="role" className="text-right">
               Role
             </Label>
@@ -72,7 +72,7 @@ export function EditUserDialog({ user, open, onClose, onSave, isLoading }: EditU
             </div>
           </div>
           
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-4 items-center gap-4">
             <Label htmlFor="active-status" className="text-right">
               Active Status
             </Label>

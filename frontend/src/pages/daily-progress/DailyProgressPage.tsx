@@ -378,7 +378,7 @@ export default function DailyProgressPage() {
                 </select>
                 <p className="text-xs text-muted-foreground">Select the major task to automatically update the overall project progress.</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="dl-area">Area *</Label>
                   <Input id="dl-area" required value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} />
@@ -388,7 +388,7 @@ export default function DailyProgressPage() {
                   <Input id="dl-activity" required value={form.activity} onChange={(e) => setForm({ ...form, activity: e.target.value })} placeholder="e.g., Pouring concrete" />
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="dl-planned">Planned Qty *</Label>
                   <Input id="dl-planned" type="number" min="0" required value={form.planned_quantity || ''} onChange={(e) => setForm({ ...form, planned_quantity: Number(e.target.value) })} />
@@ -402,7 +402,7 @@ export default function DailyProgressPage() {
                   <Input id="dl-unit" required value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="dl-workers">Workers Count *</Label>
                   <Input id="dl-workers" type="number" min="0" required value={form.workers_count || ''} onChange={(e) => setForm({ ...form, workers_count: Number(e.target.value) })} />
@@ -412,7 +412,7 @@ export default function DailyProgressPage() {
                   <Input id="dl-hours" type="number" min="0" step="0.5" value={form.labour_hours || ''} onChange={(e) => setForm({ ...form, labour_hours: Number(e.target.value) })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="dl-weather">Weather</Label>
                   <Input id="dl-weather" value={form.weather_condition} onChange={(e) => setForm({ ...form, weather_condition: e.target.value })} />

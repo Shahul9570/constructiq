@@ -351,8 +351,8 @@ function ForecastCard({ data }: { data: MaterialForecast }) {
           <span className="text-sm font-medium">{data.materials_at_risk} material(s) at risk</span>
         </div>
       )}
-      <div className="rounded-md border">
-        <table className="w-full text-sm">
+      <div className="rounded-md border overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="border-b bg-muted/50">
               <th className="text-left p-3 font-medium">Material</th>

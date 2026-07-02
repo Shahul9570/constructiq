@@ -412,7 +412,7 @@ export default function ContractorsPage() {
                 e.preventDefault()
                 if (selectedContractor) paymentMutation.mutate()
               }}
-              className="grid grid-cols-2 gap-4 p-4 border rounded-lg"
+              className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg"
             >
               <div className="grid gap-2">
                 <Label htmlFor="pay-amount">Amount ($)</Label>
@@ -526,7 +526,7 @@ function ContractorFormFields({
 }) {
   return (
     <div className="grid gap-4 py-4">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="grid gap-2">
           <Label htmlFor="c-name">Name *</Label>
           <Input id="c-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -536,7 +536,7 @@ function ContractorFormFields({
           <Input id="c-company" value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="grid gap-2">
           <Label htmlFor="c-phone">Phone *</Label>
           <Input id="c-phone" required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
@@ -546,7 +546,7 @@ function ContractorFormFields({
           <Input id="c-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="grid gap-2">
           <Label htmlFor="c-trade">Trade</Label>
           <Input id="c-trade" value={form.trade} onChange={(e) => setForm({ ...form, trade: e.target.value })} />
@@ -556,7 +556,7 @@ function ContractorFormFields({
           <Input id="c-team" type="number" min="0" value={form.team_size || ''} onChange={(e) => setForm({ ...form, team_size: Number(e.target.value) })} />
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="grid gap-2">
           <Label htmlFor="c-contract">Contract Amount ($)</Label>
           <Input id="c-contract" type="number" min="0" value={form.contract_amount || ''} onChange={(e) => setForm({ ...form, contract_amount: Number(e.target.value) })} />

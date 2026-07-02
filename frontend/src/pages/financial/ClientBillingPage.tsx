@@ -265,7 +265,7 @@ export default function ClientBillingPage() {
             <DialogTitle>Issue Client Invoice</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Invoice Number</Label>
                 <Input
@@ -284,7 +284,7 @@ export default function ClientBillingPage() {
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Base Amount ($)</Label>
                 <Input
@@ -307,7 +307,7 @@ export default function ClientBillingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label>Issue Date</Label>
                 <Input

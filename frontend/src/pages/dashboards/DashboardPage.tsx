@@ -689,7 +689,7 @@ function ClientDashboard() {
         </CardHeader>
         <CardContent>
           {data.recent_photos && data.recent_photos.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 md:grid-cols-5 gap-4">
               {data.recent_photos.map((photo: any, i: number) => (
                 <div key={i} className="group relative aspect-square rounded-lg overflow-hidden border bg-muted">
                   <img src={getFileUrl(photo.url)} alt={photo.caption || 'Project photo'} className="w-full h-full object-cover" />

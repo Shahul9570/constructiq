@@ -106,7 +106,7 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                     placeholder="e.g., Foundation, Framing"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Weight Percentage (%)</Label>
                     <Input
@@ -128,7 +128,7 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                     </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Area</Label>
                     <Input value={formData.area} onChange={(e) => setFormData({ ...formData, area: e.target.value })} placeholder="e.g., Block A, 1st Floor" />
@@ -138,7 +138,7 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
                     <Input value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} placeholder="sq.ft" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Start Date</Label>
                     <Input type="date" value={formData.start_date} onChange={(e) => setFormData({ ...formData, start_date: e.target.value })} />
@@ -196,7 +196,7 @@ export function ProjectTasksTab({ projectId }: ProjectTasksTabProps) {
             </CardHeader>
             <CardContent>
               <div className="mt-2 space-y-4">
-                <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
                   {task.area && <div><span className="font-medium text-foreground">Area:</span> {task.area}</div>}
                   {task.work_type && <div><span className="font-medium text-foreground">Type:</span> {task.work_type}</div>}
                   {task.unit && <div><span className="font-medium text-foreground">Unit:</span> {task.unit}</div>}

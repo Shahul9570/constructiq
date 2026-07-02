@@ -399,7 +399,7 @@ export default function EquipmentPage() {
               <DialogDescription>Add new equipment or machinery.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="eq-name">Name *</Label>
                   <Input id="eq-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -424,7 +424,7 @@ export default function EquipmentPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="eq-ownership">Ownership</Label>
                   <Select required value={form.ownership_type} onValueChange={(v) => setForm({ ...form, ownership_type: v })}>
@@ -444,7 +444,7 @@ export default function EquipmentPage() {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="eq-model">Model Number</Label>
                   <Input id="eq-model" value={form.model_number} onChange={(e) => setForm({ ...form, model_number: e.target.value })} />
@@ -454,7 +454,7 @@ export default function EquipmentPage() {
                   <Input id="eq-rate" type="number" min="0" step="0.01" value={form.hourly_rate || ''} onChange={(e) => setForm({ ...form, hourly_rate: Number(e.target.value) })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="eq-status">Status</Label>
                   <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
@@ -511,7 +511,7 @@ export default function EquipmentPage() {
               <DialogDescription>Update equipment details and assignment.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-eq-name">Name *</Label>
                   <Input id="edit-eq-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -536,7 +536,7 @@ export default function EquipmentPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-eq-ownership">Ownership</Label>
                   <Select required value={form.ownership_type} onValueChange={(v) => setForm({ ...form, ownership_type: v })}>
@@ -556,7 +556,7 @@ export default function EquipmentPage() {
                   </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-eq-model">Model Number</Label>
                   <Input id="edit-eq-model" value={form.model_number} onChange={(e) => setForm({ ...form, model_number: e.target.value })} />
@@ -566,7 +566,7 @@ export default function EquipmentPage() {
                   <Input id="edit-eq-rate" type="number" min="0" step="0.01" value={form.hourly_rate || ''} onChange={(e) => setForm({ ...form, hourly_rate: Number(e.target.value) })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="edit-eq-status">Status</Label>
                   <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
@@ -623,7 +623,7 @@ export default function EquipmentPage() {
               <DialogDescription>Log hours and fuel consumption.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="us-hours">Hours Used *</Label>
                   <Input id="us-hours" type="number" min="0" step="0.5" required value={usageForm.hours_used || ''} onChange={(e) => setUsageForm({ ...usageForm, hours_used: Number(e.target.value) })} />
@@ -637,7 +637,7 @@ export default function EquipmentPage() {
                 <Label htmlFor="us-date">Date</Label>
                 <Input id="us-date" type="date" required value={usageForm.date} onChange={(e) => setUsageForm({ ...usageForm, date: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="us-operator">Operator</Label>
                   <Input id="us-operator" value={usageForm.operator_name} onChange={(e) => setUsageForm({ ...usageForm, operator_name: e.target.value })} />

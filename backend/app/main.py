@@ -39,54 +39,6 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.on_event("startup")
 async def startup():
-    try:
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables created successfully")
-    except Exception as e:
-        logger.error(f"Database initialization error: {e}")
-
-    # Run safe column migrations for any new columns added to existing tables
-    try:
-        from sqlalchemy import text
-        with engine.connect() as conn:
-            migrations = [
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_code VARCHAR(20) UNIQUE",
-                "ALTER TABLE users ADD COLUMN IF NOT EXISTS company_owner_id INTEGER REFERENCES users(id)",
-                "ALTER TABLE projects ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES users(id)",
-                "ALTER TABLE projects ADD COLUMN IF NOT EXISTS members_count INTEGER DEFAULT 0",
-                "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'pending'",
-                "ALTER TABLE cost_records ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'approved'",
-                "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS assigned_to_id INTEGER REFERENCES users(id)",
-                "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS area VARCHAR(255)",
-                "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS quantity DOUBLE PRECISION",
-                "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS unit VARCHAR(50)",
-                "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS work_type VARCHAR(100)",
-                "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS start_date TIMESTAMP WITH TIME ZONE",
-                "ALTER TABLE project_tasks ADD COLUMN IF NOT EXISTS end_date TIMESTAMP WITH TIME ZONE",
-                "ALTER TABLE daily_work_logs ADD COLUMN IF NOT EXISTS verification_status VARCHAR(50) DEFAULT 'pending'",
-                "ALTER TABLE daily_work_logs ADD COLUMN IF NOT EXISTS verified_by_id INTEGER REFERENCES users(id)",
-                "ALTER TABLE daily_work_logs ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP WITH TIME ZONE",
-                "ALTER TABLE equipment ADD COLUMN IF NOT EXISTS company_id INTEGER REFERENCES users(id)",
-                "ALTER TABLE equipment ALTER COLUMN project_id DROP NOT NULL",
-                "ALTER TABLE daily_work_logs ADD COLUMN IF NOT EXISTS verification_remarks TEXT",
-                "ALTER TABLE daily_labour_summary ADD COLUMN IF NOT EXISTS verification_status VARCHAR(50) DEFAULT 'pending'",
-                "ALTER TABLE daily_labour_summary ADD COLUMN IF NOT EXISTS verified_by_id INTEGER REFERENCES users(id)",
-                "ALTER TABLE daily_labour_summary ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP WITH TIME ZONE",
-                "ALTER TABLE daily_labour_summary ADD COLUMN IF NOT EXISTS verification_remarks TEXT",
-                "ALTER TABLE daily_labour_summary ADD COLUMN IF NOT EXISTS paid_amount DOUBLE PRECISION DEFAULT 0.0",
-                "ALTER TABLE material_arrivals ADD COLUMN IF NOT EXISTS paid_amount DOUBLE PRECISION DEFAULT 0.0",
-                "ALTER TYPE invoicestatus ADD VALUE IF NOT EXISTS 'pending_verification'",
-            ]
-            for sql in migrations:
-                try:
-                    conn.execute(text(sql))
-                    conn.commit()
-                except Exception:
-                    conn.rollback()
-        logger.info("Database column migrations applied")
-    except Exception as e:
-        logger.error(f"Migration error: {e}")
-
     from app.core.celery_app import celery_app
     logger.info("Celery app initialized")
 

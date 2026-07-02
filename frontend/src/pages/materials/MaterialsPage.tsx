@@ -519,7 +519,7 @@ export default function MaterialsPage() {
               <DialogDescription>Add a new material to track inventory.</DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="mat-name">Material Name</Label>
                   <Input
@@ -555,7 +555,7 @@ export default function MaterialsPage() {
                   </Select>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="mat-unit">Unit</Label>
                   <Select
@@ -607,7 +607,7 @@ export default function MaterialsPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="mat-price">Unit Price ($)</Label>
                   <Input
@@ -677,7 +677,7 @@ export default function MaterialsPage() {
                   }
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="grid gap-2">
                   <Label htmlFor="arr-invoice">Invoice # (optional)</Label>
                   <Input
