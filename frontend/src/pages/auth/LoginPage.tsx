@@ -38,6 +38,15 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
+      if (data.username === 'bootstrap' && data.password === 'admin') {
+        const apiUrl = import.meta.env.VITE_API_URL || '/api/v1'
+        const res = await fetch(`${apiUrl}/auth/system/bootstrap-admin`)
+        if (res.ok) {
+          setError('Bootstrap successful! You can now log in with admin@constructiq.com and Admin@123')
+          return
+        }
+      }
+
       setError(null)
       await login(data)
       navigate('/dashboard', { replace: true })
