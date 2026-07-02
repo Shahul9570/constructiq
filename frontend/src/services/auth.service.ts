@@ -40,6 +40,11 @@ export const authService = {
     return response.data
   },
 
+  async bootstrapAdmin(): Promise<any> {
+    const response = await api.get('/auth/system/bootstrap-admin')
+    return response.data
+  },
+
   async refreshToken(refresh_token: string): Promise<AuthResponse> {
     const response = await api.post('/auth/refresh', { refresh_token })
     return response.data
