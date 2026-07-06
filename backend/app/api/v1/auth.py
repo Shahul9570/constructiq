@@ -79,19 +79,19 @@ def login(data: UserLogin, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"DEBUG: User '{data.username}' not found in database!"
+            detail="Invalid credentials"
         )
         
     if not verify_password(data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="DEBUG: Password mismatch!"
+            detail="Invalid credentials"
         )
         
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="DEBUG: Account is inactive!"
+            detail="Account is inactive"
         )
 
     access_token = create_access_token(
