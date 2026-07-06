@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useLocation, Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -44,8 +45,6 @@ const adminNavGroups = [
   {
     title: 'System',
     items: [
-      { label: 'Financial Overview', href: '/financial', icon: DollarSign },
-      { label: 'Client Billing', href: '/client-billing', icon: FileText },
       { label: 'AI Analytics', href: '/ai', icon: Bot },
       { label: 'Settings', href: '/settings', icon: Settings },
     ],
@@ -95,6 +94,8 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const location = useLocation()
   const { user } = useAuth()
   const role = user?.role
+  
+  const [viewMode, setViewMode] = useState<'global' | 'operations'>('global')
 
   // Define allowed labels per role (if they are not super_admin or company_owner)
   const allowedItemsPerRole: Record<string, string[]> = {
@@ -119,14 +120,19 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   };
 
   let filteredNavGroups = navGroups;
+  const isAdmin = role === 'super_admin' || role === 'company_owner';
 
-  if (role === 'super_admin' || role === 'company_owner') {
-    filteredNavGroups = role === 'super_admin' ? adminNavGroups : navGroups;
-    if (role === 'company_owner') {
-      filteredNavGroups = filteredNavGroups.map(group => ({
-        ...group,
-        items: group.items.filter(item => item.label !== 'Client Portal')
-      })).filter(group => group.items.length > 0);
+  if (isAdmin) {
+    if (viewMode === 'global') {
+      filteredNavGroups = adminNavGroups;
+    } else {
+      filteredNavGroups = navGroups;
+      if (role === 'company_owner') {
+        filteredNavGroups = filteredNavGroups.map(group => ({
+          ...group,
+          items: group.items.filter(item => item.label !== 'Client Portal')
+        })).filter(group => group.items.length > 0);
+      }
     }
   } else if (role && allowedItemsPerRole[role]) {
     const allowed = allowedItemsPerRole[role];
@@ -175,6 +181,32 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
             <X className="h-5 w-5" />
           </Button>
         </div>
+
+        {/* View Mode Toggle for Admins */}
+        {isAdmin && (
+          <div className="px-6 py-4 border-b border-slate-800">
+            <div className="flex bg-slate-800/50 p-1 rounded-lg">
+              <button
+                onClick={() => setViewMode('global')}
+                className={cn(
+                  "flex-1 text-xs font-medium py-1.5 rounded-md transition-colors",
+                  viewMode === 'global' ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                Global View
+              </button>
+              <button
+                onClick={() => setViewMode('operations')}
+                className={cn(
+                  "flex-1 text-xs font-medium py-1.5 rounded-md transition-colors",
+                  viewMode === 'operations' ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                Operations
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-6">
