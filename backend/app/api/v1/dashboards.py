@@ -18,6 +18,7 @@ from datetime import date, timedelta
 
 from app.core.security import get_current_user, require_roles
 from app.models.user import User, UserRole
+from app.models.audit_log import AuditLog
 
 router = APIRouter()
     
@@ -58,6 +59,14 @@ def super_admin_dashboard(
     # Get 5 most recently created projects
     recent_projects = db.query(Project).order_by(Project.created_at.desc()).limit(5).all()
     
+    # Get recent audit logs
+    recent_logs = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(20).all()
+
+    # Get security alerts
+    security_alerts = db.query(AuditLog).filter(
+        AuditLog.action.in_(["UNAUTHORIZED_ACCESS", "FAILED_LOGIN", "USER_SUSPENDED", "WIPE_ALL_USERS", "DATA_DELETED"])
+    ).order_by(AuditLog.created_at.desc()).limit(10).all()
+    
     return {
         "total_users": total_users,
         "active_users": active_users,
@@ -77,6 +86,28 @@ def super_admin_dashboard(
                 "budget": p.budget,
                 "created_at": p.created_at
             } for p in recent_projects
+        ],
+        "recent_logs": [
+            {
+                "id": log.id,
+                "user_id": log.user_id,
+                "username": log.user.full_name if log.user else "System",
+                "action": log.action,
+                "entity_type": log.entity_type,
+                "entity_id": log.entity_id,
+                "details": log.details,
+                "ip_address": log.ip_address,
+                "created_at": str(log.created_at)
+            } for log in recent_logs
+        ],
+        "security_alerts": [
+            {
+                "id": alert.id,
+                "action": alert.action,
+                "details": alert.details,
+                "created_at": str(alert.created_at),
+                "username": alert.user.full_name if alert.user else "Unknown"
+            } for alert in security_alerts
         ]
     }
 

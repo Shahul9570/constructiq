@@ -10,6 +10,7 @@ from app.models.document import Document
 from app.models.photo import Photo
 from app.models.notification import Notification
 from app.models.project_task import ProjectTask
+from app.models.audit_log import AuditLog
 
 __all__ = [
     "User",
@@ -31,4 +32,5 @@ __all__ = [
     "Photo",
     "Notification",
     "ProjectTask",
+    "AuditLog",
 ]

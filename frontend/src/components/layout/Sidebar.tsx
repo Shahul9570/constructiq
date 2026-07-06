@@ -51,6 +51,30 @@ const adminNavGroups = [
   },
 ]
 
+const adminOperationsNavGroups = [
+  {
+    title: 'Operations',
+    items: [
+      { label: 'Daily Progress', href: '/daily-progress', icon: BarChart3 },
+      { label: 'Labour',         href: '/labour',         icon: Users },
+      { label: 'Materials',      href: '/materials',      icon: Package },
+      { label: 'Equipment',      href: '/equipment',      icon: Wrench },
+      { label: 'Contractors',    href: '/contractors',    icon: Building2 },
+      { label: 'Daily Expenses', href: '/daily-expenses', icon: DollarSign },
+    ],
+  },
+  {
+    title: 'Records',
+    items: [
+      { label: 'Financial',  href: '/financial',  icon: DollarSign },
+      { label: 'Client Billing', href: '/client-billing', icon: FileText },
+      { label: 'Documents',  href: '/documents',  icon: FileText },
+      { label: 'Photos',     href: '/photos',     icon: Camera },
+      { label: 'Reports',    href: '/reports',    icon: FileBarChart },
+    ],
+  },
+]
+
 const navGroups = [
   {
     title: 'Overview',
@@ -126,13 +150,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
     if (viewMode === 'global') {
       filteredNavGroups = adminNavGroups;
     } else {
-      filteredNavGroups = navGroups;
-      if (role === 'company_owner') {
-        filteredNavGroups = filteredNavGroups.map(group => ({
-          ...group,
-          items: group.items.filter(item => item.label !== 'Client Portal')
-        })).filter(group => group.items.length > 0);
-      }
+      filteredNavGroups = adminOperationsNavGroups;
     }
   } else if (role && allowedItemsPerRole[role]) {
     const allowed = allowedItemsPerRole[role];

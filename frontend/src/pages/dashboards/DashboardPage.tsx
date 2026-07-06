@@ -951,6 +951,74 @@ function SuperAdminDashboard() {
         </Card>
       </div>
 
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-blue-500" />
+              Live Activity Feed (Audit Logs)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              {data.recent_logs?.map((log: any) => (
+                <div key={log.id} className="flex items-start justify-between border-b pb-3 last:border-0 last:pb-0">
+                  <div>
+                    <p className="font-medium text-sm flex items-center gap-2">
+                      <span className="text-primary">{log.username}</span> 
+                      <Badge variant="outline" className="text-[10px] uppercase">{log.action.replace(/_/g, ' ')}</Badge>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {log.entity_type} {log.entity_id ? `#${log.entity_id}` : ''} • IP: {log.ip_address || 'N/A'}
+                    </p>
+                  </div>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">
+                    {new Date(log.created_at).toLocaleString([], {hour: '2-digit', minute:'2-digit', month:'short', day:'numeric'})}
+                  </span>
+                </div>
+              ))}
+              {(!data.recent_logs || data.recent_logs.length === 0) && (
+                <p className="text-sm text-muted-foreground text-center py-4">No recent activity.</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-red-500/20 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              Security & Authorization Center
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              {data.security_alerts?.map((alert: any) => (
+                <div key={alert.id} className="flex items-start justify-between p-3 border rounded-lg bg-red-50/50 dark:bg-red-950/20 border-red-100 dark:border-red-900/30">
+                  <div>
+                    <p className="font-medium text-sm text-red-700 dark:text-red-300">
+                      {alert.action.replace(/_/g, ' ')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      By: {alert.username} • {new Date(alert.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  <Button size="sm" variant="outline" className="h-7 text-xs border-red-200 text-red-600 hover:bg-red-50">
+                    Review
+                  </Button>
+                </div>
+              ))}
+              {(!data.security_alerts || data.security_alerts.length === 0) && (
+                <div className="flex flex-col items-center justify-center py-8 text-green-600 dark:text-green-400">
+                  <CheckCircle className="h-8 w-8 mb-2" />
+                  <p className="text-sm font-medium">No security alerts detected</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Global User Directory</CardTitle>
