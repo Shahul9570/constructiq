@@ -39,7 +39,7 @@ class InvoiceBase(BaseModel):
 
 
 class InvoiceCreate(InvoiceBase):
-    pass
+    project_id: int
 
 
 class InvoiceUpdate(BaseModel):
