@@ -36,7 +36,7 @@ export const financialService = {
   },
 
   async createInvoice(project_id: number, data: Partial<Invoice>): Promise<Invoice> {
-    const response = await api.post('/financial/invoices', data, { params: { project_id } })
+    const response = await api.post('/financial/invoices', { ...data, project_id }, { params: { project_id } })
     return response.data
   },
 
