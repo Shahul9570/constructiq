@@ -399,6 +399,7 @@ def list_invoices(
             tax_amount=inv.tax_amount, issue_date=inv.issue_date, due_date=inv.due_date,
             status=inv.status.value if hasattr(inv.status, 'value') else str(inv.status),
             paid_date=inv.paid_date, payment_method=inv.payment_method, notes=inv.notes,
+            amount_paid=inv.amount_paid or 0.0,
             file_url=inv.file_url, created_by=inv.created_by, created_at=inv.created_at,
             updated_at=inv.updated_at or datetime.now()
         ))
@@ -415,6 +416,7 @@ def list_invoices(
                     vendor_name="Material Supplier", amount=amount, total_amount=amount, tax_amount=0.0,
                     issue_date=arrival.arrival_date, due_date=arrival.arrival_date,
                     status="paid", paid_date=arrival.arrival_date, payment_method=None,
+                    amount_paid=amount,
                     notes=f"Material: {mat.name}", file_url=None, created_by=arrival.received_by,
                     created_at=arrival.created_at or datetime.now(), updated_at=arrival.created_at or datetime.now()
                 ))
