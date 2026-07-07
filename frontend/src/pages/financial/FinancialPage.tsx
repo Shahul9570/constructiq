@@ -129,6 +129,7 @@ export default function FinancialPage() {
       setPaymentForm({ invoice_id: 0, amount: '', payment_method: 'bank_transfer', notes: '' })
     },
   })
+  const costSummary = {
     labour:    summary?.total_labour_cost    ?? 0,
     material:  summary?.total_material_cost  ?? 0,
     equipment: summary?.total_equipment_cost ?? 0,
