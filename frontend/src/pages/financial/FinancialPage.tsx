@@ -94,8 +94,10 @@ export default function FinancialPage() {
   const [invoiceForm, setInvoiceForm] = useState({
     invoice_number: '',
     invoice_type: 'CLIENT',
+    vendor_name: '',
     amount: '',
     issue_date: new Date().toISOString().split('T')[0],
+    due_date: '',
   })
 
   const createInvoiceMutation = useMutation({
@@ -105,7 +107,7 @@ export default function FinancialPage() {
       queryClient.invalidateQueries({ queryKey: ['cost-summary'] })
       queryClient.invalidateQueries({ queryKey: ['budget-tracking'] })
       setIsInvoiceOpen(false)
-      setInvoiceForm({ invoice_number: '', invoice_type: 'CLIENT', amount: '', issue_date: new Date().toISOString().split('T')[0] })
+      setInvoiceForm({ invoice_number: '', invoice_type: 'CLIENT', vendor_name: '', amount: '', issue_date: new Date().toISOString().split('T')[0], due_date: '' })
     },
   })
 
@@ -442,6 +444,16 @@ export default function FinancialPage() {
                 </SelectContent>
               </Select>
             </div>
+            {invoiceForm.invoice_type !== 'CLIENT' && (
+              <div className="grid gap-2">
+                <Label>Vendor Name</Label>
+                <Input
+                  value={invoiceForm.vendor_name}
+                  onChange={(e) => setInvoiceForm({ ...invoiceForm, vendor_name: e.target.value })}
+                  placeholder="e.g. Acme Equipment Rentals"
+                />
+              </div>
+            )}
             <div className="grid gap-2">
               <Label>Amount</Label>
               <Input
@@ -449,6 +461,14 @@ export default function FinancialPage() {
                 value={invoiceForm.amount}
                 onChange={(e) => setInvoiceForm({ ...invoiceForm, amount: e.target.value })}
                 placeholder="0.00"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Due Date</Label>
+              <Input
+                type="date"
+                value={invoiceForm.due_date}
+                onChange={(e) => setInvoiceForm({ ...invoiceForm, due_date: e.target.value })}
               />
             </div>
           </div>
@@ -459,7 +479,9 @@ export default function FinancialPage() {
                 ...invoiceForm,
                 amount: parseFloat(invoiceForm.amount),
                 tax_amount: 0,
-                status: 'sent'
+                status: 'sent',
+                vendor_name: invoiceForm.vendor_name || undefined,
+                due_date: invoiceForm.due_date || undefined,
               })}
               disabled={createInvoiceMutation.isPending || !invoiceForm.invoice_number || !invoiceForm.amount}
             >
