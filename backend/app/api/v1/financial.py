@@ -362,7 +362,6 @@ def create_invoice(
 ):
     invoice = Invoice(
         **data.model_dump(),
-        project_id=project_id,
         total_amount=data.amount + data.tax_amount,
         created_by=current_user.id,
     )
