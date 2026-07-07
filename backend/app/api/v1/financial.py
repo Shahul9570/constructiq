@@ -1,9 +1,10 @@
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
 
 from app.core.database import get_db
+from app.core.audit import log_action
 from app.core.security import get_current_user, require_roles
 from app.models.user import User, UserRole
 from app.models.financial import CostRecord, Invoice, CostCategory
@@ -22,6 +23,7 @@ router = APIRouter()
 def add_cost(
     data: CostRecordCreate,
     project_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
@@ -30,11 +32,15 @@ def add_cost(
     db.add(cost)
     db.commit()
     db.refresh(cost)
+    
+    log_action(db, current_user.id, "COST_RECORDED", "CostRecord", cost.id, {"amount": cost.amount, "category": cost.category.value if hasattr(cost.category, 'value') else str(cost.category)}, request.client.host if request.client else None)
+    
     return cost
 
 @router.post("/costs/{cost_id}/status", response_model=CostRecordResponse)
 def update_cost_status(
     cost_id: int,
+    request: Request,
     status: str = Query(..., description="approved or rejected"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER)),
@@ -68,6 +74,9 @@ def update_cost_status(
     cost.status = status
     db.commit()
     db.refresh(cost)
+    
+    log_action(db, current_user.id, "COST_STATUS_UPDATED", "CostRecord", cost.id, {"status": status}, request.client.host if request.client else None)
+    
     return cost
 
 @router.get("/costs", response_model=list[CostRecordResponse])
@@ -347,6 +356,7 @@ def budget_tracking(
 def create_invoice(
     data: InvoiceCreate,
     project_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
 ):
@@ -359,6 +369,9 @@ def create_invoice(
     db.add(invoice)
     db.commit()
     db.refresh(invoice)
+    
+    log_action(db, current_user.id, "INVOICE_CREATED", "Invoice", invoice.id, {"amount": invoice.total_amount, "type": invoice.invoice_type.value if hasattr(invoice.invoice_type, 'value') else str(invoice.invoice_type)}, request.client.host if request.client else None)
+    
     return invoice
 
 
@@ -433,6 +446,7 @@ def update_invoice(
 def submit_payment(
     invoice_id: int,
     data: SubmitPaymentRequest,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.CLIENT, UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER)),
 ):
@@ -448,6 +462,9 @@ def submit_payment(
         
     db.commit()
     db.refresh(invoice)
+    
+    log_action(db, current_user.id, "PAYMENT_SUBMITTED", "Invoice", invoice.id, {"payment_method": data.payment_method}, request.client.host if request.client else None)
+    
     return invoice
 
 

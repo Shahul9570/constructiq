@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from datetime import timedelta
+
+from app.core.audit import log_action
 
 from app.core.database import get_db, Base
 from app.core.security import (
@@ -18,7 +20,7 @@ router = APIRouter()
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
-def register(data: UserCreate, db: Session = Depends(get_db)):
+def register(data: UserCreate, request: Request, db: Session = Depends(get_db)):
     # Block direct super_admin registration
     if data.role and data.role.lower() == UserRole.SUPER_ADMIN.value:
         raise HTTPException(
@@ -67,28 +69,32 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
+    log_action(db, user.id, "USER_REGISTERED", "User", user.id, {"role": user.role.value}, request.client.host if request.client else None)
     return user
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(data: UserLogin, db: Session = Depends(get_db)):
+def login(data: UserLogin, request: Request, db: Session = Depends(get_db)):
     user = db.query(User).filter(
         (User.username == data.username) | (User.email == data.username)
     ).first()
     
     if not user:
+        log_action(db, None, "FAILED_LOGIN", "User", None, {"username": data.username, "reason": "User not found"}, request.client.host if request.client else None)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
         
     if not verify_password(data.password, user.hashed_password):
+        log_action(db, user.id, "FAILED_LOGIN", "User", user.id, {"reason": "Invalid password"}, request.client.host if request.client else None)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
         
     if not user.is_active:
+        log_action(db, user.id, "FAILED_LOGIN", "User", user.id, {"reason": "Inactive account"}, request.client.host if request.client else None)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is inactive"
@@ -100,6 +106,8 @@ def login(data: UserLogin, db: Session = Depends(get_db)):
     refresh_token = create_refresh_token(
         data={"sub": str(user.id)}
     )
+
+    log_action(db, user.id, "USER_LOGIN", "User", user.id, None, request.client.host if request.client else None)
 
     return TokenResponse(
         access_token=access_token,
@@ -162,6 +170,7 @@ def update_me(
 @router.post("/change-password")
 def change_password(
     data: PasswordChange,
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -172,6 +181,7 @@ def change_password(
         )
     current_user.hashed_password = hash_password(data.new_password)
     db.commit()
+    log_action(db, current_user.id, "PASSWORD_CHANGED", "User", current_user.id, None, request.client.host if request.client else None)
     return {"message": "Password changed successfully"}
 
 from app.core.security import require_roles
@@ -193,10 +203,18 @@ def wipe_mock_data(
     return {"message": "All mock data has been wiped successfully."}
 
 @router.get("/system/bootstrap-admin", status_code=status.HTTP_200_OK)
-def bootstrap_admin(db: Session = Depends(get_db)):
+def bootstrap_admin(request: Request, db: Session = Depends(get_db)):
     """
     Bootstraps the initial Super Admin account and default test users if they don't exist.
     """
+    # Security Check: Forbid if Super Admin already exists
+    existing_admin = db.query(User).filter(User.role == UserRole.SUPER_ADMIN).first()
+    if existing_admin:
+        log_action(db, None, "UNAUTHORIZED_ACCESS", "System", None, {"reason": "Attempted bootstrap with existing admin"}, request.client.host if request.client else None)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Super Admin already exists. Bootstrap locked."
+        )
     users_data = [
         {"email": "admin@constructiq.com", "username": "admin", "password": "Admin@123", "full_name": "Super Admin", "role": UserRole.SUPER_ADMIN},
         {"email": "owner@constructiq.com", "username": "owner", "password": "Owner@123", "full_name": "Company Owner", "role": UserRole.COMPANY_OWNER},
@@ -229,7 +247,11 @@ def bootstrap_admin(db: Session = Depends(get_db)):
     return {"message": "All test users (Admin, Owner, Manager, Engineer, Accountant) seeded and reset successfully."}
 
 @router.get("/system/wipe-all-users", status_code=status.HTTP_200_OK)
-def wipe_all_users(db: Session = Depends(get_db)):
+def wipe_all_users(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
+):
     """
     WARNING: Wipes all users from the database EXCEPT the Super Admin.
     Also wipes ALL data from all other tables to ensure referential integrity.
@@ -247,6 +269,9 @@ def wipe_all_users(db: Session = Depends(get_db)):
         # Now delete non-admin users
         deleted_count = db.query(User).filter(User.role != UserRole.SUPER_ADMIN).delete(synchronize_session=False)
         db.commit()
+        
+        log_action(db, current_user.id, "WIPE_ALL_USERS", "System", None, {"deleted_users_count": deleted_count}, request.client.host if request.client else None)
+        
         return {"message": f"Successfully deleted {deleted_count} non-admin users and wiped all associated data. Your database is now perfectly clean."}
     except Exception as e:
         db.rollback()

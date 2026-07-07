@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List
 
 from app.core.database import get_db
 from app.core.security import require_roles
+from app.core.audit import log_action
 from app.models.user import User, UserRole
 from app.models.project import Project
 from app.schemas.user import UserResponse
@@ -46,6 +47,7 @@ def list_all_users(
 def update_user_status(
     user_id: int,
     data: UserStatusUpdate,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
 ):
@@ -59,4 +61,7 @@ def update_user_status(
     user.is_active = data.is_active
     db.commit()
     db.refresh(user)
+    
+    log_action(db, current_user.id, "USER_STATUS_UPDATED", "User", user.id, {"is_active": data.is_active}, request.client.host if request.client else None)
+    
     return user
