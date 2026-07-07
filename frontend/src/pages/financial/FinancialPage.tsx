@@ -93,7 +93,7 @@ export default function FinancialPage() {
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
   const [invoiceForm, setInvoiceForm] = useState({
     invoice_number: '',
-    invoice_type: 'client',
+    invoice_type: 'CLIENT',
     amount: '',
     issue_date: new Date().toISOString().split('T')[0],
   })
@@ -105,7 +105,7 @@ export default function FinancialPage() {
       queryClient.invalidateQueries({ queryKey: ['cost-summary'] })
       queryClient.invalidateQueries({ queryKey: ['budget-tracking'] })
       setIsInvoiceOpen(false)
-      setInvoiceForm({ invoice_number: '', invoice_type: 'client', amount: '', issue_date: new Date().toISOString().split('T')[0] })
+      setInvoiceForm({ invoice_number: '', invoice_type: 'CLIENT', amount: '', issue_date: new Date().toISOString().split('T')[0] })
     },
   })
 
@@ -435,10 +435,10 @@ export default function FinancialPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="client">Client (Accounts Receivable)</SelectItem>
-                  <SelectItem value="material">Material Supplier</SelectItem>
-                  <SelectItem value="contractor">Subcontractor</SelectItem>
-                  <SelectItem value="equipment">Equipment Rental</SelectItem>
+                  <SelectItem value="CLIENT">Client (Accounts Receivable)</SelectItem>
+                  <SelectItem value="MATERIAL">Material Supplier</SelectItem>
+                  <SelectItem value="CONTRACTOR">Subcontractor</SelectItem>
+                  <SelectItem value="EQUIPMENT">Equipment Rental</SelectItem>
                 </SelectContent>
               </Select>
             </div>
