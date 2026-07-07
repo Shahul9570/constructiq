@@ -249,6 +249,7 @@ export interface Invoice {
   amount: number
   tax_amount: number
   total_amount: number
+  amount_paid: number
   status: string
   issue_date: string
   due_date?: string
