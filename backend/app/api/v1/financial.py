@@ -453,11 +453,17 @@ def submit_payment(
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
         
-    invoice.status = "PENDING_VERIFICATION"
+    invoice.amount_paid += data.amount
+    
+    if invoice.amount_paid >= invoice.total_amount:
+        invoice.status = "PAID"
+    else:
+        invoice.status = "PARTIALLY_PAID"
+        
     invoice.payment_method = data.payment_method
     if data.notes:
         existing_notes = invoice.notes or ""
-        invoice.notes = f"{existing_notes}\n[Client Payment Submitted]: {data.notes}".strip()
+        invoice.notes = f"{existing_notes}\n[Payment Submitted - {data.amount}]: {data.notes}".strip()
         
     db.commit()
     db.refresh(invoice)

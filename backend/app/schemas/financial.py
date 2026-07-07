@@ -51,6 +51,7 @@ class InvoiceUpdate(BaseModel):
 
 class SubmitPaymentRequest(BaseModel):
     payment_method: str
+    amount: float
     notes: Optional[str] = None
 
 
@@ -58,6 +59,7 @@ class InvoiceResponse(InvoiceBase):
     id: int
     project_id: int
     total_amount: float
+    amount_paid: float
     status: str
     paid_date: Optional[date] = None
     file_url: Optional[str] = None

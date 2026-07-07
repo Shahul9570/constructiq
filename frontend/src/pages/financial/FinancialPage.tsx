@@ -111,9 +111,24 @@ export default function FinancialPage() {
     },
   })
 
-  // Map backend field names → frontend display names
-  // Backend returns: total_labour_cost, total_material_cost, total_equipment_cost, total_cost
-  const costSummary = {
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false)
+  const [paymentForm, setPaymentForm] = useState({
+    invoice_id: 0,
+    amount: '',
+    payment_method: 'bank_transfer',
+    notes: '',
+  })
+
+  const submitPaymentMutation = useMutation({
+    mutationFn: (data: any) => financialService.submitPayment(data.invoice_id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['cost-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['budget-tracking'] })
+      setIsPaymentOpen(false)
+      setPaymentForm({ invoice_id: 0, amount: '', payment_method: 'bank_transfer', notes: '' })
+    },
+  })
     labour:    summary?.total_labour_cost    ?? 0,
     material:  summary?.total_material_cost  ?? 0,
     equipment: summary?.total_equipment_cost ?? 0,
@@ -332,7 +347,8 @@ export default function FinancialPage() {
                       <TableRow>
                         <TableHead>Invoice #</TableHead>
                         <TableHead>Vendor</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-right">Total Amount</TableHead>
+                        <TableHead className="text-right">Balance Due</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Due</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -350,11 +366,16 @@ export default function FinancialPage() {
                           <TableCell className="text-right font-medium">
                             ${inv.total_amount.toLocaleString()}
                           </TableCell>
+                          <TableCell className="text-right font-medium text-amber-600">
+                            ${(inv.total_amount - (inv.amount_paid || 0)).toLocaleString()}
+                          </TableCell>
                           <TableCell>
                             <Badge
                               variant={
                                 inv.status === 'paid'
                                   ? 'default'
+                                  : inv.status === 'partially_paid'
+                                    ? 'outline'
                                   : inv.status === 'pending_verification'
                                     ? 'outline'
                                     : inv.status === 'overdue'
@@ -391,14 +412,21 @@ export default function FinancialPage() {
                                 </Button>
                               </div>
                             )}
-                            {(inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'draft') && (
+                            {(inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'draft' || inv.status === 'partially_paid') && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => updateStatusMutation.mutate({ id: inv.id, status: 'paid' })}
-                                disabled={updateStatusMutation.isPending}
+                                onClick={() => {
+                                  setPaymentForm({
+                                    invoice_id: inv.id,
+                                    amount: (inv.total_amount - (inv.amount_paid || 0)).toString(),
+                                    payment_method: 'bank_transfer',
+                                    notes: ''
+                                  })
+                                  setIsPaymentOpen(true)
+                                }}
                               >
-                                {updateStatusMutation.isPending ? 'Updating...' : 'Mark Paid'}
+                                Settle Payment
                               </Button>
                             )}
                           </TableCell>
@@ -486,6 +514,62 @@ export default function FinancialPage() {
               disabled={createInvoiceMutation.isPending || !invoiceForm.invoice_number || !invoiceForm.amount}
             >
               {createInvoiceMutation.isPending ? 'Saving...' : 'Create Invoice'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPaymentOpen} onOpenChange={setIsPaymentOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Settle Payment</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Payment Amount</Label>
+              <Input
+                type="number"
+                value={paymentForm.amount}
+                onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Payment Method</Label>
+              <Select
+                value={paymentForm.payment_method}
+                onValueChange={(val) => setPaymentForm({ ...paymentForm, payment_method: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="credit_card">Credit Card</SelectItem>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="check">Check</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label>Notes (Optional)</Label>
+              <Input
+                value={paymentForm.notes}
+                onChange={(e) => setPaymentForm({ ...paymentForm, notes: e.target.value })}
+                placeholder="Transaction ID, Check #, etc."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPaymentOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => submitPaymentMutation.mutate({
+                ...paymentForm,
+                amount: parseFloat(paymentForm.amount)
+              })}
+              disabled={submitPaymentMutation.isPending || !paymentForm.amount}
+            >
+              {submitPaymentMutation.isPending ? 'Processing...' : 'Submit Payment'}
             </Button>
           </DialogFooter>
         </DialogContent>

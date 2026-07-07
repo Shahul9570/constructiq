@@ -31,6 +31,7 @@ class InvoiceStatus(str, enum.Enum):
     DRAFT = "DRAFT"
     SENT = "SENT"
     PENDING_VERIFICATION = "PENDING_VERIFICATION"
+    PARTIALLY_PAID = "PARTIALLY_PAID"
     PAID = "PAID"
     OVERDUE = "OVERDUE"
     CANCELLED = "CANCELLED"
@@ -66,6 +67,7 @@ class Invoice(Base):
     amount = Column(Float, nullable=False)
     tax_amount = Column(Float, default=0.0)
     total_amount = Column(Float, nullable=False)
+    amount_paid = Column(Float, default=0.0)
     status = Column(SAEnum(InvoiceStatus), default=InvoiceStatus.DRAFT)
     issue_date = Column(Date, nullable=False)
     due_date = Column(Date)
