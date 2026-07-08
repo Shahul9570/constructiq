@@ -20,6 +20,7 @@ import {
   BrainCircuit,
   ClipboardList,
   BarChart3,
+  Box,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -161,6 +162,15 @@ export default function ProjectDetailPage() {
                 Start Project
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+              onClick={() => navigate(`/projects/${projectId}/visualizer`)}
+            >
+              <Box className="mr-2 h-4 w-4" />
+              View 3D Live Progress
+            </Button>
           </div>
           <p className="text-muted-foreground flex items-center gap-2 mt-1">
             <MapPin className="h-3 w-3" />

@@ -6,6 +6,7 @@ import RegisterPage from '@/pages/auth/RegisterPage'
 import DashboardPage from '@/pages/dashboards/DashboardPage'
 import ProjectsPage from '@/pages/projects/ProjectsPage'
 import ProjectDetailPage from '@/pages/projects/ProjectDetailPage'
+import DigitalTwinPage from '@/pages/projects/DigitalTwinPage'
 import LabourSummaryPage from '@/pages/workforce/LabourSummaryPage'
 import ContractorsPage from '@/pages/contractors/ContractorsPage'
 import MaterialsPage from '@/pages/materials/MaterialsPage'
@@ -57,6 +58,7 @@ export default function App() {
         {/* All roles can view projects */}
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="projects/:id" element={<ProjectDetailPage />} />
+        <Route path="projects/:id/visualizer" element={<DigitalTwinPage />} />
         
         {/* Only admins/owners/managers can view users */}
         <Route path="users" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER]}><UsersPage /></RequireRole>} />

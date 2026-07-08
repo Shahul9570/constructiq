@@ -2,7 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import auth, users, projects, workforce, contractors
 from app.api.v1 import materials, equipment, daily_progress, financial
-from app.api.v1 import documents, photos, dashboards, reports, ai, project_tasks, billing, notifications, admin
+from app.api.v1 import documents, photos, dashboards, reports, ai, project_tasks, billing, notifications, admin, digital_twin
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -24,3 +24,4 @@ api_router.include_router(ai.router, prefix="/ai", tags=["AI Features"])
 api_router.include_router(billing.router, prefix="/billing", tags=["Billing"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 api_router.include_router(admin.router, prefix="/admin", tags=["Super Admin"])
+api_router.include_router(digital_twin.router, prefix="", tags=["Digital Twin"])

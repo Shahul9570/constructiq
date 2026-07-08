@@ -52,6 +52,7 @@ class Project(Base):
     project_type = Column(String(50), default=ProjectType.OTHER.value)
     progress_percentage = Column(Float, default=0.0)
     is_archived = Column(Boolean, default=False)
+    model_url = Column(String(500), nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
@@ -110,6 +111,7 @@ class ProjectStructure(Base):
     name = Column(String(255), nullable=False)
     level = Column(Integer, default=0)
     sort_order = Column(Integer, default=0)
+    mesh_node_id = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     project = relationship("Project", back_populates="structures")
