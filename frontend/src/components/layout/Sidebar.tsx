@@ -51,29 +51,7 @@ const adminNavGroups = [
   },
 ]
 
-const adminOperationsNavGroups = [
-  {
-    title: 'Operations',
-    items: [
-      { label: 'Daily Progress', href: '/daily-progress', icon: BarChart3 },
-      { label: 'Labour',         href: '/labour',         icon: Users },
-      { label: 'Materials',      href: '/materials',      icon: Package },
-      { label: 'Equipment',      href: '/equipment',      icon: Wrench },
-      { label: 'Contractors',    href: '/contractors',    icon: Building2 },
-      { label: 'Daily Expenses', href: '/daily-expenses', icon: DollarSign },
-    ],
-  },
-  {
-    title: 'Records',
-    items: [
-      { label: 'Financial',  href: '/financial',  icon: DollarSign },
-      { label: 'Client Billing', href: '/client-billing', icon: FileText },
-      { label: 'Documents',  href: '/documents',  icon: FileText },
-      { label: 'Photos',     href: '/photos',     icon: Camera },
-      { label: 'Reports',    href: '/reports',    icon: FileBarChart },
-    ],
-  },
-]
+
 
 const navGroups = [
   {
@@ -119,7 +97,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const { user } = useAuth()
   const role = user?.role
   
-  const [viewMode, setViewMode] = useState<'global' | 'operations'>('global')
+
 
   // Define allowed labels per role (if they are not super_admin or company_owner)
   const allowedItemsPerRole: Record<string, string[]> = {
@@ -147,11 +125,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   const isAdmin = role === 'super_admin' || role === 'company_owner';
 
   if (isAdmin) {
-    if (viewMode === 'global') {
-      filteredNavGroups = adminNavGroups;
-    } else {
-      filteredNavGroups = adminOperationsNavGroups;
-    }
+    filteredNavGroups = adminNavGroups;
   } else if (role && allowedItemsPerRole[role]) {
     const allowed = allowedItemsPerRole[role];
     filteredNavGroups = navGroups.map(group => ({
@@ -200,31 +174,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           </Button>
         </div>
 
-        {/* View Mode Toggle for Admins */}
-        {isAdmin && (
-          <div className="px-6 py-4 border-b border-slate-800">
-            <div className="flex bg-slate-800/50 p-1 rounded-lg">
-              <button
-                onClick={() => setViewMode('global')}
-                className={cn(
-                  "flex-1 text-xs font-medium py-1.5 rounded-md transition-colors",
-                  viewMode === 'global' ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
-                )}
-              >
-                Global View
-              </button>
-              <button
-                onClick={() => setViewMode('operations')}
-                className={cn(
-                  "flex-1 text-xs font-medium py-1.5 rounded-md transition-colors",
-                  viewMode === 'operations' ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
-                )}
-              >
-                Operations
-              </button>
-            </div>
-          </div>
-        )}
+
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-6">
