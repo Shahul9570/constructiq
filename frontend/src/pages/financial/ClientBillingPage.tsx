@@ -69,6 +69,7 @@ export default function ClientBillingPage() {
         vendor_name: invoiceForm.vendor_name,
         amount: Number(invoiceForm.amount),
         tax_amount: Number(invoiceForm.tax_amount || 0),
+        amount_paid: 0,
         issue_date: invoiceForm.issue_date,
         due_date: invoiceForm.due_date || undefined,
         notes: invoiceForm.notes,
