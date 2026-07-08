@@ -99,8 +99,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   
 
 
-  // Define allowed labels per role (if they are not super_admin or company_owner)
   const allowedItemsPerRole: Record<string, string[]> = {
+    company_owner: [
+      'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 
+      'Contractors', 'Daily Expenses', 'Financial', 'Client Billing', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
+    ],
     project_manager: [
       'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 
       'Contractors', 'Daily Expenses', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
@@ -122,7 +125,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
   };
 
   let filteredNavGroups = navGroups;
-  const isAdmin = role === 'super_admin' || role === 'company_owner';
+  const isAdmin = role === 'super_admin';
 
   if (isAdmin) {
     filteredNavGroups = adminNavGroups;
