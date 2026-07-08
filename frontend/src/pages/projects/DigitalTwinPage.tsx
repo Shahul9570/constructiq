@@ -5,7 +5,7 @@ import { ArrowLeft, Box } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import ModelViewer from '@/components/digital-twin/ModelViewer'
 import ProgressOverlay from '@/components/digital-twin/ProgressOverlay'
-import { api } from '@/services/api'
+import api from '@/services/api'
 
 // Temporary service function until we add it to a proper service class
 const getDigitalTwinData = async (projectId: number) => {
