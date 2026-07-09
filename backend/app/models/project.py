@@ -115,7 +115,7 @@ class ProjectStructure(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     project = relationship("Project", back_populates="structures")
-    children = relationship("ProjectStructure", backref="parent", remote_side=[id])
+    parent = relationship("ProjectStructure", remote_side=[id], backref="children")
 
     def __repr__(self):
         return f"<ProjectStructure {self.name}>"
