@@ -211,6 +211,7 @@ export default function DigitalTwinPage() {
           />
         </ModelErrorBoundary>
         <ProgressOverlay 
+          projectId={projectId}
           selectedMeshId={selectedMeshId} 
           selectedName={selectedName}
           mapping={selectedMapping}

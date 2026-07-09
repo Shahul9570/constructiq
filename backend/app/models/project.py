@@ -112,6 +112,7 @@ class ProjectStructure(Base):
     level = Column(Integer, default=0)
     sort_order = Column(Integer, default=0)
     mesh_node_id = Column(String(255), nullable=True)
+    progress_percentage = Column(Float, default=0.0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     project = relationship("Project", back_populates="structures")

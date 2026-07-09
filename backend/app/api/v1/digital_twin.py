@@ -30,13 +30,11 @@ def get_digital_twin_data(
 
     mesh_mappings = []
     for structure in structures:
-        # In a real scenario, progress would be calculated from tasks or work logs
-        # For this prototype, we'll return a simulated progress if it's missing
         mesh_mappings.append({
             "structure_id": structure.id,
             "mesh_node_id": structure.mesh_node_id,
             "name": structure.name,
-            "progress_percentage": 50.0  # Simulated progress for Phase 1
+            "progress_percentage": structure.progress_percentage
         })
 
     return {
@@ -113,3 +111,31 @@ def sync_digital_twin_structures(
         "added": len(new_structures),
         "total": len(existing_mesh_ids) + len(new_structures)
     }
+
+class UpdateProgressRequest(BaseModel):
+    progress_percentage: float
+
+@router.patch("/projects/{project_id}/digital-twin/structures/{mesh_node_id}", status_code=200)
+def update_structure_progress(
+    project_id: int,
+    mesh_node_id: str,
+    request: UpdateProgressRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    structure = db.query(ProjectStructure).filter(
+        ProjectStructure.project_id == project_id,
+        ProjectStructure.mesh_node_id == mesh_node_id
+    ).first()
+    
+    if not structure:
+        raise HTTPException(status_code=404, detail="Structure not found")
+        
+    if request.progress_percentage < 0 or request.progress_percentage > 100:
+        raise HTTPException(status_code=400, detail="Progress must be between 0 and 100")
+        
+    structure.progress_percentage = request.progress_percentage
+    db.commit()
+    db.refresh(structure)
+    
+    return {"message": "Progress updated successfully", "progress_percentage": structure.progress_percentage}
