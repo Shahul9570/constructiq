@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Box, Upload } from 'lucide-react'
+import { ArrowLeft, Box, Upload, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import toast from 'react-hot-toast'
 import ModelViewer from '@/components/digital-twin/ModelViewer'
@@ -14,6 +14,35 @@ const getDigitalTwinData = async (projectId: number) => {
   return data
 }
 
+class ModelErrorBoundary extends React.Component<{ children: React.ReactNode, onReset: () => void }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode, onReset: () => void }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full min-h-[500px] bg-slate-900 rounded-xl border border-red-900/50 space-y-4">
+          <AlertTriangle className="h-12 w-12 text-red-500" />
+          <h2 className="text-xl font-medium text-slate-300">Failed to Load Model</h2>
+          <p className="text-slate-500 max-w-md text-center">
+            The 3D model file is missing or corrupted. This can happen if the storage was cleared.
+          </p>
+          <Button variant="outline" className="border-red-900 text-red-400 hover:bg-red-950" onClick={this.props.onReset}>
+            Clear and Re-Upload Model
+          </Button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 export default function DigitalTwinPage() {
   const { id } = useParams()
   const projectId = Number(id)
@@ -23,6 +52,7 @@ export default function DigitalTwinPage() {
   const [selectedMeshId, setSelectedMeshId] = useState<string | null>(null)
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const [meshNames, setMeshNames] = useState<string[]>([])
+  const [forceUpload, setForceUpload] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['digital-twin', projectId],
@@ -43,6 +73,7 @@ export default function DigitalTwinPage() {
     },
     onSuccess: () => {
       toast.success('3D Model uploaded successfully')
+      setForceUpload(false)
       queryClient.invalidateQueries({ queryKey: ['digital-twin', projectId] })
     },
     onError: () => {
@@ -85,7 +116,7 @@ export default function DigitalTwinPage() {
     )
   }
 
-  if (!data?.model_url) {
+  if (!data?.model_url || forceUpload) {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-4">
@@ -159,12 +190,14 @@ export default function DigitalTwinPage() {
       </div>
 
       <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
-        <ModelViewer 
-          modelUrl={data.model_url.startsWith('http') ? data.model_url : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}${data.model_url}`} 
-          mappings={data.mappings || []} 
-          onMeshClick={handleMeshClick} 
-          onModelLoaded={setMeshNames}
-        />
+        <ModelErrorBoundary onReset={() => setForceUpload(true)}>
+          <ModelViewer 
+            modelUrl={data.model_url.startsWith('http') ? data.model_url : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}${data.model_url}`} 
+            mappings={data.mappings || []} 
+            onMeshClick={handleMeshClick} 
+            onModelLoaded={setMeshNames}
+          />
+        </ModelErrorBoundary>
         <ProgressOverlay 
           selectedMeshId={selectedMeshId} 
           selectedName={selectedName}
