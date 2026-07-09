@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Box } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Box, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import toast from 'react-hot-toast'
 import ModelViewer from '@/components/digital-twin/ModelViewer'
 import ProgressOverlay from '@/components/digital-twin/ProgressOverlay'
 import api from '@/services/api'
@@ -16,6 +17,8 @@ const getDigitalTwinData = async (projectId: number) => {
 export default function DigitalTwinPage() {
   const { id } = useParams()
   const projectId = Number(id)
+  const queryClient = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [selectedMeshId, setSelectedMeshId] = useState<string | null>(null)
   const [selectedName, setSelectedName] = useState<string | null>(null)
@@ -25,6 +28,32 @@ export default function DigitalTwinPage() {
     queryFn: () => getDigitalTwinData(projectId),
     enabled: !!projectId
   })
+
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const { data } = await api.post(`/projects/${projectId}/digital-twin/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+      return data
+    },
+    onSuccess: () => {
+      toast.success('3D Model uploaded successfully')
+      queryClient.invalidateQueries({ queryKey: ['digital-twin', projectId] })
+    },
+    onError: () => {
+      toast.error('Failed to upload 3D model')
+    }
+  })
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      uploadMutation.mutate(e.target.files[0])
+    }
+  }
 
   const handleMeshClick = (meshId: string, name: string) => {
     setSelectedMeshId(meshId)
@@ -58,7 +87,24 @@ export default function DigitalTwinPage() {
           <p className="text-slate-500 max-w-md text-center">
             This project does not have an uploaded 3D model. Please upload a .glb file to enable the Digital Twin experience.
           </p>
-          <Button variant="outline" className="border-slate-700 text-slate-300">
+          <input 
+            type="file" 
+            accept=".glb,.gltf"
+            className="hidden" 
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
+          <Button 
+            variant="outline" 
+            className="border-slate-700 text-slate-300"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploadMutation.isPending}
+          >
+            {uploadMutation.isPending ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-slate-300 mr-2" />
+            ) : (
+              <Upload className="h-4 w-4 mr-2" />
+            )}
             Upload Model
           </Button>
         </div>
