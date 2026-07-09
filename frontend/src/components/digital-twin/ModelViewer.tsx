@@ -1,6 +1,6 @@
-import { useRef, useState, useMemo } from 'react'
+import { useRef, useState, useMemo, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, OrbitControls, Environment, Bounds, Html } from '@react-three/drei'
+import { useGLTF, OrbitControls, Environment, Bounds, useBounds, PointerLockControls } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface ModelViewerProps {
@@ -14,6 +14,7 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight }: { url:
   const { scene } = useGLTF(url)
   const [hovered, setHovered] = useState<string | null>(null)
   const loadedRef = useRef(false)
+  const bounds = useBounds()
 
   // Extract mesh names on load
   useMemo(() => {
@@ -109,6 +110,9 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight }: { url:
         const userData = e.object.userData
         if (userData.isMapped) {
           onMeshClick(userData.meshId, userData.name)
+          if (e.delta <= 2) {
+            bounds.refresh(e.object).fit()
+          }
         }
       }}
       onPointerOver={(e: any) => {
@@ -123,11 +127,54 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight }: { url:
   )
 }
 
+function FirstPersonCamera() {
+  const keys = useRef({ w: false, a: false, s: false, d: false })
+  
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase()
+      if (keys.current.hasOwnProperty(k)) (keys.current as any)[k] = true
+    }
+    const up = (e: KeyboardEvent) => {
+      const k = e.key.toLowerCase()
+      if (keys.current.hasOwnProperty(k)) (keys.current as any)[k] = false
+    }
+    window.addEventListener('keydown', down)
+    window.addEventListener('keyup', up)
+    return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up) }
+  }, [])
+
+  useFrame((state, delta) => {
+    const speed = 5 * delta;
+    if (keys.current.w) state.camera.translateZ(-speed)
+    if (keys.current.s) state.camera.translateZ(speed)
+    if (keys.current.a) state.camera.translateX(-speed)
+    if (keys.current.d) state.camera.translateX(speed)
+  })
+
+  return <PointerLockControls />
+}
+
 export default function ModelViewer({ modelUrl, mappings, onMeshClick, onModelLoaded }: ModelViewerProps) {
   const [clipHeight, setClipHeight] = useState(100)
+  const [viewMode, setViewMode] = useState<'orbit' | 'walk'>('orbit')
 
   return (
     <div className="w-full h-full min-h-[500px] bg-slate-900 rounded-xl overflow-hidden border border-slate-800 relative">
+      <div className="absolute top-4 left-4 z-10 bg-slate-950/80 backdrop-blur-md rounded-lg p-1 border border-slate-800 flex gap-1">
+        <button
+          onClick={() => setViewMode('orbit')}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${viewMode === 'orbit' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+        >
+          Orbit View
+        </button>
+        <button
+          onClick={() => setViewMode('walk')}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${viewMode === 'walk' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+        >
+          Walk Mode
+        </button>
+      </div>
       <Canvas camera={{ position: [10, 10, 10], fov: 50 }} gl={{ localClippingEnabled: true }}>
         <color attach="background" args={['#0f172a']} />
         <ambientLight intensity={0.5} />
@@ -138,7 +185,7 @@ export default function ModelViewer({ modelUrl, mappings, onMeshClick, onModelLo
         </Bounds>
         
         <Environment preset="city" />
-        <OrbitControls makeDefault />
+        {viewMode === 'orbit' ? <OrbitControls makeDefault /> : <FirstPersonCamera />}
       </Canvas>
 
       {/* Clipping Plane Slider */}
