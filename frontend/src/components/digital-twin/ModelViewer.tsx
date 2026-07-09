@@ -37,51 +37,10 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTelepo
     clipPlane.constant = clipHeight
   }, [clipHeight, clipPlane])
 
-  const materialMap = useMemo(() => {
-    const map = new Map()
-    mappings.forEach(m => {
-      const progress = m.progress_percentage || 0
-      
-      if (progress === 100) {
-        map.set(m.mesh_node_id, null)
-      } else if (progress > 0) {
-        // Interpolate color from Red (early) to Yellow (mid) to Emerald (late)
-        const startColor = new THREE.Color('#ef4444') // Red-500
-        const midColor = new THREE.Color('#eab308') // Yellow-500
-        const endColor = new THREE.Color('#10b981') // Emerald-500
-        
-        let finalColor = new THREE.Color()
-        if (progress < 50) {
-          finalColor.lerpColors(startColor, midColor, progress / 50)
-        } else {
-          finalColor.lerpColors(midColor, endColor, (progress - 50) / 50)
-        }
-
-        // Interpolate opacity from 0.4 to 0.9 as it gets closer to 100%
-        const finalOpacity = 0.4 + ((progress / 100) * 0.5)
-
-        map.set(m.mesh_node_id, new THREE.MeshStandardMaterial({
-          color: finalColor,
-          transparent: true,
-          opacity: finalOpacity,
-          clippingPlanes: [clipPlane]
-        }))
-      } else {
-        map.set(m.mesh_node_id, new THREE.MeshStandardMaterial({
-          color: '#64748b',
-          wireframe: true,
-          transparent: true,
-          opacity: 0.3,
-          clippingPlanes: [clipPlane]
-        }))
-      }
-    })
-    return map
-  }, [mappings, clipPlane])
-
   useMemo(() => {
+    scene.updateMatrixWorld(true)
     scene.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
+      if (child instanceof THREE.Mesh && child.name !== 'progress_fill') {
         if (!child.userData.originalMaterial) {
           child.userData.originalMaterial = child.material
         }
@@ -99,19 +58,73 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTelepo
         const meshId = child.name
         const mapping = mappings.find(m => m.mesh_node_id === meshId)
         
+        // Remove existing fill clone to reset state
+        const existingFill = child.getObjectByName('progress_fill')
+        if (existingFill) {
+          child.remove(existingFill)
+        }
+        
         if (mapping) {
           child.userData = { ...child.userData, isMapped: true, meshId, name: mapping.name }
+          const progress = mapping.progress_percentage || 0
           
-          if (materialMap.has(meshId)) {
-            const overrideMat = materialMap.get(meshId)
-            child.material = overrideMat ? overrideMat : origMat
+          if (progress === 100) {
+            child.material = origMat
+          } else if (progress === 0) {
+            child.material = new THREE.MeshStandardMaterial({
+              color: '#64748b',
+              wireframe: true,
+              transparent: true,
+              opacity: 0.3,
+              clippingPlanes: [clipPlane]
+            })
+          } else {
+            // Partial Progress: Base wireframe
+            child.material = new THREE.MeshStandardMaterial({
+              color: '#64748b',
+              wireframe: true,
+              transparent: true,
+              opacity: 0.3,
+              clippingPlanes: [clipPlane]
+            })
+
+            // Calculate clipping plane for partial fill
+            if (!child.geometry.boundingBox) child.geometry.computeBoundingBox()
+            const bbox = child.geometry.boundingBox!
+            const localHeight = bbox.max.y - bbox.min.y
+            const fillY = bbox.min.y + (localHeight * (progress / 100))
+
+            // Create plane pointing DOWN (0, -1, 0) in local space, then transform to world
+            child.updateWorldMatrix(true, false)
+            const localPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), fillY)
+            const worldPlane = localPlane.applyMatrix4(child.matrixWorld)
+
+            // Dynamic color
+            const startColor = new THREE.Color('#ef4444')
+            const midColor = new THREE.Color('#eab308')
+            const endColor = new THREE.Color('#10b981')
+            let finalColor = new THREE.Color()
+            if (progress < 50) finalColor.lerpColors(startColor, midColor, progress / 50)
+            else finalColor.lerpColors(midColor, endColor, (progress - 50) / 50)
+
+            const fillMat = new THREE.MeshStandardMaterial({
+              color: finalColor,
+              transparent: true,
+              opacity: 0.9,
+              side: THREE.DoubleSide,
+              clippingPlanes: [clipPlane, worldPlane]
+            })
+
+            const fillMesh = new THREE.Mesh(child.geometry, fillMat)
+            fillMesh.name = 'progress_fill'
+            child.add(fillMesh)
           }
         } else {
           child.material = origMat
         }
       }
     })
-  }, [scene, mappings, materialMap, clipPlane])
+  }, [scene, mappings, clipPlane])
 
   return (
     <primitive 
