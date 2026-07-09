@@ -39,7 +39,7 @@ class ProjectStructureResponse(ProjectStructureBase):
     id: int
     project_id: int
     created_at: datetime
-    children: list["ProjectStructureResponse"] = []
+    children: Optional[list["ProjectStructureResponse"]] = []
 
     model_config = {"from_attributes": True}
 
