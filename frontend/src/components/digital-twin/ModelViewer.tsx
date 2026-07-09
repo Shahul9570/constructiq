@@ -10,7 +10,7 @@ interface ModelViewerProps {
   onModelLoaded?: (meshNames: string[]) => void
 }
 
-function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight }: { url: string, mappings: any[], onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[]) => void, clipHeight: number }) {
+function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTeleport }: { url: string, mappings: any[], onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[]) => void, clipHeight: number, onTeleport: (p: THREE.Vector3, n: THREE.Vector3, c: THREE.Camera) => void }) {
   const { scene } = useGLTF(url)
   const [hovered, setHovered] = useState<string | null>(null)
   const loadedRef = useRef(false)
@@ -27,24 +27,21 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight }: { url:
     })
     loadedRef.current = true
     if (onModelLoaded && meshNames.length > 0) {
-      // Defer state update to avoid during render
       setTimeout(() => onModelLoaded(meshNames), 0)
     }
   }, [scene, onModelLoaded])
 
   const clipPlane = useMemo(() => new THREE.Plane(new THREE.Vector3(0, -1, 0), 1000), [])
   
-  // Update clipping plane constant when slider changes
   useMemo(() => {
     clipPlane.constant = clipHeight
   }, [clipHeight, clipPlane])
 
-  // Memoize override materials
   const materialMap = useMemo(() => {
     const map = new Map()
     mappings.forEach(m => {
       if (m.progress_percentage === 100) {
-        map.set(m.mesh_node_id, null) // Signifies original material
+        map.set(m.mesh_node_id, null)
       } else if (m.progress_percentage > 0) {
         map.set(m.mesh_node_id, new THREE.MeshStandardMaterial({
           color: '#fbbf24',
@@ -65,16 +62,13 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight }: { url:
     return map
   }, [mappings, clipPlane])
 
-  // Apply materials and event listeners to meshes
   useMemo(() => {
     scene.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        // Cache original material
         if (!child.userData.originalMaterial) {
           child.userData.originalMaterial = child.material
         }
 
-        // Apply clipping plane to original material
         const origMat = child.userData.originalMaterial
         if (origMat) {
           if (Array.isArray(origMat)) {
@@ -107,13 +101,21 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight }: { url:
       object={scene} 
       onClick={(e: any) => {
         e.stopPropagation()
+        if (e.delta > 2) return
+        
         const userData = e.object.userData
         if (userData.isMapped) {
           onMeshClick(userData.meshId, userData.name)
-          if (e.delta <= 2) {
-            bounds.refresh(e.object).fit()
-          }
         }
+        
+        // Teleport logic
+        const point = e.point
+        // Get the world normal of the clicked face
+        const normal = e.face?.normal?.clone() || new THREE.Vector3(0, 1, 0)
+        const normalMatrix = new THREE.Matrix3().getNormalMatrix(e.object.matrixWorld)
+        normal.applyMatrix3(normalMatrix).normalize()
+        
+        onTeleport(point, normal, e.camera)
       }}
       onPointerOver={(e: any) => {
         e.stopPropagation()
@@ -159,6 +161,23 @@ export default function ModelViewer({ modelUrl, mappings, onMeshClick, onModelLo
   const [clipHeight, setClipHeight] = useState(100)
   const [viewMode, setViewMode] = useState<'orbit' | 'walk'>('orbit')
 
+  const handleTeleport = (point: THREE.Vector3, normal: THREE.Vector3, camera: THREE.Camera) => {
+    // 1. Position camera slightly outside the clicked surface to avoid clipping inside the door
+    // If it's a floor (normal pointing mostly up), stand on it. If a wall, stand back.
+    const standPos = point.clone().add(normal.clone().multiplyScalar(1.5))
+    standPos.y = point.y + 1.5 // Eye level relative to the click point
+    
+    camera.position.copy(standPos)
+    
+    // 2. Look exactly opposite to the normal (look INSIDE the room/building)
+    const lookDir = normal.clone().multiplyScalar(-1)
+    const lookTarget = standPos.clone().add(lookDir)
+    camera.lookAt(lookTarget)
+    
+    // 3. Switch to Walk Mode so they can immediately look around
+    setViewMode('walk')
+  }
+
   return (
     <div className="w-full h-full min-h-[500px] bg-slate-900 rounded-xl overflow-hidden border border-slate-800 relative">
       <div className="absolute top-4 left-4 z-10 bg-slate-950/80 backdrop-blur-md rounded-lg p-1 border border-slate-800 flex gap-1">
@@ -181,7 +200,7 @@ export default function ModelViewer({ modelUrl, mappings, onMeshClick, onModelLo
         <directionalLight position={[10, 10, 5]} intensity={1} />
         
         <Bounds fit clip observe margin={1.2}>
-          <Model url={modelUrl} mappings={mappings} onMeshClick={onMeshClick} onModelLoaded={onModelLoaded} clipHeight={clipHeight} />
+          <Model url={modelUrl} mappings={mappings} onMeshClick={onMeshClick} onModelLoaded={onModelLoaded} clipHeight={clipHeight} onTeleport={handleTeleport} />
         </Bounds>
         
         <Environment preset="city" />
