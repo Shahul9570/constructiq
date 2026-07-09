@@ -171,22 +171,34 @@ export default function DigitalTwinPage() {
           <p className="text-sm text-slate-500">Interactive 3D structural model</p>
         </div>
         
-        {meshNames.length > 0 && (data.mappings?.length || 0) < meshNames.length && (
+        <div className="ml-auto flex items-center gap-2">
           <Button 
             variant="outline" 
             size="sm"
-            className="ml-auto border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
-            onClick={() => syncMutation.mutate(meshNames)}
-            disabled={syncMutation.isPending}
+            className="border-slate-700 text-slate-300 hover:bg-slate-800"
+            onClick={() => setForceUpload(true)}
           >
-            {syncMutation.isPending ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-400 mr-2" />
-            ) : (
-              <Box className="h-4 w-4 mr-2" />
-            )}
-            Auto-Sync Structures
+            <Upload className="h-4 w-4 mr-2" />
+            Replace Model
           </Button>
-        )}
+          
+          {meshNames.length > 0 && (data.mappings?.length || 0) < meshNames.length && (
+            <Button 
+              variant="outline" 
+              size="sm"
+              className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+              onClick={() => syncMutation.mutate(meshNames)}
+              disabled={syncMutation.isPending}
+            >
+              {syncMutation.isPending ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-400 mr-2" />
+              ) : (
+                <Box className="h-4 w-4 mr-2" />
+              )}
+              Auto-Sync Structures
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
