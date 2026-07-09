@@ -1,6 +1,6 @@
 import { useRef, useState, useMemo, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { useGLTF, OrbitControls, Environment, Bounds, useBounds, PointerLockControls } from '@react-three/drei'
+import { useGLTF, OrbitControls, Environment, Bounds, useBounds } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface ModelViewerProps {
@@ -129,7 +129,7 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTelepo
   )
 }
 
-function FirstPersonCamera() {
+function WasdControls({ controlsRef }: { controlsRef: React.RefObject<any> }) {
   const keys = useRef({ w: false, a: false, s: false, d: false })
   
   useEffect(() => {
@@ -147,53 +147,57 @@ function FirstPersonCamera() {
   }, [])
 
   useFrame((state, delta) => {
+    if (!controlsRef.current) return
     const speed = 5 * delta;
-    if (keys.current.w) state.camera.translateZ(-speed)
-    if (keys.current.s) state.camera.translateZ(speed)
-    if (keys.current.a) state.camera.translateX(-speed)
-    if (keys.current.d) state.camera.translateX(speed)
+    const controls = controlsRef.current
+    const camera = state.camera
+    
+    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+    forward.y = 0
+    if (forward.lengthSq() > 0) forward.normalize()
+    
+    const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion)
+    right.y = 0
+    if (right.lengthSq() > 0) right.normalize()
+
+    const moveVec = new THREE.Vector3()
+    
+    if (keys.current.w) moveVec.add(forward.clone().multiplyScalar(speed))
+    if (keys.current.s) moveVec.add(forward.clone().multiplyScalar(-speed))
+    if (keys.current.a) moveVec.add(right.clone().multiplyScalar(-speed))
+    if (keys.current.d) moveVec.add(right.clone().multiplyScalar(speed))
+    
+    if (moveVec.lengthSq() > 0) {
+      camera.position.add(moveVec)
+      controls.target.add(moveVec)
+      controls.update()
+    }
   })
 
-  return <PointerLockControls />
+  return null
 }
 
 export default function ModelViewer({ modelUrl, mappings, onMeshClick, onModelLoaded }: ModelViewerProps) {
   const [clipHeight, setClipHeight] = useState(100)
-  const [viewMode, setViewMode] = useState<'orbit' | 'walk'>('orbit')
+  const controlsRef = useRef<any>(null)
 
   const handleTeleport = (point: THREE.Vector3, normal: THREE.Vector3, camera: THREE.Camera) => {
-    // 1. Position camera slightly outside the clicked surface to avoid clipping inside the door
-    // If it's a floor (normal pointing mostly up), stand on it. If a wall, stand back.
     const standPos = point.clone().add(normal.clone().multiplyScalar(1.5))
-    standPos.y = point.y + 1.5 // Eye level relative to the click point
+    standPos.y = point.y + 1.5 
     
     camera.position.copy(standPos)
     
-    // 2. Look exactly opposite to the normal (look INSIDE the room/building)
     const lookDir = normal.clone().multiplyScalar(-1)
     const lookTarget = standPos.clone().add(lookDir)
-    camera.lookAt(lookTarget)
     
-    // 3. Switch to Walk Mode so they can immediately look around
-    setViewMode('walk')
+    if (controlsRef.current) {
+      controlsRef.current.target.copy(lookTarget)
+      controlsRef.current.update()
+    }
   }
 
   return (
     <div className="w-full h-full min-h-[500px] bg-slate-900 rounded-xl overflow-hidden border border-slate-800 relative">
-      <div className="absolute top-4 left-4 z-10 bg-slate-950/80 backdrop-blur-md rounded-lg p-1 border border-slate-800 flex gap-1">
-        <button
-          onClick={() => setViewMode('orbit')}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${viewMode === 'orbit' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
-        >
-          Orbit View
-        </button>
-        <button
-          onClick={() => setViewMode('walk')}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${viewMode === 'walk' ? 'bg-emerald-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
-        >
-          Walk Mode
-        </button>
-      </div>
       <Canvas camera={{ position: [10, 10, 10], fov: 50 }} gl={{ localClippingEnabled: true }}>
         <color attach="background" args={['#0f172a']} />
         <ambientLight intensity={0.5} />
@@ -204,7 +208,8 @@ export default function ModelViewer({ modelUrl, mappings, onMeshClick, onModelLo
         </Bounds>
         
         <Environment preset="city" />
-        {viewMode === 'orbit' ? <OrbitControls makeDefault /> : <FirstPersonCamera />}
+        <OrbitControls ref={controlsRef} makeDefault />
+        <WasdControls controlsRef={controlsRef} />
       </Canvas>
 
       {/* Clipping Plane Slider */}
