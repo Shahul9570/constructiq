@@ -7,11 +7,29 @@ interface ModelViewerProps {
   modelUrl: string
   mappings: any[]
   onMeshClick: (meshId: string, meshName: string) => void
+  onModelLoaded?: (meshNames: string[]) => void
 }
 
-function Model({ url, mappings, onMeshClick }: { url: string, mappings: any[], onMeshClick: (meshId: string, name: string) => void }) {
+function Model({ url, mappings, onMeshClick, onModelLoaded }: { url: string, mappings: any[], onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[]) => void }) {
   const { scene } = useGLTF(url)
   const [hovered, setHovered] = useState<string | null>(null)
+  const loadedRef = useRef(false)
+
+  // Extract mesh names on load
+  useMemo(() => {
+    if (!scene || loadedRef.current) return
+    const meshNames: string[] = []
+    scene.traverse((child) => {
+      if (child instanceof THREE.Mesh && child.name) {
+        meshNames.push(child.name)
+      }
+    })
+    loadedRef.current = true
+    if (onModelLoaded && meshNames.length > 0) {
+      // Defer state update to avoid during render
+      setTimeout(() => onModelLoaded(meshNames), 0)
+    }
+  }, [scene, onModelLoaded])
 
   // Memoize materials based on progress
   const materialMap = useMemo(() => {
@@ -66,7 +84,7 @@ function Model({ url, mappings, onMeshClick }: { url: string, mappings: any[], o
   )
 }
 
-export default function ModelViewer({ modelUrl, mappings, onMeshClick }: ModelViewerProps) {
+export default function ModelViewer({ modelUrl, mappings, onMeshClick, onModelLoaded }: ModelViewerProps) {
   return (
     <div className="w-full h-full min-h-[500px] bg-slate-900 rounded-xl overflow-hidden border border-slate-800 relative">
       <Canvas camera={{ position: [10, 10, 10], fov: 50 }}>
@@ -75,7 +93,7 @@ export default function ModelViewer({ modelUrl, mappings, onMeshClick }: ModelVi
         <directionalLight position={[10, 10, 5]} intensity={1} />
         
         <Bounds fit clip observe margin={1.2}>
-          <Model url={modelUrl} mappings={mappings} onMeshClick={onMeshClick} />
+          <Model url={modelUrl} mappings={mappings} onMeshClick={onMeshClick} onModelLoaded={onModelLoaded} />
         </Bounds>
         
         <Environment preset="city" />

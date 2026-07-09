@@ -67,3 +67,49 @@ async def upload_digital_twin(
     db.refresh(project)
 
     return {"message": "Digital Twin model uploaded successfully", "model_url": file_url}
+
+from pydantic import BaseModel
+
+class SyncStructuresRequest(BaseModel):
+    mesh_names: List[str]
+
+@router.post("/projects/{project_id}/digital-twin/sync", status_code=200)
+def sync_digital_twin_structures(
+    project_id: int,
+    request: SyncStructuresRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Get existing structures
+    existing_structures = db.query(ProjectStructure).filter(
+        ProjectStructure.project_id == project_id,
+        ProjectStructure.mesh_node_id.isnot(None)
+    ).all()
+    
+    existing_mesh_ids = {s.mesh_node_id for s in existing_structures}
+    
+    new_structures = []
+    for mesh_name in request.mesh_names:
+        if mesh_name not in existing_mesh_ids:
+            # Create new flat structure
+            structure = ProjectStructure(
+                project_id=project_id,
+                name=mesh_name,
+                mesh_node_id=mesh_name,
+                level=0
+            )
+            new_structures.append(structure)
+    
+    if new_structures:
+        db.add_all(new_structures)
+        db.commit()
+
+    return {
+        "message": f"Successfully synced {len(new_structures)} new structures.",
+        "added": len(new_structures),
+        "total": len(existing_mesh_ids) + len(new_structures)
+    }

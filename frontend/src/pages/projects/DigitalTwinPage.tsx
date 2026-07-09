@@ -22,6 +22,7 @@ export default function DigitalTwinPage() {
   
   const [selectedMeshId, setSelectedMeshId] = useState<string | null>(null)
   const [selectedName, setSelectedName] = useState<string | null>(null)
+  const [meshNames, setMeshNames] = useState<string[]>([])
 
   const { data, isLoading } = useQuery({
     queryKey: ['digital-twin', projectId],
@@ -46,6 +47,20 @@ export default function DigitalTwinPage() {
     },
     onError: () => {
       toast.error('Failed to upload 3D model')
+    }
+  })
+
+  const syncMutation = useMutation({
+    mutationFn: async (names: string[]) => {
+      const { data } = await api.post(`/projects/${projectId}/digital-twin/sync`, { mesh_names: names })
+      return data
+    },
+    onSuccess: (data) => {
+      toast.success(data.message)
+      queryClient.invalidateQueries({ queryKey: ['digital-twin', projectId] })
+    },
+    onError: () => {
+      toast.error('Failed to sync structures')
     }
   })
 
@@ -124,6 +139,23 @@ export default function DigitalTwinPage() {
           <h1 className="text-2xl font-bold tracking-tight">Live Progress Visualizer</h1>
           <p className="text-sm text-slate-500">Interactive 3D structural model</p>
         </div>
+        
+        {meshNames.length > 0 && (data.mappings?.length || 0) < meshNames.length && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            className="ml-auto border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+            onClick={() => syncMutation.mutate(meshNames)}
+            disabled={syncMutation.isPending}
+          >
+            {syncMutation.isPending ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-400 mr-2" />
+            ) : (
+              <Box className="h-4 w-4 mr-2" />
+            )}
+            Auto-Sync Structures
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
@@ -131,6 +163,7 @@ export default function DigitalTwinPage() {
           modelUrl={data.model_url.startsWith('http') ? data.model_url : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}${data.model_url}`} 
           mappings={data.mappings || []} 
           onMeshClick={handleMeshClick} 
+          onModelLoaded={setMeshNames}
         />
         <ProgressOverlay 
           selectedMeshId={selectedMeshId} 
