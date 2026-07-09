@@ -68,7 +68,7 @@ export default function ProgressOverlay({ projectId, selectedMeshId, selectedNam
               </div>
               <Slider 
                 value={[progress]} 
-                onValueChange={(vals) => setProgress(vals[0])} 
+                onValueChange={(vals: number[]) => setProgress(vals[0])} 
                 max={100} 
                 step={5}
                 className="w-full"
