@@ -40,13 +40,30 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTelepo
   const materialMap = useMemo(() => {
     const map = new Map()
     mappings.forEach(m => {
-      if (m.progress_percentage === 100) {
+      const progress = m.progress_percentage || 0
+      
+      if (progress === 100) {
         map.set(m.mesh_node_id, null)
-      } else if (m.progress_percentage > 0) {
+      } else if (progress > 0) {
+        // Interpolate color from Red (early) to Yellow (mid) to Emerald (late)
+        const startColor = new THREE.Color('#ef4444') // Red-500
+        const midColor = new THREE.Color('#eab308') // Yellow-500
+        const endColor = new THREE.Color('#10b981') // Emerald-500
+        
+        let finalColor = new THREE.Color()
+        if (progress < 50) {
+          finalColor.lerpColors(startColor, midColor, progress / 50)
+        } else {
+          finalColor.lerpColors(midColor, endColor, (progress - 50) / 50)
+        }
+
+        // Interpolate opacity from 0.4 to 0.9 as it gets closer to 100%
+        const finalOpacity = 0.4 + ((progress / 100) * 0.5)
+
         map.set(m.mesh_node_id, new THREE.MeshStandardMaterial({
-          color: '#fbbf24',
+          color: finalColor,
           transparent: true,
-          opacity: 0.7,
+          opacity: finalOpacity,
           clippingPlanes: [clipPlane]
         }))
       } else {
