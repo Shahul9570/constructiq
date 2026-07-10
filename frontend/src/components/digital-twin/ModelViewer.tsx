@@ -37,7 +37,7 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTelepo
     clipPlane.constant = clipHeight
   }, [clipHeight, clipPlane])
 
-  useMemo(() => {
+  useEffect(() => {
     scene.updateMatrixWorld(true)
     scene.traverse((child) => {
       if (child instanceof THREE.Mesh && child.name !== 'progress_fill') {
@@ -59,18 +59,18 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTelepo
         const mapping = mappings.find(m => m.mesh_node_id === meshId)
         
         // Remove existing fill clone to reset state
-        const existingFill = child.getObjectByName('progress_fill')
+        const existingFill = child.children.find(c => c.name === 'progress_fill')
         if (existingFill) {
           child.remove(existingFill)
         }
         
         if (mapping) {
           child.userData = { ...child.userData, isMapped: true, meshId, name: mapping.name }
-          const progress = mapping.progress_percentage || 0
+          const progress = Number(mapping.progress_percentage) || 0
           
-          if (progress === 100) {
+          if (progress >= 100) {
             child.material = origMat
-          } else if (progress === 0) {
+          } else if (progress <= 0) {
             child.material = new THREE.MeshStandardMaterial({
               color: '#64748b',
               wireframe: true,
@@ -112,7 +112,8 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTelepo
               transparent: true,
               opacity: 0.9,
               side: THREE.DoubleSide,
-              clippingPlanes: [clipPlane, worldPlane]
+              clippingPlanes: [clipPlane, worldPlane],
+              depthWrite: false // Prevent severe Z-fighting with wireframe
             })
 
             const fillMesh = new THREE.Mesh(child.geometry, fillMat)
