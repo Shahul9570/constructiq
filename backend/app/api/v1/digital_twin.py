@@ -148,6 +148,35 @@ def update_structure_progress(
     
     return {"message": "Progress updated successfully", "progress_percentage": structure.progress_percentage}
 
+class UpdateNameRequest(BaseModel):
+    name: str
+
+@router.patch("/projects/{project_id}/digital-twin/structures/{mesh_node_id}/name", status_code=200)
+def update_structure_name(
+    project_id: int,
+    mesh_node_id: str,
+    request: UpdateNameRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    structure = db.query(ProjectStructure).filter(
+        ProjectStructure.project_id == project_id,
+        ProjectStructure.mesh_node_id == mesh_node_id
+    ).first()
+
+    if not structure:
+        raise HTTPException(status_code=404, detail="Structure not found")
+
+    structure.name = request.name.strip()
+    db.commit()
+    db.refresh(structure)
+    
+    return {"message": "Name updated successfully", "name": structure.name}
+
 class PromptRequest(BaseModel):
     prompt: str
 

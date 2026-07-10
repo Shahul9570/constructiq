@@ -1,7 +1,11 @@
 import React, { useState } from 'react'
-import { Search, List, ChevronRight } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Search, List, ChevronRight, Edit2, Check, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import api from '@/services/api'
+import toast from 'react-hot-toast'
 
 interface StructureSidebarProps {
   mappings: any[]
@@ -10,7 +14,35 @@ interface StructureSidebarProps {
 }
 
 export default function StructureSidebar({ mappings, selectedMeshId, onSelectMesh }: StructureSidebarProps) {
+  const { id: projectId } = useParams()
+  const queryClient = useQueryClient()
+  
   const [search, setSearch] = useState('')
+  const [editingMeshId, setEditingMeshId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+
+  const updateNameMutation = useMutation({
+    mutationFn: async ({ meshId, name }: { meshId: string, name: string }) => {
+      const { data } = await api.patch(`/projects/${projectId}/digital-twin/structures/${meshId}/name`, { name })
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['digital-twin', projectId] })
+      setEditingMeshId(null)
+      toast.success('Name updated successfully')
+    },
+    onError: () => {
+      toast.error('Failed to update name')
+    }
+  })
+
+  const handleSaveName = (meshId: string) => {
+    if (!editName.trim()) {
+      setEditingMeshId(null)
+      return
+    }
+    updateNameMutation.mutate({ meshId, name: editName })
+  }
 
   const filteredMappings = mappings.filter(m => 
     m.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -48,30 +80,61 @@ export default function StructureSidebar({ mappings, selectedMeshId, onSelectMes
               const isStarted = m.progress_percentage > 0 && m.progress_percentage < 100
               
               return (
-                <button
-                  key={m.mesh_node_id}
-                  onClick={() => onSelectMesh(m.mesh_node_id, m.name)}
-                  className={`w-full text-left px-3 py-2 rounded-md flex items-center justify-between group transition-colors ${
-                    isSelected 
-                      ? 'bg-emerald-500/10 text-emerald-400' 
-                      : 'hover:bg-slate-800/50 text-slate-300'
-                  }`}
-                >
-                  <div className="truncate pr-2 flex-1">
-                    <span className="text-sm font-medium block truncate">{m.name}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 shrink-0">
-                    {isComplete ? (
-                      <Badge variant="default" className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-0 h-5 px-1.5 text-[10px]">100%</Badge>
-                    ) : isStarted ? (
-                      <Badge variant="default" className="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20 border-0 h-5 px-1.5 text-[10px]">{Math.round(m.progress_percentage)}%</Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-slate-500 border-slate-700 h-5 px-1.5 text-[10px]">0%</Badge>
-                    )}
-                    <ChevronRight className={`h-4 w-4 transition-transform ${isSelected ? 'translate-x-0.5 opacity-100' : 'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`} />
-                  </div>
-                </button>
+                <div key={m.mesh_node_id} className={`w-full rounded-md flex items-center justify-between group transition-colors overflow-hidden ${
+                  isSelected 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                    : 'hover:bg-slate-800/50 text-slate-300 border border-transparent'
+                }`}>
+                  {editingMeshId === m.mesh_node_id ? (
+                    <div className="flex-1 flex items-center gap-1 p-1">
+                      <Input 
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="h-7 text-xs bg-slate-950 border-slate-700"
+                        autoFocus
+                        onKeyDown={(e) => e.key === 'Enter' && handleSaveName(m.mesh_node_id)}
+                      />
+                      <button onClick={() => handleSaveName(m.mesh_node_id)} className="p-1 hover:text-emerald-400">
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => setEditingMeshId(null)} className="p-1 hover:text-red-400">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => onSelectMesh(m.mesh_node_id, m.name)}
+                      className="flex-1 flex items-center justify-between px-3 py-2 text-left"
+                    >
+                      <div className="truncate pr-2 flex-1 flex items-center gap-2">
+                        <span className="text-sm font-medium block truncate" title={m.name}>{m.name}</span>
+                        {isSelected && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setEditName(m.name)
+                              setEditingMeshId(m.mesh_node_id)
+                            }}
+                            className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-emerald-500/20 transition-opacity"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isComplete ? (
+                          <Badge variant="default" className="bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 border-0 h-5 px-1.5 text-[10px]">100%</Badge>
+                        ) : isStarted ? (
+                          <Badge variant="default" className="bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20 border-0 h-5 px-1.5 text-[10px]">{Math.round(m.progress_percentage)}%</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-slate-500 border-slate-700 h-5 px-1.5 text-[10px]">0%</Badge>
+                        )}
+                        <ChevronRight className={`h-4 w-4 transition-transform ${isSelected ? 'translate-x-0.5 opacity-100' : 'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`} />
+                      </div>
+                    </button>
+                  )}
+                </div>
               )
             })}
           </div>
