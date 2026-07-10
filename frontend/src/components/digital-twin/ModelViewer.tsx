@@ -144,14 +144,16 @@ function Model({ url, mappings, selectedMeshId, onMeshClick, onModelLoaded, clip
         e.stopPropagation()
         if (e.delta > 2) return
         
-        const userData = e.object.userData
-        if (userData.isMapped) {
-          onMeshClick(userData.meshId, userData.name)
+        const obj = e.object
+        // Fire for any named mesh (not progress_fill children)
+        if (obj.name && obj.name !== 'progress_fill') {
+          const meshId = obj.userData.meshId || obj.name
+          const meshName = obj.userData.name || obj.name
+          onMeshClick(meshId, meshName)
         }
         
         // Teleport logic
         const point = e.point
-        // Get the world normal of the clicked face
         const normal = e.face?.normal?.clone() || new THREE.Vector3(0, 1, 0)
         const normalMatrix = new THREE.Matrix3().getNormalMatrix(e.object.matrixWorld)
         normal.applyMatrix3(normalMatrix).normalize()

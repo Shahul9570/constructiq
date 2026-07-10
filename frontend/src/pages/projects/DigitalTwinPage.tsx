@@ -250,6 +250,7 @@ export default function DigitalTwinPage() {
             <ModelViewer 
               modelUrl={data.model_url.startsWith('http') ? data.model_url : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}${data.model_url}`} 
               mappings={data.mappings || []} 
+              selectedMeshId={selectedMeshId}
               onMeshClick={handleMeshClick} 
               onModelLoaded={setMeshNames}
             />
