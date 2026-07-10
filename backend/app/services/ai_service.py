@@ -143,6 +143,46 @@ Provide a clear, concise, data-driven answer using the project data above."""
         except Exception as e:
             return f"AI query failed: {str(e)}. Please try again."
 
+    def parse_progress_prompt(self, prompt: str, structures: list) -> list:
+        if not self.llm:
+            raise ValueError("AI features require OpenAI API key configuration.")
+
+        # Prepare a concise list of structure names and IDs
+        structure_list = "\n".join([f"ID: {s.mesh_node_id} | Name: {s.name}" for s in structures])
+        
+        system_prompt = f"""You are a BIM (Building Information Modeling) assistant. 
+Your task is to parse a natural language command from a construction manager and map it to specific 3D mesh components to update their progress percentage.
+
+Here is the list of available 3D components in the database:
+{structure_list}
+
+The user's command is: "{prompt}"
+
+Based on the command, identify all matching components and determine the requested progress percentage (0 to 100).
+If the user says "all walls", find all components with 'Wall' in the name.
+If the user says "finished", that means 100%. "Half done" means 50%.
+
+Return ONLY a valid JSON array of objects. Do not include markdown formatting, backticks, or any other text.
+Format:
+[
+  {{"mesh_node_id": "...", "progress_percentage": 50}},
+  {{"mesh_node_id": "...", "progress_percentage": 100}}
+]"""
+
+        try:
+            response = self.llm.invoke(system_prompt)
+            content = response.content.strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.endswith("```"):
+                content = content[:-3]
+            
+            import json
+            parsed = json.loads(content.strip())
+            return parsed
+        except Exception as e:
+            raise ValueError(f"Failed to parse prompt: {str(e)}")
+
     def predict_completion(self, project_id: int, db: Session) -> dict:
         project = db.query(Project).filter(Project.id == project_id).first()
         if not project:

@@ -139,3 +139,53 @@ def update_structure_progress(
     db.refresh(structure)
     
     return {"message": "Progress updated successfully", "progress_percentage": structure.progress_percentage}
+
+class PromptRequest(BaseModel):
+    prompt: str
+
+@router.post("/projects/{project_id}/digital-twin/prompt", status_code=200)
+def process_digital_twin_prompt(
+    project_id: int,
+    request: PromptRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    structures = db.query(ProjectStructure).filter(
+        ProjectStructure.project_id == project_id,
+        ProjectStructure.mesh_node_id.isnot(None)
+    ).all()
+
+    if not structures:
+        raise HTTPException(status_code=400, detail="No structures found for this project.")
+
+    from app.services.ai_service import AIService
+    ai_service = AIService()
+
+    try:
+        updates = ai_service.parse_progress_prompt(request.prompt, structures)
+        
+        updated_count = 0
+        for update in updates:
+            mesh_node_id = update.get("mesh_node_id")
+            progress = update.get("progress_percentage")
+            
+            if mesh_node_id and progress is not None:
+                # Find matching structure
+                structure = next((s for s in structures if s.mesh_node_id == mesh_node_id), None)
+                if structure:
+                    structure.progress_percentage = max(0, min(100, float(progress)))
+                    updated_count += 1
+        
+        if updated_count > 0:
+            db.commit()
+
+        return {
+            "message": f"Successfully updated {updated_count} structures based on your prompt.",
+            "updated_count": updated_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

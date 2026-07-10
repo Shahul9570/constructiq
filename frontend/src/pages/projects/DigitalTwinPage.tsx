@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Box, Upload, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Box, Upload, AlertTriangle, Sparkles, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import toast from 'react-hot-toast'
 import ModelViewer from '@/components/digital-twin/ModelViewer'
 import ProgressOverlay from '@/components/digital-twin/ProgressOverlay'
@@ -53,6 +54,7 @@ export default function DigitalTwinPage() {
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const [meshNames, setMeshNames] = useState<string[]>([])
   const [forceUpload, setForceUpload] = useState(false)
+  const [prompt, setPrompt] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['digital-twin', projectId],
@@ -95,6 +97,21 @@ export default function DigitalTwinPage() {
     }
   })
 
+  const promptMutation = useMutation({
+    mutationFn: async (text: string) => {
+      const { data } = await api.post(`/projects/${projectId}/digital-twin/prompt`, { prompt: text })
+      return data
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Progress updated via AI')
+      setPrompt('')
+      queryClient.invalidateQueries({ queryKey: ['digital-twin', projectId] })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Failed to process prompt')
+    }
+  })
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       uploadMutation.mutate(e.target.files[0])
@@ -104,6 +121,12 @@ export default function DigitalTwinPage() {
   const handleMeshClick = (meshId: string, name: string) => {
     setSelectedMeshId(meshId)
     setSelectedName(name)
+  }
+
+  const handlePromptSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!prompt.trim()) return
+    promptMutation.mutate(prompt)
   }
 
   const selectedMapping = data?.mappings?.find((m: any) => m.mesh_node_id === selectedMeshId) || null
@@ -217,6 +240,37 @@ export default function DigitalTwinPage() {
           mapping={selectedMapping}
           onClose={() => setSelectedMeshId(null)}
         />
+
+        {/* AI Command Bar */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-10">
+          <form 
+            onSubmit={handlePromptSubmit} 
+            className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-2 rounded-full border border-slate-700 shadow-2xl"
+          >
+            <div className="bg-emerald-500/20 p-2 rounded-full">
+              <Sparkles className="h-5 w-5 text-emerald-400" />
+            </div>
+            <Input
+              placeholder="e.g. 'Mark all interior walls as 50% complete' or 'Set bathtub to finished'"
+              className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-white placeholder:text-slate-500"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              disabled={promptMutation.isPending}
+            />
+            <Button 
+              type="submit" 
+              size="icon" 
+              className="rounded-full bg-emerald-600 hover:bg-emerald-500 text-white transition-transform active:scale-95 disabled:opacity-50"
+              disabled={promptMutation.isPending || !prompt.trim()}
+            >
+              {promptMutation.isPending ? (
+                <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   )
