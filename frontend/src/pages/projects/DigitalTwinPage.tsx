@@ -130,6 +130,8 @@ export default function DigitalTwinPage() {
     promptMutation.mutate(prompt)
   }
 
+  const isModelUploaded = !!data?.model_url && !forceUpload
+
   const selectedMapping = data?.mappings?.find((m: any) => m.mesh_node_id === selectedMeshId) || null
 
   if (isLoading) {
