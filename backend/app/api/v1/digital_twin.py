@@ -226,3 +226,38 @@ def process_digital_twin_prompt(
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/projects/{project_id}/digital-twin/auto-rename", status_code=200)
+def auto_rename_structures(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Use AI to bulk-rename all structures to human-readable BIM labels."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    structures = db.query(ProjectStructure).filter(
+        ProjectStructure.project_id == project_id,
+        ProjectStructure.mesh_node_id.isnot(None)
+    ).all()
+
+    if not structures:
+        raise HTTPException(status_code=400, detail="No structures found.")
+
+    from app.services.ai_service import AIService
+    ai_service = AIService()
+
+    try:
+        name_map = ai_service.auto_rename_structures(structures)
+        updated = 0
+        for structure in structures:
+            new_name = name_map.get(structure.mesh_node_id)
+            if new_name and new_name.strip():
+                structure.name = new_name.strip()
+                updated += 1
+        db.commit()
+        return {"message": f"Successfully renamed {updated} structures.", "updated": updated}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

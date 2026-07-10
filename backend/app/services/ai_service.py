@@ -183,6 +183,70 @@ Format:
         except Exception as e:
             raise ValueError(f"Failed to parse prompt: {str(e)}")
 
+    def auto_rename_structures(self, structures: list) -> dict:
+        """Use AI to batch-rename raw mesh names to human-readable BIM labels."""
+        if not self.llm:
+            # Fallback: rule-based cleaning when no OpenAI key
+            result = {}
+            for s in structures:
+                raw = s.mesh_node_id or s.name or ""
+                # Strip leading Mesh + digits
+                import re
+                clean = re.sub(r'^Mesh\d+_?', '', raw)
+                # Replace underscores with spaces
+                clean = clean.replace('_', ' ')
+                # Remove trailing _0, _1 index suffixes
+                clean = re.sub(r'\s+\d+$', '', clean).strip()
+                # Title-case the result
+                clean = clean.title() if clean else raw
+                result[s.mesh_node_id] = clean or raw
+            return result
+
+        # Send in batches of 80 to avoid token limits
+        import json, re
+        BATCH = 80
+        name_map: dict = {}
+
+        for i in range(0, len(structures), BATCH):
+            batch = structures[i:i + BATCH]
+            items = "\n".join([f'- "{s.mesh_node_id}"' for s in batch])
+
+            prompt = f"""You are a BIM (Building Information Modeling) naming expert.
+The following are raw internal mesh node IDs exported from 3D architectural modelling software (SketchUp, Blender, Revit, etc.).
+Your task is to rename each one into a short, professional, human-readable BIM label that a construction manager or architect would understand.
+
+Rules:
+- Keep names concise (2-5 words max)
+- Use standard construction/architectural terminology
+- Group similar parts logically (e.g. "North Exterior Wall", "Master Bedroom Ceiling")
+- If the name contains a color like "White", "LightGray", "Wood", use that as a material hint
+- If no context can be inferred, use a generic label like "Surface Panel", "Structural Element"
+
+Mesh IDs to rename:
+{items}
+
+Return ONLY a valid JSON object mapping each original mesh_node_id to its new name. No markdown, no backticks, no explanation.
+Example: {{"Mesh370_M_0132_LightGray_0": "Light Gray Wall Panel", "Mesh371_White_0": "White Ceiling Surface"}}"""
+
+            try:
+                response = self.llm.invoke(prompt)
+                content = response.content.strip()
+                # Strip markdown fences if present
+                content = re.sub(r'^```json\s*', '', content)
+                content = re.sub(r'^```\s*', '', content)
+                content = re.sub(r'\s*```$', '', content).strip()
+                batch_map = json.loads(content)
+                name_map.update(batch_map)
+            except Exception:
+                # On failure, fall back to rule-based for this batch
+                for s in batch:
+                    raw = s.mesh_node_id or ""
+                    clean = re.sub(r'^Mesh\d+_?', '', raw).replace('_', ' ')
+                    clean = re.sub(r'\s+\d+$', '', clean).strip().title()
+                    name_map[s.mesh_node_id] = clean or raw
+
+        return name_map
+
     def predict_completion(self, project_id: int, db: Session) -> dict:
         project = db.query(Project).filter(Project.id == project_id).first()
         if not project:

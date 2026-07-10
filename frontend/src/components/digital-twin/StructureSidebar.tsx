@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, List, ChevronRight, Edit2, Check, X } from 'lucide-react'
+import { Search, List, ChevronRight, Edit2, Check, X, Sparkles } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
 
@@ -44,6 +45,20 @@ export default function StructureSidebar({ mappings, selectedMeshId, onSelectMes
     updateNameMutation.mutate({ meshId, name: editName })
   }
 
+  const autoRenameMutation = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post(`/projects/${projectId}/digital-twin/auto-rename`)
+      return data
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['digital-twin', projectId] })
+      toast.success(data.message || 'Structures renamed successfully!')
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.detail || 'Failed to auto-rename')
+    }
+  })
+
   const filteredMappings = mappings.filter(m => 
     m.name.toLowerCase().includes(search.toLowerCase()) || 
     m.mesh_node_id.toLowerCase().includes(search.toLowerCase())
@@ -52,10 +67,27 @@ export default function StructureSidebar({ mappings, selectedMeshId, onSelectMes
   return (
     <div className="w-80 flex flex-col bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl h-full">
       <div className="p-4 border-b border-slate-800 bg-slate-900/50">
-        <h2 className="font-semibold text-slate-200 flex items-center gap-2 mb-3">
-          <List className="h-4 w-4" />
-          Structure Explorer
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-semibold text-slate-200 flex items-center gap-2">
+            <List className="h-4 w-4" />
+            Structure Explorer
+          </h2>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => autoRenameMutation.mutate()}
+            disabled={autoRenameMutation.isPending || mappings.length === 0}
+            className="h-7 px-2 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 gap-1"
+            title="Use AI to rename all parts to human-readable labels"
+          >
+            {autoRenameMutation.isPending ? (
+              <div className="h-3 w-3 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+            ) : (
+              <Sparkles className="h-3 w-3" />
+            )}
+            {autoRenameMutation.isPending ? 'Renaming...' : 'Smart Rename'}
+          </Button>
+        </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
           <Input 
