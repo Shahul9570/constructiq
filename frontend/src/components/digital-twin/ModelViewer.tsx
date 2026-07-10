@@ -3,33 +3,53 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, OrbitControls, Environment, Bounds, useBounds } from '@react-three/drei'
 import * as THREE from 'three'
 
+export interface MeshGeometry {
+  w: number; h: number; d: number
+  cx: number; cy: number; cz: number
+}
+
 interface ModelViewerProps {
   modelUrl: string
   mappings: any[]
   selectedMeshId?: string | null
   focusMeshId?: string | null
   onMeshClick: (meshId: string, meshName: string) => void
-  onModelLoaded?: (meshNames: string[]) => void
+  onModelLoaded?: (meshNames: string[], geometry: Record<string, MeshGeometry>) => void
 }
 
-function Model({ url, mappings, selectedMeshId, focusMeshId, onMeshClick, onModelLoaded, clipHeight, onTeleport }: { url: string, mappings: any[], selectedMeshId?: string | null, focusMeshId?: string | null, onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[]) => void, clipHeight: number, onTeleport: (p: THREE.Vector3, n: THREE.Vector3, c: THREE.Camera) => void }) {
+function Model({ url, mappings, selectedMeshId, focusMeshId, onMeshClick, onModelLoaded, clipHeight, onTeleport }: { url: string, mappings: any[], selectedMeshId?: string | null, focusMeshId?: string | null, onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[], geometry: Record<string, MeshGeometry>) => void, clipHeight: number, onTeleport: (p: THREE.Vector3, n: THREE.Vector3, c: THREE.Camera) => void }) {
   const { scene } = useGLTF(url)
   const [hovered, setHovered] = useState<string | null>(null)
   const loadedRef = useRef(false)
   const bounds = useBounds()
 
-  // Extract mesh names on load
+  // Extract mesh names + geometry on load
   useMemo(() => {
     if (!scene || loadedRef.current) return
+    scene.updateMatrixWorld(true)
     const meshNames: string[] = []
+    const geometry: Record<string, MeshGeometry> = {}
     scene.traverse((child) => {
       if (child instanceof THREE.Mesh && child.name) {
         meshNames.push(child.name)
+        const bbox = new THREE.Box3().setFromObject(child)
+        const size = new THREE.Vector3()
+        bbox.getSize(size)
+        const center = new THREE.Vector3()
+        bbox.getCenter(center)
+        geometry[child.name] = {
+          w: parseFloat(size.x.toFixed(3)),
+          h: parseFloat(size.y.toFixed(3)),
+          d: parseFloat(size.z.toFixed(3)),
+          cx: parseFloat(center.x.toFixed(3)),
+          cy: parseFloat(center.y.toFixed(3)),
+          cz: parseFloat(center.z.toFixed(3)),
+        }
       }
     })
     loadedRef.current = true
     if (onModelLoaded && meshNames.length > 0) {
-      setTimeout(() => onModelLoaded(meshNames), 0)
+      setTimeout(() => onModelLoaded(meshNames, geometry), 0)
     }
   }, [scene, onModelLoaded])
 

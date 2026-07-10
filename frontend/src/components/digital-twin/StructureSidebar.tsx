@@ -8,13 +8,16 @@ import { Button } from '@/components/ui/button'
 import api from '@/services/api'
 import toast from 'react-hot-toast'
 
+import { MeshGeometry } from '@/components/digital-twin/ModelViewer'
+
 interface StructureSidebarProps {
   mappings: any[]
   selectedMeshId: string | null
+  meshGeometry?: Record<string, MeshGeometry>
   onSelectMesh: (meshId: string, name: string) => void
 }
 
-export default function StructureSidebar({ mappings, selectedMeshId, onSelectMesh }: StructureSidebarProps) {
+export default function StructureSidebar({ mappings, selectedMeshId, meshGeometry = {}, onSelectMesh }: StructureSidebarProps) {
   const { id: projectId } = useParams()
   const queryClient = useQueryClient()
   
@@ -47,7 +50,7 @@ export default function StructureSidebar({ mappings, selectedMeshId, onSelectMes
 
   const autoRenameMutation = useMutation({
     mutationFn: async () => {
-      const { data } = await api.post(`/projects/${projectId}/digital-twin/auto-rename`)
+      const { data } = await api.post(`/projects/${projectId}/digital-twin/auto-rename`, { geometry: meshGeometry })
       return data
     },
     onSuccess: (data) => {

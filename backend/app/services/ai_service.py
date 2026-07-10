@@ -183,67 +183,97 @@ Format:
         except Exception as e:
             raise ValueError(f"Failed to parse prompt: {str(e)}")
 
-    def auto_rename_structures(self, structures: list) -> dict:
-        """Use AI to batch-rename raw mesh names to human-readable BIM labels."""
-        if not self.llm:
-            # Fallback: rule-based cleaning when no OpenAI key
-            result = {}
-            for s in structures:
-                raw = s.mesh_node_id or s.name or ""
-                # Strip leading Mesh + digits
-                import re
-                clean = re.sub(r'^Mesh\d+_?', '', raw)
-                # Replace underscores with spaces
-                clean = clean.replace('_', ' ')
-                # Remove trailing _0, _1 index suffixes
-                clean = re.sub(r'\s+\d+$', '', clean).strip()
-                # Title-case the result
-                clean = clean.title() if clean else raw
-                result[s.mesh_node_id] = clean or raw
-            return result
+    def auto_rename_structures(self, structures: list, geometry: dict = None) -> dict:
+        """Use AI + geometry to batch-rename raw mesh IDs to human-readable BIM labels."""
+        import re, json
+        geometry = geometry or {}
 
-        # Send in batches of 80 to avoid token limits
-        import json, re
-        BATCH = 80
+        def rule_based(mesh_node_id: str, geo: dict) -> str:
+            """Fast rule-based fallback using geometry to infer part type."""
+            raw = mesh_node_id or ""
+            # Geometry-based inference
+            if geo:
+                w, h, d = geo.get('w', 0), geo.get('h', 0), geo.get('d', 0)
+                cy = geo.get('cy', 0)
+                dims = sorted([w, h, d])
+                thin, mid, large = dims[0], dims[1], dims[2]
+                # Floor / ceiling: very flat horizontal large surface
+                if thin < 0.3 and large > 1.5:
+                    if cy < 0.5:
+                        return "Floor Surface"
+                    elif cy > 2.5:
+                        return "Ceiling Panel"
+                    else:
+                        return "Horizontal Slab"
+                # Wall: thin, tall, large
+                if w < 0.5 and h > 1.5 and d > 1.0:
+                    return "Exterior Wall"
+                if d < 0.5 and h > 1.5 and w > 1.0:
+                    return "Exterior Wall"
+                # Compact / furniture-sized
+                if max(w, h, d) < 2.0 and min(w, h, d) > 0.1:
+                    if cy > 0.5 and cy < 1.2:
+                        return "Furniture"
+                    if cy > 1.2:
+                        return "Interior Fixture"
+            # Fall back to name cleaning
+            clean = re.sub(r'^Mesh\d+_?', '', raw).replace('_', ' ')
+            clean = re.sub(r'\s+\d+$', '', clean).strip().title()
+            return clean or raw
+
+        if not self.llm:
+            return {s.mesh_node_id: rule_based(s.mesh_node_id, geometry.get(s.mesh_node_id, {})) for s in structures}
+
+        BATCH = 60
         name_map: dict = {}
 
         for i in range(0, len(structures), BATCH):
             batch = structures[i:i + BATCH]
-            items = "\n".join([f'- "{s.mesh_node_id}"' for s in batch])
 
-            prompt = f"""You are a BIM (Building Information Modeling) naming expert.
-The following are raw internal mesh node IDs exported from 3D architectural modelling software (SketchUp, Blender, Revit, etc.).
-Your task is to rename each one into a short, professional, human-readable BIM label that a construction manager or architect would understand.
+            # Build geometry-annotated item list
+            lines = []
+            for s in batch:
+                geo = geometry.get(s.mesh_node_id, {})
+                if geo:
+                    w, h, d = geo.get('w', '?'), geo.get('h', '?'), geo.get('d', '?')
+                    cy = geo.get('cy', '?')
+                    lines.append(f'- mesh_id="{s.mesh_node_id}" | size={w}m(W)×{h}m(H)×{d}m(D) | center_height={cy}m')
+                else:
+                    lines.append(f'- mesh_id="{s.mesh_node_id}"')
+            items = "\n".join(lines)
 
-Rules:
-- Keep names concise (2-5 words max)
-- Use standard construction/architectural terminology
-- Group similar parts logically (e.g. "North Exterior Wall", "Master Bedroom Ceiling")
-- If the name contains a color like "White", "LightGray", "Wood", use that as a material hint
-- If no context can be inferred, use a generic label like "Surface Panel", "Structural Element"
+            prompt = f"""You are a BIM (Building Information Modeling) expert AI.
+Below are 3D mesh components from an architectural model, each with their bounding box dimensions and vertical center height.
+Use the GEOMETRY to identify what each part physically IS and assign a precise, professional BIM label.
 
-Mesh IDs to rename:
+Geometry interpretation rules:
+- Very thin (H<0.3m), large horizontal surface at low height (cy<0.5m) → Floor / Slab
+- Very thin (H<0.3m), large horizontal surface at high height (cy>2.5m) → Ceiling
+- Thin in one horizontal dimension (W<0.3m or D<0.3m), tall (H>1.5m) → Wall
+- Compact volumes at sitting height (cy 0.4-0.6m) → Seating / Sofa / Chair
+- Compact volumes at table height (cy 0.7-0.9m) → Table / Counter / Desk
+- Tall thin vertical (H>1.5m, W<0.3m, D<0.3m) → Column / Post / Door Frame
+- Small flat on wall (H<0.5m, one dim <0.1m) → Window / Door / Panel
+- If name has "wood", "White", "LightGray" etc., use as material hint in label
+- Use sequential numbering if multiple similar parts exist (e.g. "North Wall", "South Wall")
+
+Components:
 {items}
 
-Return ONLY a valid JSON object mapping each original mesh_node_id to its new name. No markdown, no backticks, no explanation.
-Example: {{"Mesh370_M_0132_LightGray_0": "Light Gray Wall Panel", "Mesh371_White_0": "White Ceiling Surface"}}"""
+Return ONLY a valid JSON object mapping mesh_id → label. No markdown, no backticks, no explanation.
+Example: {{"Mesh370_M_0132_LightGray_0": "Light Gray Exterior Wall", "Mesh371_White_0": "White Ceiling Panel"}}"""
 
             try:
                 response = self.llm.invoke(prompt)
                 content = response.content.strip()
-                # Strip markdown fences if present
                 content = re.sub(r'^```json\s*', '', content)
                 content = re.sub(r'^```\s*', '', content)
                 content = re.sub(r'\s*```$', '', content).strip()
                 batch_map = json.loads(content)
                 name_map.update(batch_map)
             except Exception:
-                # On failure, fall back to rule-based for this batch
                 for s in batch:
-                    raw = s.mesh_node_id or ""
-                    clean = re.sub(r'^Mesh\d+_?', '', raw).replace('_', ' ')
-                    clean = re.sub(r'\s+\d+$', '', clean).strip().title()
-                    name_map[s.mesh_node_id] = clean or raw
+                    name_map[s.mesh_node_id] = rule_based(s.mesh_node_id, geometry.get(s.mesh_node_id, {}))
 
         return name_map
 

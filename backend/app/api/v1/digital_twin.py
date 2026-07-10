@@ -230,10 +230,12 @@ def process_digital_twin_prompt(
 @router.post("/projects/{project_id}/digital-twin/auto-rename", status_code=200)
 def auto_rename_structures(
     project_id: int,
+    body: dict = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Use AI to bulk-rename all structures to human-readable BIM labels."""
+    from fastapi import Body
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -246,11 +248,13 @@ def auto_rename_structures(
     if not structures:
         raise HTTPException(status_code=400, detail="No structures found.")
 
+    geometry = (body or {}).get("geometry", {})
+
     from app.services.ai_service import AIService
     ai_service = AIService()
 
     try:
-        name_map = ai_service.auto_rename_structures(structures)
+        name_map = ai_service.auto_rename_structures(structures, geometry)
         updated = 0
         for structure in structures:
             new_name = name_map.get(structure.mesh_node_id)

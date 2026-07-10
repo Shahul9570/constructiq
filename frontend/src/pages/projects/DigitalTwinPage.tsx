@@ -5,7 +5,7 @@ import { ArrowLeft, Box, Upload, AlertTriangle, Sparkles, Send } from 'lucide-re
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import toast from 'react-hot-toast'
-import ModelViewer from '@/components/digital-twin/ModelViewer'
+import ModelViewer, { MeshGeometry } from '@/components/digital-twin/ModelViewer'
 import ProgressOverlay from '@/components/digital-twin/ProgressOverlay'
 import StructureSidebar from '@/components/digital-twin/StructureSidebar'
 import api from '@/services/api'
@@ -54,6 +54,7 @@ export default function DigitalTwinPage() {
   const [selectedMeshId, setSelectedMeshId] = useState<string | null>(null)
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const [meshNames, setMeshNames] = useState<string[]>([])
+  const [meshGeometry, setMeshGeometry] = useState<Record<string, MeshGeometry>>({})
   const [forceUpload, setForceUpload] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [focusMeshId, setFocusMeshId] = useState<string | null>(null)
@@ -239,10 +240,11 @@ export default function DigitalTwinPage() {
           <StructureSidebar 
             mappings={data.mappings || []} 
             selectedMeshId={selectedMeshId}
+            meshGeometry={meshGeometry}
             onSelectMesh={(id, name) => {
               setSelectedMeshId(id)
               setSelectedName(name)
-              setFocusMeshId(id) // triggers auto-zoom in ModelViewer
+              setFocusMeshId(id)
             }}
           />
         )}
@@ -255,7 +257,7 @@ export default function DigitalTwinPage() {
               selectedMeshId={selectedMeshId}
               focusMeshId={focusMeshId}
               onMeshClick={handleMeshClick} 
-              onModelLoaded={setMeshNames}
+              onModelLoaded={(names, geo) => { setMeshNames(names); setMeshGeometry(geo) }}
             />
           </ModelErrorBoundary>
         <ProgressOverlay 
