@@ -147,21 +147,33 @@ function Model({ url, mappings, selectedMeshId, onMeshClick, onModelLoaded, clip
       onClick={(e: any) => {
         e.stopPropagation()
         if (e.delta > 2) return
-        
-        const obj = e.object
-        // Fire for any named mesh (not progress_fill children)
-        if (obj.name && obj.name !== 'progress_fill') {
-          const meshId = obj.userData.meshId || obj.name
-          const meshName = obj.userData.name || obj.name
+
+        // Walk through all ray intersections (sorted nearest-first) and
+        // pick the FIRST named mesh that isn't an internal fill child.
+        let chosenObj: any = null
+        for (const hit of e.intersections) {
+          let obj = hit.object
+          // If we hit a progress_fill child, use its parent instead
+          if (obj.name === 'progress_fill' && obj.parent) {
+            obj = obj.parent
+          }
+          if (obj instanceof THREE.Mesh && obj.name && obj.name !== 'progress_fill') {
+            chosenObj = obj
+            break
+          }
+        }
+
+        if (chosenObj) {
+          const meshId = chosenObj.userData.meshId || chosenObj.name
+          const meshName = chosenObj.userData.name || chosenObj.name
           onMeshClick(meshId, meshName)
         }
-        
-        // Teleport logic
+
+        // Teleport to the exact clicked point
         const point = e.point
         const normal = e.face?.normal?.clone() || new THREE.Vector3(0, 1, 0)
         const normalMatrix = new THREE.Matrix3().getNormalMatrix(e.object.matrixWorld)
         normal.applyMatrix3(normalMatrix).normalize()
-        
         onTeleport(point, normal, e.camera)
       }}
       onPointerOver={(e: any) => {
