@@ -42,95 +42,99 @@ function Model({ url, mappings, selectedMeshId, onMeshClick, onModelLoaded, clip
     scene.updateMatrixWorld(true)
     scene.traverse((child) => {
       if (child instanceof THREE.Mesh && child.name !== 'progress_fill') {
+        // Save original material once
         if (!child.userData.originalMaterial) {
           child.userData.originalMaterial = child.material
         }
-
         const origMat = child.userData.originalMaterial
-        if (origMat) {
-          if (Array.isArray(origMat)) {
-            origMat.forEach(m => { m.clippingPlanes = [clipPlane]; m.needsUpdate = true })
+
+        // Apply elevation slicer to all original materials
+        const applyClipToMat = (mat: any) => {
+          if (!mat) return
+          if (Array.isArray(mat)) {
+            mat.forEach(m => { m.clippingPlanes = [clipPlane]; m.needsUpdate = true })
           } else {
-            origMat.clippingPlanes = [clipPlane]
-            origMat.needsUpdate = true
+            mat.clippingPlanes = [clipPlane]
+            mat.needsUpdate = true
           }
         }
+        applyClipToMat(origMat)
 
         const meshId = child.name
         const mapping = mappings.find(m => m.mesh_node_id === meshId)
-        
-        // Remove existing fill clone to reset state
+
+        // Remove existing fill child to reset each frame
         const existingFill = child.children.find(c => c.name === 'progress_fill')
-        if (existingFill) {
-          child.remove(existingFill)
-        }
-        
+        if (existingFill) child.remove(existingFill)
+
+        const isSelected = meshId === selectedMeshId
+
         if (mapping) {
           child.userData = { ...child.userData, isMapped: true, meshId, name: mapping.name }
           const progress = Number(mapping.progress_percentage) || 0
-          const isSelected = meshId === selectedMeshId
-          const highlightColor = isSelected ? new THREE.Color('#38bdf8') : new THREE.Color(0x000000)
-          
+
           if (progress >= 100) {
-            child.material = origMat.clone ? origMat.clone() : origMat
-            if (child.material instanceof THREE.MeshStandardMaterial || child.material instanceof THREE.MeshPhysicalMaterial) {
-              child.material.emissive = highlightColor
-              child.material.emissiveIntensity = isSelected ? 0.5 : 0
+            // FULLY BUILT: show original architect material
+            if (isSelected) {
+              const mat = Array.isArray(origMat)
+                ? origMat.map((m: any) => { const c = m.clone(); c.emissive = new THREE.Color('#38bdf8'); c.emissiveIntensity = 0.4; c.clippingPlanes = [clipPlane]; return c })
+                : (() => { const c = origMat.clone(); c.emissive = new THREE.Color('#38bdf8'); c.emissiveIntensity = 0.4; c.clippingPlanes = [clipPlane]; return c })()
+              child.material = mat
+            } else {
+              child.material = origMat
             }
           } else if (progress <= 0) {
+            // NOT STARTED: wireframe skeleton only
             child.material = new THREE.MeshStandardMaterial({
-              color: isSelected ? '#38bdf8' : '#64748b',
-              emissive: highlightColor,
-              emissiveIntensity: isSelected ? 0.5 : 0,
+              color: isSelected ? '#38bdf8' : '#475569',
               wireframe: true,
               transparent: true,
-              opacity: isSelected ? 0.8 : 0.3,
+              opacity: isSelected ? 0.7 : 0.25,
               clippingPlanes: [clipPlane]
             })
           } else {
-            // Partial Progress: Base wireframe
+            // PARTIAL: wireframe skeleton (full shape) + original material clipped at progress height
             child.material = new THREE.MeshStandardMaterial({
-              color: isSelected ? '#38bdf8' : '#64748b',
-              emissive: highlightColor,
-              emissiveIntensity: isSelected ? 0.5 : 0,
+              color: isSelected ? '#38bdf8' : '#475569',
               wireframe: true,
               transparent: true,
-              opacity: isSelected ? 0.8 : 0.3,
+              opacity: isSelected ? 0.6 : 0.2,
               clippingPlanes: [clipPlane]
             })
 
-            // Calculate clipping plane for partial fill in WORLD SPACE
+            // World-space bounding box for fill height
             const worldBBox = new THREE.Box3().setFromObject(child)
             const worldHeight = worldBBox.max.y - worldBBox.min.y
             const fillWorldY = worldBBox.min.y + (worldHeight * (progress / 100))
+            // Plane clips ABOVE the fill level (normal points down = keep below)
+            const progressPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), fillWorldY)
 
-            // Create plane pointing DOWN (0, -1, 0) in world space
-            const worldPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), fillWorldY)
+            // Clone original material(s) and add the progress clip plane
+            const buildFillMaterial = (mat: any) => {
+              if (!mat) return mat
+              const cloned = mat.clone()
+              const existing = Array.isArray(cloned.clippingPlanes) ? cloned.clippingPlanes : []
+              cloned.clippingPlanes = [...existing, progressPlane]
+              if (isSelected) {
+                cloned.emissive = new THREE.Color('#38bdf8')
+                cloned.emissiveIntensity = 0.3
+              }
+              cloned.needsUpdate = true
+              return cloned
+            }
 
-            // Dynamic color
-            const startColor = new THREE.Color('#ef4444')
-            const midColor = new THREE.Color('#eab308')
-            const endColor = new THREE.Color('#10b981')
-            let finalColor = new THREE.Color()
-            if (progress < 50) finalColor.lerpColors(startColor, midColor, progress / 50)
-            else finalColor.lerpColors(midColor, endColor, (progress - 50) / 50)
+            const fillMaterial = Array.isArray(origMat)
+              ? origMat.map(buildFillMaterial)
+              : buildFillMaterial(origMat)
 
-            const fillMat = new THREE.MeshStandardMaterial({
-              color: finalColor,
-              emissive: highlightColor,
-              emissiveIntensity: isSelected ? 0.5 : 0,
-              transparent: true,
-              opacity: 0.9,
-              side: THREE.DoubleSide,
-              clippingPlanes: [clipPlane, worldPlane],
-              depthWrite: false // Prevent severe Z-fighting with wireframe
-            })
-
-            const fillMesh = new THREE.Mesh(child.geometry, fillMat)
+            const fillMesh = new THREE.Mesh(child.geometry, fillMaterial)
             fillMesh.name = 'progress_fill'
+            fillMesh.matrixAutoUpdate = false
+            fillMesh.matrix.identity() // local identity — same transform as parent
             child.add(fillMesh)
           }
         } else {
+          // Unmapped: restore original material
           child.material = origMat
         }
       }
