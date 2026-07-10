@@ -1,5 +1,4 @@
 import { useRef, useState, useMemo, useEffect } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, OrbitControls, Environment, Bounds, useBounds } from '@react-three/drei'
 import * as THREE from 'three'
