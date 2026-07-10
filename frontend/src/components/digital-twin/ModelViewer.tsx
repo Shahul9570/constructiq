@@ -88,9 +88,6 @@ function Model({ url, mappings, selectedMeshId, onMeshClick, onModelLoaded, clip
               clippingPlanes: [clipPlane]
             })
           } else {
-            const isSelected = meshId === selectedMeshId
-            const highlightColor = isSelected ? new THREE.Color('#38bdf8') : new THREE.Color(0x000000)
-
             // Partial Progress: Base wireframe
             child.material = new THREE.MeshStandardMaterial({
               color: isSelected ? '#38bdf8' : '#64748b',
@@ -102,16 +99,13 @@ function Model({ url, mappings, selectedMeshId, onMeshClick, onModelLoaded, clip
               clippingPlanes: [clipPlane]
             })
 
-            // Calculate clipping plane for partial fill
-            if (!child.geometry.boundingBox) child.geometry.computeBoundingBox()
-            const bbox = child.geometry.boundingBox!
-            const localHeight = bbox.max.y - bbox.min.y
-            const fillY = bbox.min.y + (localHeight * (progress / 100))
+            // Calculate clipping plane for partial fill in WORLD SPACE
+            const worldBBox = new THREE.Box3().setFromObject(child)
+            const worldHeight = worldBBox.max.y - worldBBox.min.y
+            const fillWorldY = worldBBox.min.y + (worldHeight * (progress / 100))
 
-            // Create plane pointing DOWN (0, -1, 0) in local space, then transform to world
-            child.updateWorldMatrix(true, false)
-            const localPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), fillY)
-            const worldPlane = localPlane.applyMatrix4(child.matrixWorld)
+            // Create plane pointing DOWN (0, -1, 0) in world space
+            const worldPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), fillWorldY)
 
             // Dynamic color
             const startColor = new THREE.Color('#ef4444')
