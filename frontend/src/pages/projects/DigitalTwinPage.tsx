@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import toast from 'react-hot-toast'
 import ModelViewer from '@/components/digital-twin/ModelViewer'
 import ProgressOverlay from '@/components/digital-twin/ProgressOverlay'
+import StructureSidebar from '@/components/digital-twin/StructureSidebar'
 import api from '@/services/api'
 
 // Temporary service function until we add it to a proper service class
@@ -224,15 +225,27 @@ export default function DigitalTwinPage() {
         </div>
       </div>
 
-      <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
-        <ModelErrorBoundary onReset={() => setForceUpload(true)}>
-          <ModelViewer 
-            modelUrl={data.model_url.startsWith('http') ? data.model_url : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}${data.model_url}`} 
+      <div className="flex-1 flex gap-4 overflow-hidden">
+        {isModelUploaded && (
+          <StructureSidebar 
             mappings={data.mappings || []} 
-            onMeshClick={handleMeshClick} 
-            onModelLoaded={setMeshNames}
+            selectedMeshId={selectedMeshId}
+            onSelectMesh={(id, name) => {
+              setSelectedMeshId(id)
+              setSelectedName(name)
+            }}
           />
-        </ModelErrorBoundary>
+        )}
+        
+        <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
+          <ModelErrorBoundary onReset={() => setForceUpload(true)}>
+            <ModelViewer 
+              modelUrl={data.model_url.startsWith('http') ? data.model_url : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}${data.model_url}`} 
+              mappings={data.mappings || []} 
+              onMeshClick={handleMeshClick} 
+              onModelLoaded={setMeshNames}
+            />
+          </ModelErrorBoundary>
         <ProgressOverlay 
           projectId={projectId}
           selectedMeshId={selectedMeshId} 
@@ -241,35 +254,36 @@ export default function DigitalTwinPage() {
           onClose={() => setSelectedMeshId(null)}
         />
 
-        {/* AI Command Bar */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-10">
-          <form 
-            onSubmit={handlePromptSubmit} 
-            className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-2 rounded-full border border-slate-700 shadow-2xl"
-          >
-            <div className="bg-emerald-500/20 p-2 rounded-full">
-              <Sparkles className="h-5 w-5 text-emerald-400" />
-            </div>
-            <Input
-              placeholder="e.g. 'Mark all interior walls as 50% complete' or 'Set bathtub to finished'"
-              className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-white placeholder:text-slate-500"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              disabled={promptMutation.isPending}
-            />
-            <Button 
-              type="submit" 
-              size="icon" 
-              className="rounded-full bg-emerald-600 hover:bg-emerald-500 text-white transition-transform active:scale-95 disabled:opacity-50"
-              disabled={promptMutation.isPending || !prompt.trim()}
+          {/* AI Command Bar */}
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-10">
+            <form 
+              onSubmit={handlePromptSubmit} 
+              className="flex items-center gap-2 bg-slate-900/90 backdrop-blur-md p-2 rounded-full border border-slate-700 shadow-2xl"
             >
-              {promptMutation.isPending ? (
-                <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
-          </form>
+              <div className="bg-emerald-500/20 p-2 rounded-full">
+                <Sparkles className="h-5 w-5 text-emerald-400" />
+              </div>
+              <Input
+                placeholder="e.g. 'Mark all interior walls as 50% complete' or 'Set bathtub to finished'"
+                className="flex-1 bg-transparent border-0 focus-visible:ring-0 text-white placeholder:text-slate-500"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                disabled={promptMutation.isPending}
+              />
+              <Button 
+                type="submit" 
+                size="icon" 
+                className="rounded-full bg-emerald-600 hover:bg-emerald-500 text-white transition-transform active:scale-95 disabled:opacity-50"
+                disabled={promptMutation.isPending || !prompt.trim()}
+              >
+                {promptMutation.isPending ? (
+                  <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
