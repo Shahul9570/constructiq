@@ -7,11 +7,12 @@ interface ModelViewerProps {
   modelUrl: string
   mappings: any[]
   selectedMeshId?: string | null
+  focusMeshId?: string | null
   onMeshClick: (meshId: string, meshName: string) => void
   onModelLoaded?: (meshNames: string[]) => void
 }
 
-function Model({ url, mappings, selectedMeshId, onMeshClick, onModelLoaded, clipHeight, onTeleport }: { url: string, mappings: any[], selectedMeshId?: string | null, onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[]) => void, clipHeight: number, onTeleport: (p: THREE.Vector3, n: THREE.Vector3, c: THREE.Camera) => void }) {
+function Model({ url, mappings, selectedMeshId, focusMeshId, onMeshClick, onModelLoaded, clipHeight, onTeleport }: { url: string, mappings: any[], selectedMeshId?: string | null, focusMeshId?: string | null, onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[]) => void, clipHeight: number, onTeleport: (p: THREE.Vector3, n: THREE.Vector3, c: THREE.Camera) => void }) {
   const { scene } = useGLTF(url)
   const [hovered, setHovered] = useState<string | null>(null)
   const loadedRef = useRef(false)
@@ -37,6 +38,25 @@ function Model({ url, mappings, selectedMeshId, onMeshClick, onModelLoaded, clip
   useMemo(() => {
     clipPlane.constant = clipHeight
   }, [clipHeight, clipPlane])
+
+  // Auto-zoom to the focused mesh
+  useEffect(() => {
+    if (!focusMeshId || !scene) return
+    let targetMesh: THREE.Object3D | null = null
+    scene.traverse((child) => {
+      if (child instanceof THREE.Mesh && (child.name === focusMeshId || child.userData.meshId === focusMeshId)) {
+        targetMesh = child
+      }
+    })
+    if (targetMesh) {
+      // Zoom camera to fit the focused mesh with some padding
+      try {
+        bounds.refresh(targetMesh).clip().fit()
+      } catch (e) {
+        // bounds may not be ready yet
+      }
+    }
+  }, [focusMeshId, scene, bounds])
 
   useEffect(() => {
     scene.updateMatrixWorld(true)
@@ -236,7 +256,7 @@ function WasdControls({ controlsRef }: { controlsRef: React.RefObject<any> }) {
   return null
 }
 
-export default function ModelViewer({ modelUrl, mappings, selectedMeshId, onMeshClick, onModelLoaded }: ModelViewerProps) {
+export default function ModelViewer({ modelUrl, mappings, selectedMeshId, focusMeshId, onMeshClick, onModelLoaded }: ModelViewerProps) {
   const [clipHeight, setClipHeight] = useState(100)
   const controlsRef = useRef<any>(null)
 
@@ -262,8 +282,8 @@ export default function ModelViewer({ modelUrl, mappings, selectedMeshId, onMesh
         <ambientLight intensity={0.5} />
         <directionalLight position={[10, 10, 5]} intensity={1} />
         
-        <Bounds fit clip observe margin={1.2}>
-          <Model url={modelUrl} mappings={mappings} selectedMeshId={selectedMeshId} onMeshClick={onMeshClick} onModelLoaded={onModelLoaded} clipHeight={clipHeight} onTeleport={handleTeleport} />
+        <Bounds fit clip observe margin={1.5}>
+          <Model url={modelUrl} mappings={mappings} selectedMeshId={selectedMeshId} focusMeshId={focusMeshId} onMeshClick={onMeshClick} onModelLoaded={onModelLoaded} clipHeight={clipHeight} onTeleport={handleTeleport} />
         </Bounds>
         
         <Environment preset="city" />

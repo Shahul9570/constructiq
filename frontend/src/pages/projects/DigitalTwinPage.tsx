@@ -56,6 +56,7 @@ export default function DigitalTwinPage() {
   const [meshNames, setMeshNames] = useState<string[]>([])
   const [forceUpload, setForceUpload] = useState(false)
   const [prompt, setPrompt] = useState('')
+  const [focusMeshId, setFocusMeshId] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['digital-twin', projectId],
@@ -241,6 +242,7 @@ export default function DigitalTwinPage() {
             onSelectMesh={(id, name) => {
               setSelectedMeshId(id)
               setSelectedName(name)
+              setFocusMeshId(id) // triggers auto-zoom in ModelViewer
             }}
           />
         )}
@@ -251,6 +253,7 @@ export default function DigitalTwinPage() {
               modelUrl={data.model_url.startsWith('http') ? data.model_url : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}${data.model_url}`} 
               mappings={data.mappings || []} 
               selectedMeshId={selectedMeshId}
+              focusMeshId={focusMeshId}
               onMeshClick={handleMeshClick} 
               onModelLoaded={setMeshNames}
             />
