@@ -1,16 +1,18 @@
 import { useRef, useState, useMemo, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, OrbitControls, Environment, Bounds, useBounds } from '@react-three/drei'
 import * as THREE from 'three'
 
 interface ModelViewerProps {
   modelUrl: string
   mappings: any[]
+  selectedMeshId?: string | null
   onMeshClick: (meshId: string, meshName: string) => void
   onModelLoaded?: (meshNames: string[]) => void
 }
 
-function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTeleport }: { url: string, mappings: any[], onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[]) => void, clipHeight: number, onTeleport: (p: THREE.Vector3, n: THREE.Vector3, c: THREE.Camera) => void }) {
+function Model({ url, mappings, selectedMeshId, onMeshClick, onModelLoaded, clipHeight, onTeleport }: { url: string, mappings: any[], selectedMeshId?: string | null, onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[]) => void, clipHeight: number, onTeleport: (p: THREE.Vector3, n: THREE.Vector3, c: THREE.Camera) => void }) {
   const { scene } = useGLTF(url)
   const [hovered, setHovered] = useState<string | null>(null)
   const loadedRef = useRef(false)
@@ -67,24 +69,37 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTelepo
         if (mapping) {
           child.userData = { ...child.userData, isMapped: true, meshId, name: mapping.name }
           const progress = Number(mapping.progress_percentage) || 0
+          const isSelected = meshId === selectedMeshId
+          const highlightColor = isSelected ? new THREE.Color('#38bdf8') : new THREE.Color(0x000000)
           
           if (progress >= 100) {
-            child.material = origMat
+            child.material = origMat.clone ? origMat.clone() : origMat
+            if (child.material instanceof THREE.MeshStandardMaterial || child.material instanceof THREE.MeshPhysicalMaterial) {
+              child.material.emissive = highlightColor
+              child.material.emissiveIntensity = isSelected ? 0.5 : 0
+            }
           } else if (progress <= 0) {
             child.material = new THREE.MeshStandardMaterial({
-              color: '#64748b',
+              color: isSelected ? '#38bdf8' : '#64748b',
+              emissive: highlightColor,
+              emissiveIntensity: isSelected ? 0.5 : 0,
               wireframe: true,
               transparent: true,
-              opacity: 0.3,
+              opacity: isSelected ? 0.8 : 0.3,
               clippingPlanes: [clipPlane]
             })
           } else {
+            const isSelected = meshId === selectedMeshId
+            const highlightColor = isSelected ? new THREE.Color('#38bdf8') : new THREE.Color(0x000000)
+
             // Partial Progress: Base wireframe
             child.material = new THREE.MeshStandardMaterial({
-              color: '#64748b',
+              color: isSelected ? '#38bdf8' : '#64748b',
+              emissive: highlightColor,
+              emissiveIntensity: isSelected ? 0.5 : 0,
               wireframe: true,
               transparent: true,
-              opacity: 0.3,
+              opacity: isSelected ? 0.8 : 0.3,
               clippingPlanes: [clipPlane]
             })
 
@@ -109,6 +124,8 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTelepo
 
             const fillMat = new THREE.MeshStandardMaterial({
               color: finalColor,
+              emissive: highlightColor,
+              emissiveIntensity: isSelected ? 0.5 : 0,
               transparent: true,
               opacity: 0.9,
               side: THREE.DoubleSide,
@@ -125,7 +142,7 @@ function Model({ url, mappings, onMeshClick, onModelLoaded, clipHeight, onTelepo
         }
       }
     })
-  }, [scene, mappings, clipPlane])
+  }, [scene, mappings, clipPlane, selectedMeshId])
 
   return (
     <primitive 
@@ -208,7 +225,7 @@ function WasdControls({ controlsRef }: { controlsRef: React.RefObject<any> }) {
   return null
 }
 
-export default function ModelViewer({ modelUrl, mappings, onMeshClick, onModelLoaded }: ModelViewerProps) {
+export default function ModelViewer({ modelUrl, mappings, selectedMeshId, onMeshClick, onModelLoaded }: ModelViewerProps) {
   const [clipHeight, setClipHeight] = useState(100)
   const controlsRef = useRef<any>(null)
 
@@ -235,7 +252,7 @@ export default function ModelViewer({ modelUrl, mappings, onMeshClick, onModelLo
         <directionalLight position={[10, 10, 5]} intensity={1} />
         
         <Bounds fit clip observe margin={1.2}>
-          <Model url={modelUrl} mappings={mappings} onMeshClick={onMeshClick} onModelLoaded={onModelLoaded} clipHeight={clipHeight} onTeleport={handleTeleport} />
+          <Model url={modelUrl} mappings={mappings} selectedMeshId={selectedMeshId} onMeshClick={onMeshClick} onModelLoaded={onModelLoaded} clipHeight={clipHeight} onTeleport={handleTeleport} />
         </Bounds>
         
         <Environment preset="city" />
