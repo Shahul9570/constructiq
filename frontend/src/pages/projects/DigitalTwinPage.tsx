@@ -134,6 +134,12 @@ export default function DigitalTwinPage() {
 
   const selectedMapping = data?.mappings?.find((m: any) => m.mesh_node_id === selectedMeshId) || null
 
+  const mappingIds = new Set(data?.mappings?.map((m: any) => m.mesh_node_id) || [])
+  const needsSync = meshNames.length > 0 && (
+    meshNames.some(name => !mappingIds.has(name)) || 
+    (data?.mappings || []).some((m: any) => !meshNames.includes(m.mesh_node_id))
+  )
+
   if (isLoading) {
     return (
       <div className="flex h-[calc(100vh-6rem)] items-center justify-center">
@@ -208,11 +214,11 @@ export default function DigitalTwinPage() {
             Replace Model
           </Button>
           
-          {meshNames.length > 0 && (data.mappings?.length || 0) < meshNames.length && (
+          {needsSync && (
             <Button 
               variant="outline" 
               size="sm"
-              className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10"
+              className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 animate-pulse"
               onClick={() => syncMutation.mutate(meshNames)}
               disabled={syncMutation.isPending}
             >

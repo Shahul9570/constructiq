@@ -89,9 +89,10 @@ def sync_digital_twin_structures(
     ).all()
     
     existing_mesh_ids = {s.mesh_node_id for s in existing_structures}
+    request_mesh_ids = set(request.mesh_names)
     
     new_structures = []
-    for mesh_name in request.mesh_names:
+    for mesh_name in request_mesh_ids:
         if mesh_name not in existing_mesh_ids:
             # Create new flat structure
             structure = ProjectStructure(
@@ -104,12 +105,19 @@ def sync_digital_twin_structures(
     
     if new_structures:
         db.add_all(new_structures)
-        db.commit()
+
+    # 2. Remove orphaned structures (from old models)
+    orphans = [s for s in existing_structures if s.mesh_node_id not in request_mesh_ids]
+    for orphan in orphans:
+        db.delete(orphan)
+
+    db.commit()
 
     return {
-        "message": f"Successfully synced {len(new_structures)} new structures.",
+        "message": f"Successfully synced structures. Added {len(new_structures)}, Removed {len(orphans)}.",
         "added": len(new_structures),
-        "total": len(existing_mesh_ids) + len(new_structures)
+        "removed": len(orphans),
+        "total": len(request_mesh_ids)
     }
 
 class UpdateProgressRequest(BaseModel):
