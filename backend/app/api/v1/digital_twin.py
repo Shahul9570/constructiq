@@ -6,7 +6,7 @@ import os
 
 from app.core.database import get_db
 from app.core.security import get_current_user
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.project import Project, ProjectStructure
 from app.services.storage_service import StorageService
 
@@ -22,6 +22,10 @@ def get_digital_twin_data(
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # Clients can only view the 3D data for their own linked project
+    if current_user.role == UserRole.CLIENT and project.client_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You are not linked to this project")
 
     structures = db.query(ProjectStructure).filter(
         ProjectStructure.project_id == project_id,

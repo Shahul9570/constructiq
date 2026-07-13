@@ -12,10 +12,11 @@ interface ProgressOverlayProps {
   selectedMeshId: string | null
   selectedName: string | null
   mapping: any | null
+  readOnly?: boolean
   onClose: () => void
 }
 
-export default function ProgressOverlay({ projectId, selectedMeshId, selectedName, mapping, onClose }: ProgressOverlayProps) {
+export default function ProgressOverlay({ projectId, selectedMeshId, selectedName, mapping, readOnly = false, onClose }: ProgressOverlayProps) {
   const [progress, setProgress] = useState<number>(0)
   const queryClient = useQueryClient()
 
@@ -64,31 +65,61 @@ export default function ProgressOverlay({ projectId, selectedMeshId, selectedNam
             <div className="space-y-3">
               <div className="flex justify-between items-end mb-1">
                 <span className="text-xs text-slate-400">Completion</span>
-                <span className="text-sm font-bold text-emerald-400">{progress}%</span>
+                <span className={`text-sm font-bold ${
+                  progress === 100 ? 'text-emerald-400' : progress > 0 ? 'text-yellow-400' : 'text-slate-400'
+                }`}>{progress}%</span>
               </div>
-              <Slider 
-                value={[progress]} 
-                onValueChange={(vals: number[]) => setProgress(vals[0])} 
-                max={100} 
-                step={5}
-                className="w-full"
-              />
-              
-              <Button 
-                className="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white"
-                size="sm"
-                onClick={() => updateMutation.mutate(progress)}
-                disabled={updateMutation.isPending || progress === mapping.progress_percentage}
-              >
-                {updateMutation.isPending ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                ) : progress === 100 ? (
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                {progress === mapping.progress_percentage ? 'Saved' : 'Save Progress'}
-              </Button>
+
+              {readOnly ? (
+                /* Client: read-only progress bar */
+                <div className="space-y-2">
+                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        progress === 100
+                          ? 'bg-emerald-500'
+                          : progress > 0
+                          ? 'bg-yellow-400'
+                          : 'bg-slate-700'
+                      }`}
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 text-center">
+                    {progress === 100
+                      ? '✅ Completed'
+                      : progress > 0
+                      ? `🔨 In progress — ${progress}% done`
+                      : '🔲 Not started yet'}
+                  </p>
+                </div>
+              ) : (
+                /* Manager: editable slider */
+                <>
+                  <Slider
+                    value={[progress]}
+                    onValueChange={(vals: number[]) => setProgress(vals[0])}
+                    max={100}
+                    step={5}
+                    className="w-full"
+                  />
+                  <Button
+                    className="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 text-white"
+                    size="sm"
+                    onClick={() => updateMutation.mutate(progress)}
+                    disabled={updateMutation.isPending || progress === mapping.progress_percentage}
+                  >
+                    {updateMutation.isPending ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    ) : progress === 100 ? (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    {progress === mapping.progress_percentage ? 'Saved' : 'Save Progress'}
+                  </Button>
+                </>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">

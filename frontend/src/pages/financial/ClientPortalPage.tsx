@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 import { billingService } from '@/services/billing.service'
 import { format } from 'date-fns'
 import {
@@ -7,7 +8,8 @@ import {
   CreditCard,
   CheckCircle2,
   AlertCircle,
-  Clock
+  Clock,
+  Box
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -91,6 +93,13 @@ export default function ClientPortalPage() {
           <h1 className="text-3xl font-bold tracking-tight">My Invoices</h1>
           <p className="text-muted-foreground">View and pay your project bills securely.</p>
         </div>
+        
+        <Link to={`/projects/${selectedProjectNum}/visualizer`}>
+          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-lg shadow-emerald-900/20">
+            <Box className="h-4 w-4" />
+            View 3D Live Progress
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

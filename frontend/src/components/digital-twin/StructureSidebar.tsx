@@ -14,10 +14,11 @@ interface StructureSidebarProps {
   mappings: any[]
   selectedMeshId: string | null
   meshGeometry?: Record<string, MeshGeometry>
+  readOnly?: boolean
   onSelectMesh: (meshId: string, name: string) => void
 }
 
-export default function StructureSidebar({ mappings, selectedMeshId, meshGeometry = {}, onSelectMesh }: StructureSidebarProps) {
+export default function StructureSidebar({ mappings, selectedMeshId, meshGeometry = {}, readOnly = false, onSelectMesh }: StructureSidebarProps) {
   const { id: projectId } = useParams()
   const queryClient = useQueryClient()
   
@@ -75,21 +76,23 @@ export default function StructureSidebar({ mappings, selectedMeshId, meshGeometr
             <List className="h-4 w-4" />
             Structure Explorer
           </h2>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => autoRenameMutation.mutate()}
-            disabled={autoRenameMutation.isPending || mappings.length === 0}
-            className="h-7 px-2 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 gap-1"
-            title="Use AI to rename all parts to human-readable labels"
-          >
-            {autoRenameMutation.isPending ? (
-              <div className="h-3 w-3 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
-            ) : (
-              <Sparkles className="h-3 w-3" />
-            )}
-            {autoRenameMutation.isPending ? 'Renaming...' : 'Smart Rename'}
-          </Button>
+          {!readOnly && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => autoRenameMutation.mutate()}
+              disabled={autoRenameMutation.isPending || mappings.length === 0}
+              className="h-7 px-2 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 gap-1"
+              title="Use AI to rename all parts to human-readable labels"
+            >
+              {autoRenameMutation.isPending ? (
+                <div className="h-3 w-3 rounded-full border-2 border-emerald-400 border-t-transparent animate-spin" />
+              ) : (
+                <Sparkles className="h-3 w-3" />
+              )}
+              {autoRenameMutation.isPending ? 'Renaming...' : 'Smart Rename'}
+            </Button>
+          )}
         </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
@@ -143,8 +146,8 @@ export default function StructureSidebar({ mappings, selectedMeshId, meshGeometr
                     >
                       <div className="truncate pr-2 flex-1 flex items-center gap-2">
                         <span className="text-sm font-medium block truncate" title={m.name}>{m.name}</span>
-                        {isSelected && (
-                          <button 
+                        {isSelected && !readOnly && (
+                          <button
                             onClick={(e) => {
                               e.stopPropagation()
                               setEditName(m.name)
