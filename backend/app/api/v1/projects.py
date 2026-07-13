@@ -1,5 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -403,3 +404,78 @@ def remove_project_member(
 
     db.delete(member)
     db.commit()
+
+
+class ClientLinkRequest(BaseModel):
+    client_email: str
+
+@router.patch("/{project_id}/link-client", response_model=ProjectResponse)
+def link_client_to_project(
+    project_id: int,
+    data: ClientLinkRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(
+        UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER
+    )),
+):
+    """Link an existing CLIENT user to a project by their email address."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    client_user = db.query(User).filter(
+        User.email == data.client_email,
+        User.role == UserRole.CLIENT,
+        User.is_active == True,
+    ).first()
+
+    if not client_user:
+        raise HTTPException(
+            status_code=404,
+            detail="No active CLIENT account found with that email address."
+        )
+
+    project.client_id = client_user.id
+    project.client_name = client_user.full_name
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+@router.delete("/{project_id}/link-client", response_model=ProjectResponse)
+def unlink_client_from_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(
+        UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER
+    )),
+):
+    """Remove the linked client from a project."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    project.client_id = None
+    project.client_name = None
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+@router.get("/search-clients")
+def search_client_users(
+    email: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(
+        UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER
+    )),
+):
+    """Search for CLIENT users by email prefix for autocomplete."""
+    clients = db.query(User).filter(
+        User.role == UserRole.CLIENT,
+        User.is_active == True,
+        User.email.ilike(f"%{email}%")
+    ).limit(10).all()
+
+    return [{"id": c.id, "email": c.email, "full_name": c.full_name} for c in clients]
+

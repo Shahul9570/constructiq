@@ -29,6 +29,8 @@ import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ProjectTasksTab } from './ProjectTasksTab'
 import ProjectTeamTab from './ProjectTeamTab'
+import ClientLinkCard from '@/components/projects/ClientLinkCard'
+import { useAuth } from '@/hooks/useAuth'
 import {
   Table,
   TableBody,
@@ -51,6 +53,8 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const projectId = Number(id)
+  const { user } = useAuth()
+  const canManageClient = user?.role && ['super_admin', 'company_owner', 'project_manager'].includes(user.role)
 
   const queryClient = useQueryClient()
 
@@ -291,6 +295,14 @@ export default function ProjectDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Client Linking Card */}
+          <ClientLinkCard
+            projectId={projectId}
+            clientName={project.client_name}
+            clientId={project.client_id}
+            canEdit={!!canManageClient}
+          />
 
           {budgetTracking && (
             <Card>
