@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import ModelViewer, { MeshGeometry } from '@/components/digital-twin/ModelViewer'
 import ProgressOverlay from '@/components/digital-twin/ProgressOverlay'
 import StructureSidebar from '@/components/digital-twin/StructureSidebar'
+import IssuePanel from '@/components/digital-twin/IssuePanel'
 import api from '@/services/api'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -62,11 +63,47 @@ export default function DigitalTwinPage() {
   const [forceUpload, setForceUpload] = useState(false)
   const [prompt, setPrompt] = useState('')
   const [focusMeshId, setFocusMeshId] = useState<string | null>(null)
+  
+  const [addPinMode, setAddPinMode] = useState(false)
+  const [selectedPosition, setSelectedPosition] = useState<{x: number, y: number, z: number} | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['digital-twin', projectId],
     queryFn: () => getDigitalTwinData(projectId),
     enabled: !!projectId
+  })
+
+  const { data: issues = [] } = useQuery({
+    queryKey: ['digital-twin-issues', projectId],
+    queryFn: async () => {
+      const { data } = await api.get(`/projects/${projectId}/digital-twin/issues`)
+      return data
+    },
+    enabled: !!projectId
+  })
+
+  const createIssueMutation = useMutation({
+    mutationFn: async (issueData: any) => {
+      const { data } = await api.post(`/projects/${projectId}/digital-twin/issues`, issueData)
+      return data
+    },
+    onSuccess: () => {
+      toast.success('Pin saved successfully')
+      setAddPinMode(false)
+      setSelectedPosition(null)
+      queryClient.invalidateQueries({ queryKey: ['digital-twin-issues', projectId] })
+    },
+    onError: () => toast.error('Failed to save pin')
+  })
+
+  const updateIssueMutation = useMutation({
+    mutationFn: async ({ issueId, status }: { issueId: number, status: string }) => {
+      const { data } = await api.patch(`/projects/${projectId}/digital-twin/issues/${issueId}`, { status })
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['digital-twin-issues', projectId] })
+    }
   })
 
   const uploadMutation = useMutation({
@@ -307,17 +344,44 @@ export default function DigitalTwinPage() {
       <div className="flex-1 flex gap-4 overflow-hidden">
         {/* Sidebar — read-only for clients (no rename/smart-rename) */}
         {isModelUploaded && (
-          <StructureSidebar
-            mappings={data.mappings || []}
-            selectedMeshId={selectedMeshId}
-            meshGeometry={meshGeometry}
-            readOnly={isClient}
-            onSelectMesh={(meshId, name) => {
-              setSelectedMeshId(meshId)
-              setSelectedName(name)
-              setFocusMeshId(meshId)
-            }}
-          />
+          <>
+            <StructureSidebar
+              mappings={data.mappings || []}
+              selectedMeshId={selectedMeshId}
+              meshGeometry={meshGeometry}
+              readOnly={isClient}
+              onSelectMesh={(meshId, name) => {
+                setSelectedMeshId(meshId)
+                setSelectedName(name)
+                setFocusMeshId(meshId)
+              }}
+            />
+            <IssuePanel
+              issues={issues}
+              isClient={isClient}
+              addPinMode={addPinMode}
+              setAddPinMode={setAddPinMode}
+              selectedPosition={selectedPosition}
+              onAddIssue={(title, description, priority) => {
+                createIssueMutation.mutate({
+                  title,
+                  description,
+                  priority,
+                  mesh_node_id: selectedMeshId,
+                  position_x: selectedPosition?.x,
+                  position_y: selectedPosition?.y,
+                  position_z: selectedPosition?.z
+                })
+              }}
+              onUpdateIssueStatus={(issueId, status) => {
+                updateIssueMutation.mutate({ issueId, status })
+              }}
+              onFocusIssue={(issue) => {
+                setSelectedMeshId(issue.mesh_node_id)
+                setFocusMeshId(issue.mesh_node_id)
+              }}
+            />
+          </>
         )}
 
         <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
@@ -329,6 +393,16 @@ export default function DigitalTwinPage() {
               focusMeshId={focusMeshId}
               onMeshClick={handleMeshClick}
               onModelLoaded={(names, geo) => { setMeshNames(names); setMeshGeometry(geo) }}
+              issues={issues}
+              addPinMode={addPinMode}
+              onAddPin={(position, meshId) => {
+                setSelectedPosition(position)
+                setSelectedMeshId(meshId)
+              }}
+              onPinClick={(issue) => {
+                setSelectedMeshId(issue.mesh_node_id)
+                setFocusMeshId(issue.mesh_node_id)
+              }}
             />
           </ModelErrorBoundary>
 

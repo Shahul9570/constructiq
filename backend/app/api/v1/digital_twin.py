@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 import uuid
 import os
 
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User, UserRole
-from app.models.project import Project, ProjectStructure
+from app.models.project import Project, ProjectStructure, DigitalTwinIssue
 from app.services.storage_service import StorageService
 
 router = APIRouter()
@@ -269,3 +269,99 @@ def auto_rename_structures(
         return {"message": f"Successfully renamed {updated} structures.", "updated": updated}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+class DigitalTwinIssueCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    priority: Optional[str] = "medium"
+    mesh_node_id: Optional[str] = None
+    position_x: float
+    position_y: float
+    position_z: float
+
+class DigitalTwinIssueUpdate(BaseModel):
+    status: Optional[str] = None
+
+@router.get("/projects/{project_id}/digital-twin/issues", status_code=200)
+def get_digital_twin_issues(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    issues = db.query(DigitalTwinIssue).filter(DigitalTwinIssue.project_id == project_id).all()
+    
+    return [
+        {
+            "id": issue.id,
+            "title": issue.title,
+            "description": issue.description,
+            "status": issue.status,
+            "priority": issue.priority,
+            "mesh_node_id": issue.mesh_node_id,
+            "position": {"x": issue.position_x, "y": issue.position_y, "z": issue.position_z},
+            "created_at": issue.created_at,
+            "created_by": f"{issue.created_by.first_name} {issue.created_by.last_name}" if issue.created_by else "Unknown"
+        }
+        for issue in issues
+    ]
+
+@router.post("/projects/{project_id}/digital-twin/issues", status_code=201)
+def create_digital_twin_issue(
+    project_id: int,
+    request: DigitalTwinIssueCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role == UserRole.CLIENT:
+        raise HTTPException(status_code=403, detail="Clients cannot create issues")
+        
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    new_issue = DigitalTwinIssue(
+        project_id=project_id,
+        title=request.title,
+        description=request.description,
+        priority=request.priority,
+        mesh_node_id=request.mesh_node_id,
+        position_x=request.position_x,
+        position_y=request.position_y,
+        position_z=request.position_z,
+        created_by_id=current_user.id
+    )
+    db.add(new_issue)
+    db.commit()
+    db.refresh(new_issue)
+    
+    return {"message": "Issue created", "id": new_issue.id}
+
+@router.patch("/projects/{project_id}/digital-twin/issues/{issue_id}", status_code=200)
+def update_digital_twin_issue(
+    project_id: int,
+    issue_id: int,
+    request: DigitalTwinIssueUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role == UserRole.CLIENT:
+        raise HTTPException(status_code=403, detail="Clients cannot update issues")
+        
+    issue = db.query(DigitalTwinIssue).filter(
+        DigitalTwinIssue.id == issue_id,
+        DigitalTwinIssue.project_id == project_id
+    ).first()
+    
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+        
+    if request.status:
+        issue.status = request.status
+        
+    db.commit()
+    
+    return {"message": "Issue updated"}

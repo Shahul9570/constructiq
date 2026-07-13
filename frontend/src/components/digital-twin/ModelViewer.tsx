@@ -1,7 +1,8 @@
 import { useRef, useState, useMemo, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useGLTF, OrbitControls, Environment, Bounds, useBounds } from '@react-three/drei'
+import { useGLTF, OrbitControls, Environment, Bounds, useBounds, Html } from '@react-three/drei'
 import * as THREE from 'three'
+import { MapPin } from 'lucide-react'
 
 export interface MeshGeometry {
   w: number; h: number; d: number
@@ -15,9 +16,13 @@ interface ModelViewerProps {
   focusMeshId?: string | null
   onMeshClick: (meshId: string, meshName: string) => void
   onModelLoaded?: (meshNames: string[], geometry: Record<string, MeshGeometry>) => void
+  issues?: any[]
+  addPinMode?: boolean
+  onAddPin?: (position: {x: number, y: number, z: number}, meshId: string) => void
+  onPinClick?: (issue: any) => void
 }
 
-function Model({ url, mappings, selectedMeshId, focusMeshId, onMeshClick, onModelLoaded, clipHeight, onTeleport }: { url: string, mappings: any[], selectedMeshId?: string | null, focusMeshId?: string | null, onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[], geometry: Record<string, MeshGeometry>) => void, clipHeight: number, onTeleport: (p: THREE.Vector3, n: THREE.Vector3, c: THREE.Camera) => void }) {
+function Model({ url, mappings, selectedMeshId, focusMeshId, onMeshClick, onModelLoaded, clipHeight, onTeleport, addPinMode, onAddPin }: { url: string, mappings: any[], selectedMeshId?: string | null, focusMeshId?: string | null, onMeshClick: (meshId: string, name: string) => void, onModelLoaded?: (names: string[], geometry: Record<string, MeshGeometry>) => void, clipHeight: number, onTeleport: (p: THREE.Vector3, n: THREE.Vector3, c: THREE.Camera) => void, addPinMode?: boolean, onAddPin?: (p: any, m: string) => void }) {
   const { scene } = useGLTF(url)
   const [hovered, setHovered] = useState<string | null>(null)
   const loadedRef = useRef(false)
@@ -206,8 +211,16 @@ function Model({ url, mappings, selectedMeshId, focusMeshId, onMeshClick, onMode
         if (chosenObj) {
           const meshId = chosenObj.userData.meshId || chosenObj.name
           const meshName = chosenObj.userData.name || chosenObj.name
+          
+          if (addPinMode && onAddPin) {
+            onAddPin(e.point, meshId)
+            return
+          }
+          
           onMeshClick(meshId, meshName)
         }
+
+        if (addPinMode) return;
 
         // Teleport to the exact clicked point
         const point = e.point
@@ -276,7 +289,7 @@ function WasdControls({ controlsRef }: { controlsRef: React.RefObject<any> }) {
   return null
 }
 
-export default function ModelViewer({ modelUrl, mappings, selectedMeshId, focusMeshId, onMeshClick, onModelLoaded }: ModelViewerProps) {
+export default function ModelViewer({ modelUrl, mappings, selectedMeshId, focusMeshId, onMeshClick, onModelLoaded, issues = [], addPinMode = false, onAddPin, onPinClick }: ModelViewerProps) {
   const [clipHeight, setClipHeight] = useState(100)
   const controlsRef = useRef<any>(null)
 
@@ -303,7 +316,36 @@ export default function ModelViewer({ modelUrl, mappings, selectedMeshId, focusM
         <directionalLight position={[10, 10, 5]} intensity={1} />
         
         <Bounds fit clip observe margin={1.5}>
-          <Model url={modelUrl} mappings={mappings} selectedMeshId={selectedMeshId} focusMeshId={focusMeshId} onMeshClick={onMeshClick} onModelLoaded={onModelLoaded} clipHeight={clipHeight} onTeleport={handleTeleport} />
+          <Model url={modelUrl} mappings={mappings} selectedMeshId={selectedMeshId} focusMeshId={focusMeshId} onMeshClick={onMeshClick} onModelLoaded={onModelLoaded} clipHeight={clipHeight} onTeleport={handleTeleport} addPinMode={addPinMode} onAddPin={onAddPin} />
+          
+          {issues.map(issue => (
+            <Html 
+              key={issue.id} 
+              position={[issue.position.x, issue.position.y, issue.position.z]}
+              center
+              zIndexRange={[100, 0]}
+            >
+              <div 
+                className={`relative group cursor-pointer transition-transform duration-200 hover:scale-125 ${selectedMeshId === issue.mesh_node_id ? 'scale-125' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onPinClick?.(issue) }}
+              >
+                <MapPin className={`h-8 w-8 drop-shadow-md ${issue.status === 'resolved' ? 'text-emerald-500' : issue.priority === 'high' ? 'text-rose-500' : 'text-amber-500'} fill-slate-900/80`} />
+                
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  <div className="bg-slate-900 border border-slate-700 shadow-xl rounded-lg px-3 py-2 text-sm text-slate-200 text-left">
+                    <p className="font-semibold">{issue.title}</p>
+                    {issue.status === 'resolved' ? (
+                      <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-bold mt-1 block">Resolved</span>
+                    ) : (
+                      <span className={`text-[10px] uppercase tracking-wider font-bold mt-1 block ${issue.priority === 'high' ? 'text-rose-400' : 'text-amber-400'}`}>{issue.priority} Priority</span>
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 border-b border-r border-slate-700 transform rotate-45"></div>
+                </div>
+              </div>
+            </Html>
+          ))}
         </Bounds>
         
         <Environment preset="city" />

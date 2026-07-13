@@ -120,3 +120,29 @@ class ProjectStructure(Base):
 
     def __repr__(self):
         return f"<ProjectStructure {self.name}>"
+
+class DigitalTwinIssue(Base):
+    __tablename__ = "digital_twin_issues"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text)
+    status = Column(String(50), default="open") # open, in_progress, resolved
+    priority = Column(String(50), default="medium") # low, medium, high
+    
+    # 3D Coordinates
+    mesh_node_id = Column(String(255), nullable=True)
+    position_x = Column(Float, nullable=False)
+    position_y = Column(Float, nullable=False)
+    position_z = Column(Float, nullable=False)
+    
+    created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    project = relationship("Project")
+    created_by = relationship("User")
+
+    def __repr__(self):
+        return f"<DigitalTwinIssue {self.title}>"
