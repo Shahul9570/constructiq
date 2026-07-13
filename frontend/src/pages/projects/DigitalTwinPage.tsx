@@ -18,8 +18,8 @@ const getDigitalTwinData = async (projectId: number) => {
   return data
 }
 
-class ModelErrorBoundary extends React.Component<{ children: React.ReactNode, onReset: () => void }, { hasError: boolean }> {
-  constructor(props: { children: React.ReactNode, onReset: () => void }) {
+class ModelErrorBoundary extends React.Component<{ children: React.ReactNode, onReset: () => void, isClient?: boolean }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode, onReset: () => void, isClient?: boolean }) {
     super(props)
     this.state = { hasError: false }
   }
