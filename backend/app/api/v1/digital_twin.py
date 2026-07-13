@@ -53,6 +53,9 @@ async def upload_digital_twin(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if current_user.role not in [UserRole.PROJECT_MANAGER, UserRole.COMPANY_OWNER, UserRole.SUPER_ADMIN]:
+        raise HTTPException(status_code=403, detail="Only managers can upload the 3D model")
+
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")

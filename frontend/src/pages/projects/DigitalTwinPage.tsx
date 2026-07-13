@@ -55,6 +55,7 @@ export default function DigitalTwinPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { user } = useAuth()
   const isClient = user?.role === 'client'
+  const isManager = user?.role === 'project_manager' || user?.role === 'company_owner' || user?.role === 'super_admin'
   
   const [selectedMeshId, setSelectedMeshId] = useState<string | null>(null)
   const [selectedName, setSelectedName] = useState<string | null>(null)
@@ -207,11 +208,11 @@ export default function DigitalTwinPage() {
           <Box className="h-12 w-12 text-slate-500" />
           <h2 className="text-xl font-medium text-slate-300">3D Model Not Available Yet</h2>
           <p className="text-slate-500 max-w-md text-center">
-            {isClient
+            {!isManager
               ? 'The project team has not uploaded a 3D model yet. Please check back later.'
               : 'Upload a .glb file to enable the Digital Twin experience.'}
           </p>
-          {!isClient && (
+          {isManager && (
             <>
               <input
                 type="file"
@@ -241,7 +242,7 @@ export default function DigitalTwinPage() {
   }
 
   // Legacy: forceUpload for managers only
-  if (forceUpload && !isClient) {
+  if (forceUpload && isManager) {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-4">
@@ -309,7 +310,7 @@ export default function DigitalTwinPage() {
         </div>
 
         {/* Manager-only controls */}
-        {!isClient && (
+        {isManager && (
           <div className="ml-auto flex items-center gap-2">
             <Button
               variant="outline"
@@ -417,7 +418,7 @@ export default function DigitalTwinPage() {
           />
 
           {/* AI Command Bar — managers only */}
-          {!isClient && (
+          {isManager && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-10">
               <form
                 onSubmit={handlePromptSubmit}
