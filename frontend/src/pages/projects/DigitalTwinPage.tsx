@@ -325,7 +325,7 @@ export default function DigitalTwinPage() {
         )}
 
         <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
-          <ModelErrorBoundary onReset={() => setForceUpload(true)}>
+          <ModelErrorBoundary onReset={() => setForceUpload(true)} isClient={isClient}>
             <ModelViewer
               modelUrl={data.model_url.startsWith('http') ? data.model_url : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}${data.model_url}`}
               mappings={data.mappings || []}
