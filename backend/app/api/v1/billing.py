@@ -78,6 +78,7 @@ def list_client_invoices(
             vendor_name=inv.vendor_name, total_amount=inv.total_amount, amount=inv.amount,
             tax_amount=inv.tax_amount, issue_date=inv.issue_date, due_date=inv.due_date,
             status=inv.status.value if hasattr(inv.status, 'value') else str(inv.status),
+            amount_paid=inv.amount_paid or 0.0,
             paid_date=inv.paid_date, payment_method=inv.payment_method, notes=inv.notes,
             file_url=inv.file_url, created_by=inv.created_by, created_at=inv.created_at,
             updated_at=inv.updated_at or datetime.now()
@@ -113,6 +114,7 @@ def create_client_invoice(
         vendor_name=invoice.vendor_name, total_amount=invoice.total_amount, amount=invoice.amount,
         tax_amount=invoice.tax_amount, issue_date=invoice.issue_date, due_date=invoice.due_date,
         status=invoice.status.value if hasattr(invoice.status, 'value') else str(invoice.status),
+        amount_paid=invoice.amount_paid or 0.0,
         paid_date=invoice.paid_date, payment_method=invoice.payment_method, notes=invoice.notes,
         file_url=invoice.file_url, created_by=invoice.created_by, created_at=invoice.created_at,
         updated_at=invoice.updated_at or datetime.now()
@@ -146,6 +148,7 @@ def update_client_invoice(
         vendor_name=invoice.vendor_name, total_amount=invoice.total_amount, amount=invoice.amount,
         tax_amount=invoice.tax_amount, issue_date=invoice.issue_date, due_date=invoice.due_date,
         status=invoice.status.value if hasattr(invoice.status, 'value') else str(invoice.status),
+        amount_paid=invoice.amount_paid or 0.0,
         paid_date=invoice.paid_date, payment_method=invoice.payment_method, notes=invoice.notes,
         file_url=invoice.file_url, created_by=invoice.created_by, created_at=invoice.created_at,
         updated_at=invoice.updated_at or datetime.now()
@@ -179,6 +182,7 @@ def get_client_portal_invoices(
             vendor_name=inv.vendor_name, total_amount=inv.total_amount, amount=inv.amount,
             tax_amount=inv.tax_amount, issue_date=inv.issue_date, due_date=inv.due_date,
             status=inv.status.value if hasattr(inv.status, 'value') else str(inv.status),
+            amount_paid=inv.amount_paid or 0.0,
             paid_date=inv.paid_date, payment_method=inv.payment_method, notes=inv.notes,
             file_url=inv.file_url, created_by=inv.created_by, created_at=inv.created_at,
             updated_at=inv.updated_at or datetime.now()
@@ -237,6 +241,7 @@ def submit_client_payment(
         vendor_name=invoice.vendor_name, total_amount=invoice.total_amount, amount=invoice.amount,
         tax_amount=invoice.tax_amount, issue_date=invoice.issue_date, due_date=invoice.due_date,
         status=invoice.status.value if hasattr(invoice.status, 'value') else str(invoice.status),
+        amount_paid=invoice.amount_paid or 0.0,
         paid_date=invoice.paid_date, payment_method=invoice.payment_method, notes=invoice.notes,
         file_url=invoice.file_url, created_by=invoice.created_by, created_at=invoice.created_at,
         updated_at=invoice.updated_at or datetime.now()
@@ -283,6 +288,7 @@ def verify_client_payment(
         vendor_name=invoice.vendor_name, total_amount=invoice.total_amount, amount=invoice.amount,
         tax_amount=invoice.tax_amount, issue_date=invoice.issue_date, due_date=invoice.due_date,
         status=invoice.status.value if hasattr(invoice.status, 'value') else str(invoice.status),
+        amount_paid=invoice.amount_paid or 0.0,
         paid_date=invoice.paid_date, payment_method=invoice.payment_method, notes=invoice.notes,
         file_url=invoice.file_url, created_by=invoice.created_by, created_at=invoice.created_at,
         updated_at=invoice.updated_at or datetime.now()
