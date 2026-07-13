@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Response
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 import uuid
@@ -7,7 +7,7 @@ import os
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User, UserRole
-from app.models.project import Project, ProjectStructure, DigitalTwinModel
+from app.models.project import Project, ProjectStructure
 from app.services.storage_service import StorageService
 
 router = APIRouter()
@@ -57,22 +57,11 @@ async def upload_digital_twin(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    content = await file.read()
-    
-    # Save to database
-    model_record = db.query(DigitalTwinModel).filter(DigitalTwinModel.project_id == project_id).first()
-    if model_record:
-        model_record.file_data = content
-        model_record.content_type = file.content_type or "model/gltf-binary"
-    else:
-        model_record = DigitalTwinModel(
-            project_id=project_id,
-            file_data=content,
-            content_type=file.content_type or "model/gltf-binary"
-        )
-        db.add(model_record)
-        
-    file_url = f"/api/v1/projects/{project_id}/digital-twin/model.glb"
+    # Upload to storage
+    file_ext = os.path.splitext(file.filename or "")[1] if file.filename else ""
+    file_key = f"digital-twin/{project_id}/{uuid.uuid4()}{file_ext}"
+
+    file_url = await storage.upload_file(file, file_key)
 
     # Update project model_url
     project.model_url = file_url
@@ -80,17 +69,6 @@ async def upload_digital_twin(
     db.refresh(project)
 
     return {"message": "Digital Twin model uploaded successfully", "model_url": file_url}
-
-@router.get("/projects/{project_id}/digital-twin/model.glb")
-def download_digital_twin_model(
-    project_id: int,
-    db: Session = Depends(get_db),
-):
-    model = db.query(DigitalTwinModel).filter(DigitalTwinModel.project_id == project_id).first()
-    if not model:
-        raise HTTPException(status_code=404, detail="Model not found")
-        
-    return Response(content=model.file_data, media_type=model.content_type)
 
 from pydantic import BaseModel
 

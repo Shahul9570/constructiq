@@ -18,8 +18,8 @@ const getDigitalTwinData = async (projectId: number) => {
   return data
 }
 
-class ModelErrorBoundary extends React.Component<{ children: React.ReactNode, onReset: () => void, isClient: boolean }, { hasError: boolean }> {
-  constructor(props: { children: React.ReactNode, onReset: () => void, isClient: boolean }) {
+class ModelErrorBoundary extends React.Component<{ children: React.ReactNode, onReset: () => void }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode, onReset: () => void }) {
     super(props)
     this.state = { hasError: false }
   }
@@ -35,15 +35,11 @@ class ModelErrorBoundary extends React.Component<{ children: React.ReactNode, on
           <AlertTriangle className="h-12 w-12 text-red-500" />
           <h2 className="text-xl font-medium text-slate-300">Failed to Load Model</h2>
           <p className="text-slate-500 max-w-md text-center">
-            {this.props.isClient 
-              ? 'The 3D model is currently unavailable. The project manager may be updating it.'
-              : 'The 3D model file is missing or corrupted. This can happen if the storage was cleared.'}
+            The 3D model file is missing or corrupted. This can happen if the storage was cleared.
           </p>
-          {!this.props.isClient && (
-            <Button variant="outline" className="border-red-900 text-red-400 hover:bg-red-950" onClick={this.props.onReset}>
-              Clear and Re-Upload Model
-            </Button>
-          )}
+          <Button variant="outline" className="border-red-900 text-red-400 hover:bg-red-950" onClick={this.props.onReset}>
+            Clear and Re-Upload Model
+          </Button>
         </div>
       )
     }
