@@ -7,6 +7,7 @@ from sqlalchemy.orm import relationship
 import enum
 
 from app.core.database import Base
+from sqlalchemy import LargeBinary
 
 
 class ProjectStatus(str, enum.Enum):
@@ -120,3 +121,14 @@ class ProjectStructure(Base):
 
     def __repr__(self):
         return f"<ProjectStructure {self.name}>"
+
+class DigitalTwinModel(Base):
+    __tablename__ = "digital_twin_models"
+
+    id = Column(Integer, primary_key=True, index=True)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), unique=True, nullable=False)
+    file_data = Column(LargeBinary, nullable=False)
+    content_type = Column(String(50), default="model/gltf-binary")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project")
