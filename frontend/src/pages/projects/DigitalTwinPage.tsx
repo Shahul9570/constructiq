@@ -12,6 +12,7 @@ import StructureSidebar from '@/components/digital-twin/StructureSidebar'
 import IssuePanel from '@/components/digital-twin/IssuePanel'
 import api from '@/services/api'
 import { useAuth } from '@/hooks/useAuth'
+import { projectService } from '@/services/project.service'
 
 // Temporary service function until we add it to a proper service class
 const getDigitalTwinData = async (projectId: number) => {
@@ -80,6 +81,12 @@ export default function DigitalTwinPage() {
       const { data } = await api.get(`/projects/${projectId}/digital-twin/issues`)
       return data
     },
+    enabled: !!projectId
+  })
+
+  const { data: members = [] } = useQuery({
+    queryKey: ['project-members', projectId],
+    queryFn: () => projectService.getMembers(projectId),
     enabled: !!projectId
   })
 
@@ -359,11 +366,14 @@ export default function DigitalTwinPage() {
             />
             <IssuePanel
               issues={issues}
+              members={members}
+              user={user}
               isClient={isClient}
+              isManager={isManager}
               addPinMode={addPinMode}
               setAddPinMode={setAddPinMode}
               selectedPosition={selectedPosition}
-              onAddIssue={(title, description, priority) => {
+              onAddIssue={(title, description, priority, assignedToId) => {
                 createIssueMutation.mutate({
                   title,
                   description,
@@ -371,7 +381,8 @@ export default function DigitalTwinPage() {
                   mesh_node_id: selectedMeshId,
                   position_x: selectedPosition?.x,
                   position_y: selectedPosition?.y,
-                  position_z: selectedPosition?.z
+                  position_z: selectedPosition?.z,
+                  assigned_to_id: assignedToId ? Number(assignedToId) : null
                 })
               }}
               onUpdateIssueStatus={(issueId, status) => {

@@ -1,22 +1,28 @@
 import React, { useState } from 'react'
-import { MapPin, Plus, CheckCircle, Clock, AlertTriangle, X } from 'lucide-react'
+import { MapPin, Plus, CheckCircle, Clock, AlertTriangle, X, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
 interface IssuePanelProps {
   issues: any[]
+  members: any[]
+  user: any
   isClient: boolean
+  isManager: boolean
   addPinMode: boolean
   setAddPinMode: (mode: boolean) => void
-  onAddIssue: (title: string, description: string, priority: string) => void
+  onAddIssue: (title: string, description: string, priority: string, assignedToId?: string) => void
   onUpdateIssueStatus: (issueId: number, status: string) => void
   onFocusIssue: (issue: any) => void
   selectedPosition: { x: number, y: number, z: number } | null
 }
 
 export default function IssuePanel({ 
-  issues, 
-  isClient, 
+  issues,
+  members,
+  user,
+  isClient,
+  isManager,
   addPinMode, 
   setAddPinMode, 
   onAddIssue, 
@@ -27,14 +33,16 @@ export default function IssuePanel({
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('medium')
+  const [assignedToId, setAssignedToId] = useState('')
   
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim() || !selectedPosition) return
-    onAddIssue(title, description, priority)
+    onAddIssue(title, description, priority, assignedToId)
     setTitle('')
     setDescription('')
     setPriority('medium')
+    setAssignedToId('')
   }
 
   return (
@@ -82,6 +90,16 @@ export default function IssuePanel({
                 <option value="medium">Medium Priority</option>
                 <option value="high">High Priority</option>
               </select>
+              <select
+                value={assignedToId}
+                onChange={(e) => setAssignedToId(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 rounded-md p-1.5 text-xs text-slate-300 focus:outline-none"
+              >
+                <option value="">Unassigned</option>
+                {members.map(m => (
+                  <option key={m.user_id} value={m.user_id}>{m.user_full_name} ({m.user_role?.replace('_', ' ')})</option>
+                ))}
+              </select>
               <Button type="submit" size="sm" className="w-full h-8 bg-emerald-600 hover:bg-emerald-500 text-white" disabled={!title.trim()}>
                 Save Pin
               </Button>
@@ -121,24 +139,46 @@ export default function IssuePanel({
                 <p className="text-xs text-slate-400 line-clamp-2 mb-2">{issue.description}</p>
               )}
               
+              {issue.assigned_to && (
+                <div className="text-[10px] text-slate-400 mb-2 flex items-center gap-1 bg-slate-900/50 p-1 rounded border border-slate-700/50">
+                  <User className="h-3 w-3" /> {issue.assigned_to.name}
+                </div>
+              )}
+              
               <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-700/50">
                 <span className="text-[10px] text-slate-500">{new Date(issue.created_at).toLocaleDateString()}</span>
-                {!isClient && issue.status !== 'resolved' && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onUpdateIssueStatus(issue.id, 'resolved') }}
-                    className="text-[10px] font-medium text-emerald-400 hover:text-emerald-300"
-                  >
-                    Mark Resolved
-                  </button>
-                )}
-                {!isClient && issue.status === 'resolved' && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onUpdateIssueStatus(issue.id, 'open') }}
-                    className="text-[10px] font-medium text-amber-400 hover:text-amber-300"
-                  >
-                    Reopen
-                  </button>
-                )}
+                
+                <div className="flex gap-2">
+                  {/* Contractor action */}
+                  {user?.role === 'contractor' && issue.assigned_to?.id === user?.id && issue.status !== 'completed' && issue.status !== 'verified' && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onUpdateIssueStatus(issue.id, 'completed') }}
+                      className="text-[10px] font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-2 py-1 rounded"
+                    >
+                      Mark Completed
+                    </button>
+                  )}
+
+                  {/* Manager verification action */}
+                  {isManager && issue.status === 'completed' && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onUpdateIssueStatus(issue.id, 'verified') }}
+                      className="text-[10px] font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-2 py-1 rounded animate-pulse"
+                    >
+                      Verify & Update Model
+                    </button>
+                  )}
+
+                  {/* Legacy resolve action for general issues */}
+                  {isManager && issue.status !== 'verified' && issue.status !== 'completed' && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); onUpdateIssueStatus(issue.id, 'verified') }}
+                      className="text-[10px] font-medium text-slate-400 hover:text-slate-300"
+                    >
+                      Close Issue
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}

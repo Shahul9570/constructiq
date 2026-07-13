@@ -137,12 +137,16 @@ class DigitalTwinIssue(Base):
     position_y = Column(Float, nullable=False)
     position_z = Column(Float, nullable=False)
     
+    # Assignment
+    assigned_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     project = relationship("Project")
-    created_by = relationship("User")
+    created_by = relationship("User", foreign_keys=[created_by_id])
+    assigned_to = relationship("User", foreign_keys=[assigned_to_id])
 
     def __repr__(self):
         return f"<DigitalTwinIssue {self.title}>"

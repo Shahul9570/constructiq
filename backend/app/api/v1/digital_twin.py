@@ -281,6 +281,7 @@ class DigitalTwinIssueCreate(BaseModel):
     position_x: float
     position_y: float
     position_z: float
+    assigned_to_id: Optional[int] = None
 
 class DigitalTwinIssueUpdate(BaseModel):
     status: Optional[str] = None
@@ -307,7 +308,12 @@ def get_digital_twin_issues(
             "mesh_node_id": issue.mesh_node_id,
             "position": {"x": issue.position_x, "y": issue.position_y, "z": issue.position_z},
             "created_at": issue.created_at,
-            "created_by": f"{issue.created_by.first_name} {issue.created_by.last_name}" if issue.created_by else "Unknown"
+            "created_by": f"{issue.created_by.first_name} {issue.created_by.last_name}" if issue.created_by else "Unknown",
+            "assigned_to": {
+                "id": issue.assigned_to.id,
+                "name": f"{issue.assigned_to.first_name} {issue.assigned_to.last_name}",
+                "role": issue.assigned_to.role
+            } if issue.assigned_to else None
         }
         for issue in issues
     ]
@@ -319,8 +325,8 @@ def create_digital_twin_issue(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if current_user.role == UserRole.CLIENT:
-        raise HTTPException(status_code=403, detail="Clients cannot create issues")
+    if current_user.role in [UserRole.CLIENT, UserRole.CONTRACTOR]:
+        raise HTTPException(status_code=403, detail="Not authorized to create issues")
         
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
@@ -335,6 +341,7 @@ def create_digital_twin_issue(
         position_x=request.position_x,
         position_y=request.position_y,
         position_z=request.position_z,
+        assigned_to_id=request.assigned_to_id,
         created_by_id=current_user.id
     )
     db.add(new_issue)
@@ -363,6 +370,23 @@ def update_digital_twin_issue(
         raise HTTPException(status_code=404, detail="Issue not found")
         
     if request.status:
+        # Contractor validation
+        if current_user.role == UserRole.CONTRACTOR:
+            if issue.assigned_to_id != current_user.id:
+                raise HTTPException(status_code=403, detail="Can only update issues assigned to you")
+            if request.status != "completed":
+                raise HTTPException(status_code=403, detail="Contractors can only mark issues as completed")
+        
+        # Manager verification auto-update
+        if request.status == "verified" and current_user.role in [UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.COMPANY_OWNER, UserRole.SUPER_ADMIN]:
+            if issue.mesh_node_id:
+                structure = db.query(ProjectStructure).filter(
+                    ProjectStructure.project_id == project_id,
+                    ProjectStructure.mesh_node_id == issue.mesh_node_id
+                ).first()
+                if structure:
+                    structure.progress_percentage = 100.0
+                    
         issue.status = request.status
         
     db.commit()
