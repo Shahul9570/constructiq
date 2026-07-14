@@ -111,6 +111,7 @@ export default function DigitalTwinPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['digital-twin-issues', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['digital-twin', projectId] })
     }
   })
 
