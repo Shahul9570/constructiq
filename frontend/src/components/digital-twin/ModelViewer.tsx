@@ -358,8 +358,9 @@ export default function ModelViewer({ modelUrl, mappings, selectedMeshId, focusM
           <PointerLockControls 
             makeDefault 
             ref={(node: any) => {
-              if (node && !node.update) {
-                node.update = () => {}
+              if (node) {
+                if (!node.update) node.update = () => {}
+                if (!node.target) node.target = { copy: () => {}, add: () => {} } // Mock THREE.Vector3 interface required by <Bounds>
               }
             }}
           />
