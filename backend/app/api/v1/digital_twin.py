@@ -296,7 +296,12 @@ def get_digital_twin_issues(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
         
-    issues = db.query(DigitalTwinIssue).filter(DigitalTwinIssue.project_id == project_id).all()
+    query = db.query(DigitalTwinIssue).filter(DigitalTwinIssue.project_id == project_id)
+    
+    if current_user.role == UserRole.CONTRACTOR:
+        query = query.filter(DigitalTwinIssue.assigned_to_id == current_user.id)
+        
+    issues = query.all()
     
     return [
         {
