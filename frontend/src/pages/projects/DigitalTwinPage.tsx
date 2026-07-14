@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Box, Upload, AlertTriangle, Sparkles, Send, Radio } from 'lucide-react'
+import { useGLTF } from '@react-three/drei'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -20,8 +21,8 @@ const getDigitalTwinData = async (projectId: number) => {
   return data
 }
 
-class ModelErrorBoundary extends React.Component<{ children: React.ReactNode, onReset: () => void, isClient?: boolean }, { hasError: boolean }> {
-  constructor(props: { children: React.ReactNode, onReset: () => void, isClient?: boolean }) {
+class ModelErrorBoundary extends React.Component<{ children: React.ReactNode, onReset: () => void, onRetry: () => void, isClient?: boolean }, { hasError: boolean }> {
+  constructor(props: { children: React.ReactNode, onReset: () => void, onRetry: () => void, isClient?: boolean }) {
     super(props)
     this.state = { hasError: false }
   }
@@ -37,11 +38,18 @@ class ModelErrorBoundary extends React.Component<{ children: React.ReactNode, on
           <AlertTriangle className="h-12 w-12 text-red-500" />
           <h2 className="text-xl font-medium text-slate-300">Failed to Load Model</h2>
           <p className="text-slate-500 max-w-md text-center">
-            The 3D model file is missing or corrupted. This can happen if the storage was cleared.
+            The 3D model could not be loaded. If the server is waking up, it might just need a moment.
           </p>
-          <Button variant="outline" className="border-red-900 text-red-400 hover:bg-red-950" onClick={this.props.onReset}>
-            Clear and Re-Upload Model
-          </Button>
+          <div className="flex gap-4">
+            <Button variant="outline" className="border-emerald-900 text-emerald-400 hover:bg-emerald-950" onClick={() => { this.setState({ hasError: false }); this.props.onRetry(); }}>
+              Retry Loading
+            </Button>
+            {!this.props.isClient && (
+              <Button variant="outline" className="border-red-900 text-red-400 hover:bg-red-950" onClick={this.props.onReset}>
+                Re-Upload Model
+              </Button>
+            )}
+          </div>
         </div>
       )
     }
@@ -398,7 +406,14 @@ export default function DigitalTwinPage() {
         )}
 
         <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-800 shadow-2xl">
-          <ModelErrorBoundary onReset={() => setForceUpload(true)} isClient={isClient}>
+          <ModelErrorBoundary 
+            onReset={() => setForceUpload(true)} 
+            onRetry={() => {
+              const url = data.model_url.startsWith('http') ? data.model_url : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}${data.model_url}`
+              useGLTF.clear(url)
+            }}
+            isClient={isClient}
+          >
             <ModelViewer
               modelUrl={data.model_url.startsWith('http') ? data.model_url : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1').replace('/api/v1', '')}${data.model_url}`}
               mappings={data.mappings || []}
