@@ -308,10 +308,10 @@ def get_digital_twin_issues(
             "mesh_node_id": issue.mesh_node_id,
             "position": {"x": issue.position_x, "y": issue.position_y, "z": issue.position_z},
             "created_at": issue.created_at,
-            "created_by": f"{issue.created_by.first_name} {issue.created_by.last_name}" if issue.created_by else "Unknown",
+            "created_by": issue.created_by.full_name if issue.created_by else "Unknown",
             "assigned_to": {
                 "id": issue.assigned_to.id,
-                "name": f"{issue.assigned_to.first_name} {issue.assigned_to.last_name}",
+                "name": issue.assigned_to.full_name,
                 "role": issue.assigned_to.role
             } if issue.assigned_to else None
         }
