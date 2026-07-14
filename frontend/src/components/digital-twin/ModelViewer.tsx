@@ -355,7 +355,14 @@ export default function ModelViewer({ modelUrl, mappings, selectedMeshId, focusM
         {viewMode === 'orbit' ? (
           <OrbitControls ref={controlsRef} makeDefault />
         ) : (
-          <PointerLockControls makeDefault />
+          <PointerLockControls 
+            makeDefault 
+            ref={(node: any) => {
+              if (node && !node.update) {
+                node.update = () => {}
+              }
+            }}
+          />
         )}
         <WasdControls controlsRef={controlsRef} viewMode={viewMode} />
       </Canvas>
