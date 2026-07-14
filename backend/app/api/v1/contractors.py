@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, require_roles
 from app.models.user import User, UserRole
 from app.models.contractor import Contractor, ContractorPayment, PaymentStatus
 from app.schemas.contractor import (
@@ -24,7 +24,15 @@ def list_contractors(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if current_user.role == UserRole.CLIENT:
+        raise HTTPException(status_code=403, detail="Not authorized to view contractors")
+
     query = db.query(Contractor).filter(Contractor.project_id == project_id)
+    
+    if current_user.role == UserRole.CONTRACTOR:
+        # Contractors can only see their own linked profile
+        query = query.filter(Contractor.user_id == current_user.id)
+        
     if search:
         query = query.filter(
             (Contractor.name.ilike(f"%{search}%")) |
@@ -40,7 +48,7 @@ def create_contractor(
     data: ContractorCreate,
     project_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     contractor = Contractor(
         **data.model_dump(),
@@ -70,7 +78,7 @@ def update_contractor(
     contractor_id: int,
     data: ContractorUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     contractor = db.query(Contractor).filter(Contractor.id == contractor_id).first()
     if not contractor:
@@ -87,7 +95,7 @@ def update_contractor(
 def delete_contractor(
     contractor_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER)),
 ):
     contractor = db.query(Contractor).filter(Contractor.id == contractor_id).first()
     if not contractor:
@@ -101,7 +109,7 @@ def create_payment(
     contractor_id: int,
     data: ContractorPaymentCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER)),
 ):
     contractor = db.query(Contractor).filter(Contractor.id == contractor_id).first()
     if not contractor:
@@ -140,6 +148,12 @@ def list_payments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    if current_user.role == UserRole.CLIENT:
+        raise HTTPException(status_code=403, detail="Not authorized to view payments")
+        
+    contractor = db.query(Contractor).filter(Contractor.id == contractor_id).first()
+    if current_user.role == UserRole.CONTRACTOR and contractor.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view these payments")
     payments = (
         db.query(ContractorPayment)
         .filter(ContractorPayment.contractor_id == contractor_id)

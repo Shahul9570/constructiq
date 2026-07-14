@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { contractorService } from '@/services/contractor.service'
+import { projectService } from '@/services/project.service'
 import {
   Users,
   Search,
@@ -10,6 +11,7 @@ import {
   Star,
   Phone,
   Building2,
+  AlertTriangle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
@@ -41,11 +43,15 @@ import {
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/hooks/useAuth'
 import type { Contractor, ContractorPayment } from '@/types'
 
 const projectId = () => Number(localStorage.getItem('selected_project_id') || 0)
 
 export default function ContractorsPage() {
+  const { user } = useAuth()
+  const isManager = user?.role === 'project_manager' || user?.role === 'company_owner' || user?.role === 'super_admin' || user?.role === 'site_engineer'
+  
   const queryClient = useQueryClient()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -66,6 +72,7 @@ export default function ContractorsPage() {
     contract_amount: 0,
     paid_amount: 0,
     rating: 0,
+    user_id: '' as string | number,
   })
 
   const [paymentForm, setPaymentForm] = useState({
@@ -94,6 +101,12 @@ export default function ContractorsPage() {
     enabled: !!selectedContractor && isPaymentOpen,
   })
 
+  const { data: members = [] } = useQuery({
+    queryKey: ['project-members', pid],
+    queryFn: () => projectService.getMembers(pid),
+    enabled: !!pid && isManager,
+  })
+
   const createMutation = useMutation({
     mutationFn: () =>
       contractorService.create(pid, {
@@ -106,6 +119,7 @@ export default function ContractorsPage() {
         contract_amount: Number(form.contract_amount),
         paid_amount: Number(form.paid_amount),
         rating: Number(form.rating),
+        user_id: form.user_id ? Number(form.user_id) : undefined,
         project_id: pid,
       }),
     onSuccess: () => {
@@ -129,6 +143,7 @@ export default function ContractorsPage() {
         contract_amount: Number(form.contract_amount),
         paid_amount: Number(form.paid_amount),
         rating: Number(form.rating),
+        user_id: form.user_id ? Number(form.user_id) : undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contractors'] })
@@ -183,6 +198,7 @@ export default function ContractorsPage() {
       contract_amount: 0,
       paid_amount: 0,
       rating: 0,
+      user_id: '',
     })
   }
 
@@ -198,6 +214,7 @@ export default function ContractorsPage() {
       contract_amount: c.contract_amount,
       paid_amount: c.paid_amount,
       rating: c.rating,
+      user_id: c.user_id || '',
     })
     setIsEditOpen(true)
   }
@@ -231,10 +248,12 @@ export default function ContractorsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Contractors</h1>
           <p className="text-muted-foreground">Manage project contractors</p>
         </div>
-        <Button onClick={() => { resetForm(); setIsAddOpen(true) }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Contractor
-        </Button>
+        {isManager && (
+          <Button onClick={() => { resetForm(); setIsAddOpen(true) }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contractor
+          </Button>
+        )}
       </div>
 
       <div className="relative">
@@ -255,10 +274,12 @@ export default function ContractorsPage() {
         <div className="flex flex-col items-center justify-center py-12">
           <Users className="h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-muted-foreground text-lg mb-2">No contractors found</p>
-          <Button onClick={() => { resetForm(); setIsAddOpen(true) }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Contractor
-          </Button>
+          {isManager && (
+            <Button onClick={() => { resetForm(); setIsAddOpen(true) }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Contractor
+            </Button>
+          )}
         </div>
       ) : (
         <div className="rounded-md border">
@@ -274,7 +295,7 @@ export default function ContractorsPage() {
                 <TableHead className="text-right">Paid</TableHead>
                 <TableHead className="text-right">Pending</TableHead>
                 <TableHead className="text-center">Rating</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {isManager && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -305,7 +326,10 @@ export default function ContractorsPage() {
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     {c.pending_amount < 0 ? (
-                      <span className="text-red-500 whitespace-nowrap">Advance: ${Math.abs(c.pending_amount).toLocaleString()}</span>
+                      <span className="text-red-500 whitespace-nowrap font-bold flex items-center justify-end gap-1" title="Warning: Contractor has been overpaid relative to the contract amount.">
+                        <AlertTriangle className="h-3 w-3" />
+                        Overpaid: ${Math.abs(c.pending_amount).toLocaleString()}
+                      </span>
                     ) : (
                       <span className="text-orange-600 whitespace-nowrap">${c.pending_amount.toLocaleString()}</span>
                     )}
@@ -316,24 +340,26 @@ export default function ContractorsPage() {
                       <span>{c.rating.toFixed(1)}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openPayments(c)}>
-                        <DollarSign className="h-3 w-3 mr-1" />
-                        Payments
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => { setSelectedContractor(c); setIsDeleteOpen(true) }}
-                      >
-                        <Trash2 className="h-3 w-3 text-red-500" />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {isManager && (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => openPayments(c)}>
+                          <DollarSign className="h-3 w-3 mr-1" />
+                          Payments
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => { setSelectedContractor(c); setIsDeleteOpen(true) }}
+                        >
+                          <Trash2 className="h-3 w-3 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>
@@ -348,7 +374,7 @@ export default function ContractorsPage() {
               <DialogTitle>Add Contractor</DialogTitle>
               <DialogDescription>Add a new contractor to the project.</DialogDescription>
             </DialogHeader>
-            <ContractorFormFields form={form} setForm={setForm} />
+            <ContractorFormFields form={form} setForm={setForm} members={members} />
             <DialogFooter className="mt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
                 Cancel
@@ -368,7 +394,7 @@ export default function ContractorsPage() {
               <DialogTitle>Edit Contractor</DialogTitle>
               <DialogDescription>Update contractor details.</DialogDescription>
             </DialogHeader>
-            <ContractorFormFields form={form} setForm={setForm} />
+            <ContractorFormFields form={form} setForm={setForm} members={members} />
             <DialogFooter className="mt-4">
               <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
                 Cancel
@@ -510,6 +536,7 @@ export default function ContractorsPage() {
 function ContractorFormFields({
   form,
   setForm,
+  members,
 }: {
   form: {
     name: string
@@ -521,8 +548,10 @@ function ContractorFormFields({
     contract_amount: number
     paid_amount: number
     rating: number
+    user_id: string | number
   }
-  setForm: React.Dispatch<React.SetStateAction<typeof form>>
+  setForm: React.Dispatch<React.SetStateAction<any>>
+  members: any[]
 }) {
   return (
     <div className="grid gap-4 py-4">
@@ -531,6 +560,26 @@ function ContractorFormFields({
           <Label htmlFor="c-name">Name *</Label>
           <Input id="c-name" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </div>
+        <div className="grid gap-2">
+          <Label htmlFor="c-user">Link to User Account</Label>
+          <Select
+            value={form.user_id ? String(form.user_id) : undefined}
+            onValueChange={(v) => setForm({ ...form, user_id: v })}
+          >
+            <SelectTrigger id="c-user">
+              <SelectValue placeholder="Select user (optional)" />
+            </SelectTrigger>
+            <SelectContent>
+              {members.map(m => (
+                <SelectItem key={m.user_id} value={String(m.user_id)}>
+                  {m.user_full_name} ({m.user_role?.replace('_', ' ')})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="grid gap-2">
           <Label htmlFor="c-company">Company</Label>
           <Input id="c-company" value={form.company_name} onChange={(e) => setForm({ ...form, company_name: e.target.value })} />

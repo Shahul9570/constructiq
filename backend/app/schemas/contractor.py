@@ -12,11 +12,10 @@ class ContractorBase(BaseModel):
     trade: Optional[str] = None
     team_size: int = 1
     contract_amount: float = 0.0
-
+    user_id: Optional[int] = None
 
 class ContractorCreate(ContractorBase):
     pass
-
 
 class ContractorUpdate(BaseModel):
     name: Optional[str] = None
@@ -28,7 +27,7 @@ class ContractorUpdate(BaseModel):
     team_size: Optional[int] = None
     contract_amount: Optional[float] = None
     is_active: Optional[bool] = None
-
+    user_id: Optional[int] = None
 
 class ContractorPaymentBase(BaseModel):
     amount: float
@@ -37,10 +36,8 @@ class ContractorPaymentBase(BaseModel):
     transaction_id: Optional[str] = None
     notes: Optional[str] = None
 
-
 class ContractorPaymentCreate(ContractorPaymentBase):
     pass
-
 
 class ContractorPaymentResponse(ContractorPaymentBase):
     id: int
@@ -50,7 +47,6 @@ class ContractorPaymentResponse(ContractorPaymentBase):
     created_at: datetime
 
     model_config = {"from_attributes": True}
-
 
 class ContractorResponse(ContractorBase):
     id: int

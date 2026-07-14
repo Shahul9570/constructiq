@@ -33,11 +33,13 @@ class Contractor(Base):
     rating = Column(Float, default=0.0)
     is_active = Column(Boolean, default=True)
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
+    user = relationship("User")
     payments = relationship("ContractorPayment", back_populates="contractor", cascade="all, delete-orphan")
     labour_summaries = relationship("DailyLabourSummary", backref="contractor_ref", foreign_keys="DailyLabourSummary.contractor_id")
 

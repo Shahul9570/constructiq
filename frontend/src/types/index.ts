@@ -127,6 +127,7 @@ export interface Contractor {
   pending_amount: number
   rating: number
   project_id: number
+  user_id?: number | null
   payments: ContractorPayment[]
 }
 
