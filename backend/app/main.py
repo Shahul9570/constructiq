@@ -34,7 +34,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# Removed StaticFiles mount to enforce DB blob storage for uploads
 
 
 @app.on_event("startup")

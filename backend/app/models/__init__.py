@@ -11,6 +11,7 @@ from app.models.photo import Photo
 from app.models.notification import Notification
 from app.models.project_task import ProjectTask
 from app.models.audit_log import AuditLog
+from app.models.blob import FileBlob
 
 __all__ = [
     "User",
@@ -33,4 +34,5 @@ __all__ = [
     "Notification",
     "ProjectTask",
     "AuditLog",
+    "FileBlob",
 ]

@@ -54,11 +54,24 @@ class StorageService:
             )
             return f"{settings.S3_ENDPOINT}/{self.bucket_name}/{key}"
         else:
-            local_path = f"uploads/{key}"
-            os.makedirs(os.path.dirname(local_path), exist_ok=True)
-            with open(local_path, "wb") as f:
-                f.write(content)
-            return f"/{local_path}"
+            from app.core.database import SessionLocal
+            from app.models.blob import FileBlob
+            db = SessionLocal()
+            try:
+                blob = FileBlob(
+                    id=key,
+                    filename=file.filename,
+                    content_type=file.content_type,
+                    data=content
+                )
+                db.add(blob)
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                raise e
+            finally:
+                db.close()
+            return f"/api/v1/blobs/{key}"
 
     def delete_file(self, url: str) -> bool:
         try:
@@ -66,9 +79,17 @@ class StorageService:
                 key = url.replace(f"{settings.S3_ENDPOINT}/{self.bucket_name}/", "")
                 self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
             else:
-                local_path = url.lstrip("/")
-                if os.path.exists(local_path):
-                    os.remove(local_path)
+                key = url.replace("/api/v1/blobs/", "")
+                from app.core.database import SessionLocal
+                from app.models.blob import FileBlob
+                db = SessionLocal()
+                try:
+                    blob = db.query(FileBlob).filter(FileBlob.id == key).first()
+                    if blob:
+                        db.delete(blob)
+                        db.commit()
+                finally:
+                    db.close()
             return True
         except Exception:
             return False
@@ -76,4 +97,4 @@ class StorageService:
     def get_file_url(self, key: str) -> str:
         if self.use_s3:
             return f"{settings.S3_ENDPOINT}/{self.bucket_name}/{key}"
-        return f"/uploads/{key}"
+        return f"/api/v1/blobs/{key}"
