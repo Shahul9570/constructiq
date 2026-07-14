@@ -9,6 +9,9 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
+      workbox: {
+        maximumFileSizeToCacheInBytes: 4000000 // 4MB
+      },
       manifest: {
         name: 'ConstructIQ',
         short_name: 'ConstructIQ',

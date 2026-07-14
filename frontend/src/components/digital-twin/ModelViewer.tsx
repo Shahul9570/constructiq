@@ -1,8 +1,8 @@
 import { useRef, useState, useMemo, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useGLTF, OrbitControls, Environment, Bounds, useBounds, Html } from '@react-three/drei'
+import { useGLTF, OrbitControls, PointerLockControls, Environment, Bounds, useBounds, Html } from '@react-three/drei'
 import * as THREE from 'three'
-import { MapPin } from 'lucide-react'
+import { MapPin, Footprints, MousePointerClick } from 'lucide-react'
 
 export interface MeshGeometry {
   w: number; h: number; d: number
@@ -241,7 +241,7 @@ function Model({ url, mappings, selectedMeshId, focusMeshId, onMeshClick, onMode
   )
 }
 
-function WasdControls({ controlsRef }: { controlsRef: React.RefObject<any> }) {
+function WasdControls({ controlsRef, viewMode }: { controlsRef: React.RefObject<any>, viewMode: 'orbit' | 'walk' }) {
   const keys = useRef({ w: false, a: false, s: false, d: false })
   
   useEffect(() => {
@@ -259,11 +259,11 @@ function WasdControls({ controlsRef }: { controlsRef: React.RefObject<any> }) {
   }, [])
 
   useFrame((state, delta) => {
-    if (!controlsRef.current) return
+    if (!controlsRef.current && viewMode === 'orbit') return
     const speed = 5 * delta;
-    const controls = controlsRef.current
     const camera = state.camera
     
+    // In PointerLock (walk) mode, camera rotation represents looking direction
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
     forward.y = 0
     if (forward.lengthSq() > 0) forward.normalize()
@@ -281,8 +281,10 @@ function WasdControls({ controlsRef }: { controlsRef: React.RefObject<any> }) {
     
     if (moveVec.lengthSq() > 0) {
       camera.position.add(moveVec)
-      controls.target.add(moveVec)
-      controls.update()
+      if (viewMode === 'orbit' && controlsRef.current) {
+        controlsRef.current.target.add(moveVec)
+        controlsRef.current.update()
+      }
     }
   })
 
@@ -291,6 +293,7 @@ function WasdControls({ controlsRef }: { controlsRef: React.RefObject<any> }) {
 
 export default function ModelViewer({ modelUrl, mappings, selectedMeshId, focusMeshId, onMeshClick, onModelLoaded, issues = [], addPinMode = false, onAddPin, onPinClick }: ModelViewerProps) {
   const [clipHeight, setClipHeight] = useState(100)
+  const [viewMode, setViewMode] = useState<'orbit' | 'walk'>('orbit')
   const controlsRef = useRef<any>(null)
 
   const handleTeleport = (point: THREE.Vector3, normal: THREE.Vector3, camera: THREE.Camera) => {
@@ -349,12 +352,46 @@ export default function ModelViewer({ modelUrl, mappings, selectedMeshId, focusM
         </Bounds>
         
         <Environment preset="city" />
-        <OrbitControls ref={controlsRef} makeDefault />
-        <WasdControls controlsRef={controlsRef} />
+        {viewMode === 'orbit' ? (
+          <OrbitControls ref={controlsRef} makeDefault />
+        ) : (
+          <PointerLockControls makeDefault />
+        )}
+        <WasdControls controlsRef={controlsRef} viewMode={viewMode} />
       </Canvas>
 
+      {/* View Mode Toggle Overlay */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-slate-950/80 backdrop-blur-md p-1.5 rounded-full border border-slate-800 shadow-xl flex items-center gap-1 z-10">
+        <button
+          onClick={() => setViewMode('orbit')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+            viewMode === 'orbit' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+          }`}
+        >
+          <MapPin className="w-4 h-4" />
+          Orbit View
+        </button>
+        <button
+          onClick={() => setViewMode('walk')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+            viewMode === 'walk' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+          }`}
+        >
+          <Footprints className="w-4 h-4" />
+          Walk View
+        </button>
+      </div>
+
+      {/* Walk Mode Instruction Overlay */}
+      {viewMode === 'walk' && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-6 py-2 rounded-full backdrop-blur-md flex items-center gap-3 animate-pulse pointer-events-none z-10">
+          <MousePointerClick className="w-4 h-4" />
+          <span className="text-sm font-medium tracking-wide">Click anywhere to look around. Press ESC to unlock. Use W A S D to walk.</span>
+        </div>
+      )}
+
       {/* Clipping Plane Slider */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-950/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-800 shadow-xl flex items-center gap-4">
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-950/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-800 shadow-xl flex items-center gap-4 z-10">
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest whitespace-nowrap">Elevation Slicer</span>
         <input 
           type="range" 
