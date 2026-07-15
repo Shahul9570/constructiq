@@ -44,6 +44,7 @@ export default function ClientPortalPage() {
   const [paymentForm, setPaymentForm] = useState({
     payment_method: '',
     notes: '',
+    amount: 0,
   })
 
   const { data: invoices, isLoading } = useQuery({
@@ -57,18 +58,20 @@ export default function ClientPortalPage() {
       billingService.submitClientPayment(
         selectedInvoiceId!,
         paymentForm.payment_method,
+        paymentForm.amount,
         paymentForm.notes
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['client-portal-invoices'] })
       setIsPaymentModalOpen(false)
       setSelectedInvoiceId(null)
-      setPaymentForm({ payment_method: '', notes: '' })
+      setPaymentForm({ payment_method: '', notes: '', amount: 0 })
     },
   })
 
-  const openPaymentModal = (invoiceId: number) => {
-    setSelectedInvoiceId(invoiceId)
+  const openPaymentModal = (inv: any) => {
+    setSelectedInvoiceId(inv.id)
+    setPaymentForm({ ...paymentForm, amount: inv.total_amount - (inv.amount_paid || 0) })
     setIsPaymentModalOpen(true)
   }
 
@@ -188,7 +191,7 @@ export default function ClientPortalPage() {
                           <Button 
                             size="sm"
                             className="bg-emerald-600 hover:bg-emerald-700"
-                            onClick={() => openPaymentModal(inv.id)}
+                            onClick={() => openPaymentModal(inv)}
                           >
                             <CreditCard className="mr-2 h-4 w-4" /> Pay Now
                           </Button>
@@ -215,6 +218,15 @@ export default function ClientPortalPage() {
                 value={paymentForm.payment_method}
                 onChange={(e) => setPaymentForm({ ...paymentForm, payment_method: e.target.value })}
                 placeholder="e.g., Bank Transfer, Credit Card"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label>Amount to Pay</Label>
+              <Input
+                type="number"
+                value={paymentForm.amount}
+                onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
+                placeholder="0.00"
               />
             </div>
             <div className="grid gap-2">

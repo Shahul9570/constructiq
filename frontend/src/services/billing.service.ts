@@ -48,10 +48,12 @@ export const billingService = {
   submitClientPayment: async (
     invoiceId: number,
     paymentMethod: string,
+    amount: number,
     notes?: string
   ): Promise<Invoice> => {
     const response = await api.post(`/billing/client-portal/invoices/${invoiceId}/submit-payment`, {
       payment_method: paymentMethod,
+      amount: amount,
       notes: notes
     })
     return response.data
