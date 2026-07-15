@@ -35,6 +35,17 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-three': ['three', '@react-three/fiber', '@react-three/drei'],
+          'vendor-ui': ['lucide-react', 'recharts', 'framer-motion'],
+        }
+      }
+    }
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,
