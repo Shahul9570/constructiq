@@ -115,6 +115,7 @@ def create_client_invoice(
         tax_amount=invoice.tax_amount, issue_date=invoice.issue_date, due_date=invoice.due_date,
         status=invoice.status.value if hasattr(invoice.status, 'value') else str(invoice.status),
         amount_paid=invoice.amount_paid or 0.0,
+        pending_amount=invoice.pending_amount or 0.0,
         paid_date=invoice.paid_date, payment_method=invoice.payment_method, notes=invoice.notes,
         file_url=invoice.file_url, created_by=invoice.created_by, created_at=invoice.created_at,
         updated_at=invoice.updated_at or datetime.now()
@@ -211,11 +212,12 @@ def submit_client_payment(
 
     # Use raw SQL to guarantee correct uppercase enum value matching the DB
     from sqlalchemy import text
+    new_pending = (invoice.pending_amount or 0.0) + data.amount
     db.execute(
         text(
-            "UPDATE invoices SET status='PENDING_VERIFICATION', payment_method=:pm, notes=:notes, updated_at=now() WHERE id=:id"
+            "UPDATE invoices SET status='PENDING_VERIFICATION', pending_amount=:pending, payment_method=:pm, notes=:notes, updated_at=now() WHERE id=:id"
         ),
-        {"pm": data.payment_method, "notes": notes_val, "id": invoice_id}
+        {"pending": new_pending, "pm": data.payment_method, "notes": notes_val, "id": invoice_id}
     )
     db.commit()
     db.refresh(invoice)
@@ -265,13 +267,14 @@ def verify_client_payment(
 
     new_amount_paid = (invoice.amount_paid or 0.0) + data.amount_received
     new_status = 'PAID' if new_amount_paid >= invoice.total_amount else 'PARTIALLY_PAID'
+    new_pending = max(0.0, (invoice.pending_amount or 0.0) - data.amount_received) # Reduce pending amount by what was verified
 
     from sqlalchemy import text
     db.execute(
         text(
-            "UPDATE invoices SET amount_paid=:amt, status=:status, paid_date=CURRENT_DATE, updated_at=now() WHERE id=:id"
+            "UPDATE invoices SET amount_paid=:amt, pending_amount=:pending, status=:status, paid_date=CURRENT_DATE, updated_at=now() WHERE id=:id"
         ),
-        {"amt": new_amount_paid, "status": new_status, "id": invoice_id}
+        {"amt": new_amount_paid, "pending": new_pending, "status": new_status, "id": invoice_id}
     )
     db.commit()
     db.refresh(invoice)

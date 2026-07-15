@@ -157,17 +157,19 @@ export default function ClientPortalPage() {
                   <TableHead>Due Date</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-right">Total Amount</TableHead>
+                  <TableHead className="text-right">Amount Paid</TableHead>
+                  <TableHead className="text-right">Balance Due</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading invoices...</TableCell>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Loading invoices...</TableCell>
                   </TableRow>
                 ) : invoices?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No invoices found.</TableCell>
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">No invoices found.</TableCell>
                   </TableRow>
                 ) : (
                   invoices?.map((inv) => (
@@ -188,6 +190,12 @@ export default function ClientPortalPage() {
                       </TableCell>
                       <TableCell className="text-right font-semibold">
                         ${inv.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right text-emerald-400">
+                        ${(inv.amount_paid || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+                      <TableCell className="text-right text-orange-400 font-medium">
+                        ${(inv.total_amount - (inv.amount_paid || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-right">
                         {inv.status !== 'PAID' && inv.status !== 'PENDING_VERIFICATION' && (

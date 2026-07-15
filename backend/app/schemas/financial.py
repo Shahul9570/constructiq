@@ -64,6 +64,7 @@ class InvoiceResponse(InvoiceBase):
     project_id: int
     total_amount: float
     amount_paid: float
+    pending_amount: float = 0.0
     status: str
     paid_date: Optional[date] = None
     file_url: Optional[str] = None
