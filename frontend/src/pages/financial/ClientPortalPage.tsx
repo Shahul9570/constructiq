@@ -71,7 +71,7 @@ export default function ClientPortalPage() {
 
   const openPaymentModal = (inv: any) => {
     setSelectedInvoiceId(inv.id)
-    setPaymentForm({ ...paymentForm, amount: inv.total_amount - (inv.amount_paid || 0) })
+    setPaymentForm({ ...paymentForm, amount: inv.total_amount - (inv.amount_paid || 0) - (inv.pending_amount || 0) })
     setIsPaymentModalOpen(true)
   }
 
@@ -85,9 +85,9 @@ export default function ClientPortalPage() {
   }
 
   // Calculate totals
-  const totalDue = invoices?.filter(i => i.status !== 'PAID' && i.status !== 'PENDING_VERIFICATION').reduce((acc, curr) => acc + curr.total_amount, 0) || 0
-  const totalPending = invoices?.filter(i => i.status === 'PENDING_VERIFICATION').reduce((acc, curr) => acc + curr.total_amount, 0) || 0
-  const totalPaid = invoices?.filter(i => i.status === 'PAID').reduce((acc, curr) => acc + curr.total_amount, 0) || 0
+  const totalDue = invoices?.filter(i => i.status !== 'PAID').reduce((acc, curr) => acc + (curr.total_amount - (curr.amount_paid || 0) - (curr.pending_amount || 0)), 0) || 0
+  const totalPending = invoices?.reduce((acc, curr) => acc + (curr.pending_amount || 0), 0) || 0
+  const totalPaid = invoices?.reduce((acc, curr) => acc + (curr.amount_paid || 0), 0) || 0
 
   return (
     <div className="space-y-6">
@@ -239,6 +239,7 @@ export default function ClientPortalPage() {
                 onChange={(e) => setPaymentForm({ ...paymentForm, amount: parseFloat(e.target.value) || 0 })}
                 placeholder="0.00"
               />
+              <span className="text-xs text-muted-foreground">You can edit this amount if you are making a partial payment.</span>
             </div>
             <div className="grid gap-2">
               <Label>Transaction ID / Reference Note</Label>
