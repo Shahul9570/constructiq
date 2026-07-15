@@ -178,7 +178,10 @@ export default function ClientPortalPage() {
                       <TableCell className="text-center">
                         <Badge 
                           variant={inv.status === 'PAID' ? 'default' : inv.status === 'PENDING_VERIFICATION' ? 'secondary' : 'destructive'} 
-                          className={`capitalize ${inv.status === 'PENDING_VERIFICATION' ? 'bg-blue-500/20 text-blue-400' : ''}`}
+                          className={`capitalize ${
+                            inv.status === 'PENDING_VERIFICATION' ? 'bg-blue-500/20 text-blue-400' : 
+                            inv.status === 'PARTIALLY_PAID' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50' : ''
+                          }`}
                         >
                           {inv.status.replace(/_/g, ' ').toLowerCase()}
                         </Badge>

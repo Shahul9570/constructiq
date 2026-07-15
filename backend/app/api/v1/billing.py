@@ -10,7 +10,7 @@ from app.models.user import User, UserRole
 from app.models.financial import Invoice, InvoiceType, InvoiceStatus
 from app.models.project import Project
 from app.models.notification import Notification, NotificationType
-from app.schemas.financial import InvoiceCreate, InvoiceResponse, InvoiceUpdate, SubmitPaymentRequest
+from app.schemas.financial import InvoiceCreate, InvoiceResponse, InvoiceUpdate, SubmitPaymentRequest, VerifyPaymentRequest
 from app.api.v1.dashboards import _get_project_total_cost
 
 router = APIRouter()
@@ -205,8 +205,9 @@ def submit_client_payment(
         raise HTTPException(status_code=404, detail="Client invoice not found")
     
     notes_val = invoice.notes or ""
+    notes_val = f"{notes_val}\n[Client Payment Submitted]: {data.payment_method} - Claimed Amount: ${data.amount}".strip()
     if data.notes:
-        notes_val = f"{notes_val}\n[Client Payment Submitted]: {data.notes}".strip()
+        notes_val += f" - Notes: {data.notes}"
 
     # Use raw SQL to guarantee correct uppercase enum value matching the DB
     from sqlalchemy import text
@@ -251,22 +252,26 @@ def submit_client_payment(
 @router.post("/verify-payment/{invoice_id}", response_model=InvoiceResponse)
 def verify_client_payment(
     invoice_id: int,
+    data: VerifyPaymentRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(
         UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT
     )),
 ):
-    """Accountant/Owner verifies a client's submitted payment and marks it as PAID."""
+    """Accountant/Owner verifies a client's submitted payment and marks it as PAID or PARTIALLY_PAID."""
     invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
 
+    new_amount_paid = (invoice.amount_paid or 0.0) + data.amount_received
+    new_status = 'PAID' if new_amount_paid >= invoice.total_amount else 'PARTIALLY_PAID'
+
     from sqlalchemy import text
     db.execute(
         text(
-            "UPDATE invoices SET status='PAID', paid_date=CURRENT_DATE, updated_at=now() WHERE id=:id"
+            "UPDATE invoices SET amount_paid=:amt, status=:status, paid_date=CURRENT_DATE, updated_at=now() WHERE id=:id"
         ),
-        {"id": invoice_id}
+        {"amt": new_amount_paid, "status": new_status, "id": invoice_id}
     )
     db.commit()
     db.refresh(invoice)

@@ -48,6 +48,9 @@ export default function ClientBillingPage() {
     notes: '',
   })
 
+  const [verifyInvoice, setVerifyInvoice] = useState<any>(null)
+  const [verifyAmount, setVerifyAmount] = useState<number>(0)
+
   const { data: summary } = useQuery({
     queryKey: ['billing-summary', selectedProjectNum],
     queryFn: () => billingService.getSummary(selectedProjectNum!),
@@ -101,10 +104,11 @@ export default function ClientBillingPage() {
   })
 
   const verifyPaymentMutation = useMutation({
-    mutationFn: (invoiceId: number) => billingService.verifyPayment(invoiceId),
+    mutationFn: (data: { invoiceId: number, amountReceived: number }) => billingService.verifyPayment(data.invoiceId, data.amountReceived),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing-summary'] })
       queryClient.invalidateQueries({ queryKey: ['client-invoices'] })
+      setVerifyInvoice(null)
     },
   })
 
@@ -219,7 +223,10 @@ export default function ClientBillingPage() {
                       <TableCell className="text-center">
                         <Badge 
                           variant={inv.status === 'PAID' ? 'default' : inv.status === 'DRAFT' || inv.status === 'SENT' ? 'secondary' : 'destructive'} 
-                          className={`capitalize ${inv.status === 'PENDING_VERIFICATION' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : ''}`}
+                          className={`capitalize ${
+                            inv.status === 'PENDING_VERIFICATION' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50' : 
+                            inv.status === 'PARTIALLY_PAID' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/50' : ''
+                          }`}
                         >
                           {inv.status.replace(/_/g, ' ').toLowerCase()}
                         </Badge>
@@ -233,7 +240,10 @@ export default function ClientBillingPage() {
                             variant="default" 
                             size="sm"
                             className="bg-blue-600 hover:bg-blue-700"
-                            onClick={() => verifyPaymentMutation.mutate(inv.id)}
+                            onClick={() => {
+                              setVerifyInvoice(inv)
+                              setVerifyAmount(inv.total_amount - (inv.amount_paid || 0))
+                            }}
                             disabled={verifyPaymentMutation.isPending}
                           >
                             ✓ Confirm Payment
@@ -346,6 +356,46 @@ export default function ClientBillingPage() {
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               {createInvoiceMutation.isPending ? 'Saving...' : 'Save Invoice'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Verify Payment Modal */}
+      <Dialog open={!!verifyInvoice} onOpenChange={(open) => !open && setVerifyInvoice(null)}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-slate-100 sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Verify Client Payment</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            {verifyInvoice?.notes && (
+              <div className="text-sm text-muted-foreground p-3 bg-slate-800/50 rounded-md whitespace-pre-wrap">
+                {verifyInvoice.notes}
+              </div>
+            )}
+            <div className="grid gap-2">
+              <Label>Amount Received ($)</Label>
+              <Input
+                type="number"
+                value={verifyAmount}
+                onChange={(e) => setVerifyAmount(parseFloat(e.target.value) || 0)}
+                placeholder="0.00"
+              />
+              <span className="text-xs text-muted-foreground">
+                Remaining Balance: ${(verifyInvoice?.total_amount - (verifyInvoice?.amount_paid || 0)).toLocaleString()}
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVerifyInvoice(null)} className="border-slate-700 text-slate-300">
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => verifyPaymentMutation.mutate({ invoiceId: verifyInvoice.id, amountReceived: verifyAmount })} 
+              disabled={verifyPaymentMutation.isPending || verifyAmount <= 0}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {verifyPaymentMutation.isPending ? 'Verifying...' : 'Verify Amount'}
             </Button>
           </DialogFooter>
         </DialogContent>

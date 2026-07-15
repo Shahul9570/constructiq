@@ -55,6 +55,10 @@ class SubmitPaymentRequest(BaseModel):
     notes: Optional[str] = None
 
 
+class VerifyPaymentRequest(BaseModel):
+    amount_received: float
+
+
 class InvoiceResponse(InvoiceBase):
     id: int
     project_id: int
