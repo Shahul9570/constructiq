@@ -10,7 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       workbox: {
-        maximumFileSizeToCacheInBytes: 4000000 // 4MB
+        maximumFileSizeToCacheInBytes: 10485760 // 10MB
       },
       manifest: {
         name: 'ConstructIQ',
