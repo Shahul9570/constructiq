@@ -16,7 +16,7 @@ class Notification(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    type = Column(Enum(NotificationType), nullable=False)
+    type = Column(Enum(NotificationType, values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False, nullable=False)
     invoice_id = Column(Integer, ForeignKey("invoices.id", ondelete="CASCADE"), nullable=True)
