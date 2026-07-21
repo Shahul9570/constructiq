@@ -352,7 +352,6 @@ export default function FinancialPage() {
                         <TableHead className="text-right">Balance Due</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Due</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -392,44 +391,6 @@ export default function FinancialPage() {
                             {inv.due_date
                               ? new Date(inv.due_date).toLocaleDateString()
                               : '-'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {inv.status === 'pending_verification' && (
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => updateStatusMutation.mutate({ id: inv.id, status: 'paid' })}
-                                  disabled={updateStatusMutation.isPending}
-                                >
-                                  Approve
-                                </Button>
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => updateStatusMutation.mutate({ id: inv.id, status: 'sent' })}
-                                  disabled={updateStatusMutation.isPending}
-                                >
-                                  Reject
-                                </Button>
-                              </div>
-                            )}
-                            {(inv.status === 'sent' || inv.status === 'overdue' || inv.status === 'draft' || inv.status === 'partially_paid') && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setPaymentForm({
-                                    invoice_id: inv.id,
-                                    amount: (inv.total_amount - (inv.amount_paid || 0)).toString(),
-                                    payment_method: 'bank_transfer',
-                                    notes: ''
-                                  })
-                                  setIsPaymentOpen(true)
-                                }}
-                              >
-                                Settle Payment
-                              </Button>
-                            )}
                           </TableCell>
                         </TableRow>
                       ))}
