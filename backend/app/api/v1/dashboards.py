@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -179,7 +179,7 @@ def project_manager_dashboard(
 ):
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
-        return {"error": "Project not found"}
+        raise HTTPException(status_code=404, detail="Project not found")
 
     delays = 0
     if project.expected_end_date:

@@ -251,6 +251,7 @@ export interface Invoice {
   tax_amount: number
   total_amount: number
   amount_paid: number
+  pending_amount: number
   status: string
   issue_date: string
   due_date?: string

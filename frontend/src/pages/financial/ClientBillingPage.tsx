@@ -77,6 +77,7 @@ export default function ClientBillingPage() {
         due_date: invoiceForm.due_date || undefined,
         notes: invoiceForm.notes,
         status: 'DRAFT',
+        pending_amount: Number(invoiceForm.amount) + Number(invoiceForm.tax_amount || 0),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['billing-summary'] })
