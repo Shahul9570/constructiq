@@ -9,7 +9,7 @@ from app.core.security import get_current_user, require_roles
 from app.models.user import User, UserRole
 from app.models.financial import CostRecord, Invoice, CostCategory
 from app.schemas.financial import (
-    CostRecordCreate, CostRecordResponse,
+    CostRecordCreate, CostRecordResponse, CostRecordUpdate,
     InvoiceCreate, InvoiceUpdate, InvoiceResponse,
     SubmitPaymentRequest,
     CostSummary, BudgetTracking,
@@ -109,6 +109,7 @@ def list_costs(
             id=c.id, project_id=c.project_id, category=c.category.value if hasattr(c.category, 'value') else str(c.category),
             description=c.description, amount=c.amount, date=c.date,
             reference_type=c.reference_type, reference_id=c.reference_id,
+            paid_amount=c.paid_amount or 0.0,
             created_by=c.created_by, status=c.status, created_at=c.created_at
         ))
 
@@ -126,6 +127,7 @@ def list_costs(
                 results.append(CostRecordResponse(
                     id=l.id * 100000 + 1, project_id=project_id, category="labour",
                     description=f"Labour Cost: {l.workers_count} workers", amount=amount, date=l.date,
+                    paid_amount=0.0, reference_id=l.id,
                     created_by=l.created_by, status="approved", created_at=l.created_at or datetime.now()
                 ))
 
@@ -140,6 +142,7 @@ def list_costs(
                 results.append(CostRecordResponse(
                     id=arrival.id * 100000 + 2, project_id=project_id, category="material",
                     description=f"Material: {mat.name} ({arrival.quantity} units)", amount=amount, date=arrival.arrival_date,
+                    paid_amount=arrival.paid_amount or 0.0, reference_id=arrival.id,
                     created_by=arrival.received_by, status="approved", created_at=datetime.now()
                 ))
 
@@ -154,6 +157,7 @@ def list_costs(
                 results.append(CostRecordResponse(
                     id=eq.id * 100000 + 3, project_id=project_id, category="equipment",
                     description=f"Equipment Purchase: {eq.name}", amount=eq.purchase_cost, date=eq.purchase_date,
+                    paid_amount=eq.purchase_cost, reference_id=eq.id,
                     created_by=1, status="approved", created_at=eq.created_at or datetime.now()
                 ))
         
@@ -167,6 +171,7 @@ def list_costs(
                 results.append(CostRecordResponse(
                     id=use.id * 100000 + 4, project_id=project_id, category="equipment",
                     description=f"Equipment Usage: {eq.name} ({use.hours_used}h)", amount=amount, date=use.date,
+                    paid_amount=0.0, reference_id=use.id,
                     created_by=use.created_by, status="approved", created_at=use.created_at or datetime.now()
                 ))
 
@@ -474,6 +479,24 @@ def submit_payment(
     
     return invoice
 
+
+
+@router.patch("/costs/{cost_id}", response_model=CostRecordResponse)
+def update_cost(
+    cost_id: int,
+    data: CostRecordUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT, UserRole.PROJECT_MANAGER)),
+):
+    cost = db.query(CostRecord).filter(CostRecord.id == cost_id).first()
+    if not cost:
+        raise HTTPException(status_code=404, detail="Cost record not found")
+    update_data = data.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(cost, key, value)
+    db.commit()
+    db.refresh(cost)
+    return cost
 
 
 @router.get("/categories")

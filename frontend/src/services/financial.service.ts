@@ -10,6 +10,10 @@ export const financialService = {
     const response = await api.post(`/financial/costs/${cost_id}/status`, null, { params: { status } })
     return response.data
   },
+  async updateCost(cost_id: number, data: Partial<CostRecord>): Promise<CostRecord> {
+    const response = await api.patch(`/financial/costs/${cost_id}`, data)
+    return response.data
+  },
 
   async listCosts(project_id: number, params?: {
     page?: number

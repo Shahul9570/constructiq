@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { labourService } from '@/services/labour.service'
 import { contractorService } from '@/services/contractor.service'
 import { financialService } from '@/services/financial.service'
+import { materialService } from '@/services/material.service'
 
 const projectId = () => Number(localStorage.getItem('selected_project_id') || 0)
 
@@ -35,6 +36,7 @@ export default function DailyExpensesPage() {
   
   // State to hold uncommitted paid amounts
   const [paidAmounts, setPaidAmounts] = useState<Record<number, number>>({})
+  const [otherPaidAmounts, setOtherPaidAmounts] = useState<Record<number, number>>({})
 
   // Modal state for Other Expenses
   const [isExpenseOpen, setIsExpenseOpen] = useState(false)
@@ -106,6 +108,22 @@ export default function DailyExpensesPage() {
     onError: () => toast.error('Failed to record payment'),
   })
 
+  // Update other expense payment mutation
+  const updateOtherPaymentMutation = useMutation({
+    mutationFn: async ({ id, category, reference_id, paid_amount }: { id: number, category: string, reference_id?: number, paid_amount: number }) => {
+      if (category === 'material' && reference_id) {
+        return materialService.updateArrival(reference_id, { paid_amount })
+      } else {
+        return financialService.updateCost(id, { paid_amount })
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-costs'] })
+      toast.success('Payment recorded successfully')
+    },
+    onError: () => toast.error('Failed to record payment'),
+  })
+
   // Add other expense mutation
   const addExpenseMutation = useMutation({
     mutationFn: (data: any) => financialService.addCost(pid, data),
@@ -136,6 +154,27 @@ export default function DailyExpensesPage() {
     updatePaymentMutation.mutate({ id, paid_amount: amount })
   }
 
+  const handleOtherPaidAmountChange = (id: number, value: string) => {
+    setOtherPaidAmounts(prev => ({
+      ...prev,
+      [id]: Number(value)
+    }))
+  }
+
+  const handleSaveOtherPayment = (cost: any) => {
+    const amount = otherPaidAmounts[cost.id]
+    if (amount === undefined || amount < 0) {
+      toast.error('Invalid amount')
+      return
+    }
+    updateOtherPaymentMutation.mutate({ 
+      id: cost.id, 
+      category: cost.category, 
+      reference_id: cost.reference_id, 
+      paid_amount: amount 
+    })
+  }
+
   // Initialize paidAmounts from fetched data
   useEffect(() => {
     if (labourData?.items) {
@@ -148,6 +187,19 @@ export default function DailyExpensesPage() {
       setPaidAmounts(initial)
     }
   }, [labourData])
+
+  // Initialize otherPaidAmounts from fetched costs data
+  useEffect(() => {
+    if (costsData) {
+      const initial: Record<number, number> = {}
+      costsData.forEach(item => {
+        if (item.paid_amount !== undefined) {
+          initial[item.id] = item.paid_amount
+        }
+      })
+      setOtherPaidAmounts(initial)
+    }
+  }, [costsData])
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.value) {
@@ -329,11 +381,18 @@ export default function DailyExpensesPage() {
                         <TableHead>Category</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead className="text-center">Status</TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-right">Daily Cost</TableHead>
+                        <TableHead className="text-right">Total Pending Balance</TableHead>
+                        <TableHead className="w-[200px]">Amount Paid Today</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {costItems.map((cost) => (
+                      {costItems.map((cost) => {
+                        const accruedCost = cost.amount
+                        const currentPaidValue = otherPaidAmounts[cost.id] !== undefined ? otherPaidAmounts[cost.id] : (cost.paid_amount || 0)
+                        const pendingBalance = accruedCost - currentPaidValue
+
+                        return (
                         <TableRow key={cost.id} className="border-slate-800 hover:bg-slate-800/30">
                           <TableCell className="capitalize font-medium text-slate-300">
                             {cost.category}
@@ -347,11 +406,38 @@ export default function DailyExpensesPage() {
                               {cost.status}
                             </Badge>
                           </TableCell>
+                          <TableCell className="text-right font-semibold text-slate-200">
+                            ${accruedCost.toLocaleString()}
+                          </TableCell>
                           <TableCell className="text-right font-semibold text-orange-400">
-                            ${cost.amount.toLocaleString()}
+                            ${pendingBalance.toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Input 
+                                type="number" 
+                                min="0"
+                                placeholder="0.00"
+                                className="w-24 text-right bg-slate-900 border-slate-700"
+                                value={currentPaidValue}
+                                onChange={(e) => handleOtherPaidAmountChange(cost.id, e.target.value)}
+                                disabled={updateOtherPaymentMutation.isPending}
+                              />
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="h-8 w-8 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/10"
+                                onClick={() => handleSaveOtherPayment(cost)}
+                                disabled={updateOtherPaymentMutation.isPending || currentPaidValue === cost.paid_amount}
+                                title="Save Payment"
+                              >
+                                <Save className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
-                      ))}
+                        )
+                      })}
                     </TableBody>
                   </Table>
                 </div>

@@ -7,6 +7,7 @@ class CostRecordBase(BaseModel):
     category: str
     description: Optional[str] = None
     amount: float
+    paid_amount: float = 0.0
     date: date
     reference_type: Optional[str] = None
     reference_id: Optional[int] = None
@@ -14,6 +15,17 @@ class CostRecordBase(BaseModel):
 
 class CostRecordCreate(CostRecordBase):
     pass
+
+
+class CostRecordUpdate(BaseModel):
+    category: Optional[str] = None
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    paid_amount: Optional[float] = None
+    date: Optional[date] = None
+    reference_type: Optional[str] = None
+    reference_id: Optional[int] = None
+    status: Optional[str] = None
 
 
 class CostRecordResponse(CostRecordBase):

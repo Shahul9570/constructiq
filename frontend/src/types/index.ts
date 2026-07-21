@@ -237,6 +237,8 @@ export interface CostRecord {
   category: string
   description?: string
   amount: number
+  paid_amount?: number
+  reference_id?: number
   date: string
   status: 'pending' | 'approved' | 'rejected'
 }

@@ -48,6 +48,7 @@ class CostRecord(Base):
     date = Column(Date, nullable=False)
     reference_type = Column(String(50))
     reference_id = Column(Integer)
+    paid_amount = Column(Float, default=0.0)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     status = Column(String(20), default="approved")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
