@@ -41,6 +41,13 @@ app.add_middleware(
 async def startup():
     from app.core.celery_app import celery_app
     logger.info("Celery app initialized")
+    
+    try:
+        from create_admin import create_super_admin
+        create_super_admin()
+        logger.info("Super admin initialization checked/completed.")
+    except Exception as e:
+        logger.error(f"Failed to check/create super admin on startup: {e}")
 
 
 @app.exception_handler(Exception)
