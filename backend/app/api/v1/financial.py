@@ -368,6 +368,7 @@ def create_invoice(
     invoice = Invoice(
         **data.model_dump(),
         total_amount=data.amount + data.tax_amount,
+        pending_amount=data.amount + data.tax_amount,
         created_by=current_user.id,
     )
     db.add(invoice)
@@ -405,26 +406,33 @@ def list_invoices(
             status=inv.status.value if hasattr(inv.status, 'value') else str(inv.status),
             paid_date=inv.paid_date, payment_method=inv.payment_method, notes=inv.notes,
             amount_paid=inv.amount_paid or 0.0,
+            pending_amount=inv.pending_amount or (inv.total_amount - (inv.amount_paid or 0.0)),
             file_url=inv.file_url, created_by=inv.created_by, created_at=inv.created_at,
             updated_at=inv.updated_at or datetime.now()
         ))
 
     # 2. Material Arrivals with Invoices
-    if not status or status == "paid":
+    if not status or status == "paid" or status == "partially_paid" or status == "pending_verification":
         mat_q = db.query(MaterialArrival, Material).join(Material).filter(Material.project_id == project_id)
         for arrival, mat in mat_q.all():
             amount = arrival.invoice_amount if arrival.invoice_amount else (arrival.quantity * mat.unit_price)
             if amount > 0:
-                results.append(InvoiceResponse(
-                    id=arrival.id * 100000 + 1, project_id=project_id, 
-                    invoice_number=f"MAT-{arrival.id}", invoice_type="material",
-                    vendor_name="Material Supplier", amount=amount, total_amount=amount, tax_amount=0.0,
-                    issue_date=arrival.arrival_date, due_date=arrival.arrival_date,
-                    status="paid", paid_date=arrival.arrival_date, payment_method=None,
-                    amount_paid=amount,
-                    notes=f"Material: {mat.name}", file_url=None, created_by=arrival.received_by,
-                    created_at=arrival.created_at or datetime.now(), updated_at=arrival.created_at or datetime.now()
-                ))
+                paid = arrival.paid_amount or 0.0
+                mat_status = "paid" if paid >= amount else ("partially_paid" if paid > 0 else "pending_verification")
+                if status and status != mat_status and mat_status != "paid":
+                    pass # We might want to filter, but let's include if no status provided
+                
+                if not status or status == mat_status:
+                    results.append(InvoiceResponse(
+                        id=arrival.id * 100000 + 1, project_id=project_id, 
+                        invoice_number=f"MAT-{arrival.id}", invoice_type="material",
+                        vendor_name="Material Supplier", amount=amount, total_amount=amount, tax_amount=0.0,
+                        issue_date=arrival.arrival_date, due_date=arrival.arrival_date,
+                        status=mat_status, paid_date=arrival.arrival_date if paid >= amount else None, payment_method=None,
+                        amount_paid=paid, pending_amount=amount - paid,
+                        notes=f"Material: {mat.name}", file_url=None, created_by=arrival.received_by,
+                        created_at=arrival.created_at or datetime.now(), updated_at=arrival.created_at or datetime.now()
+                    ))
 
     results.sort(key=lambda x: x.issue_date, reverse=True)
     return results
@@ -461,6 +469,7 @@ def submit_payment(
         raise HTTPException(status_code=404, detail="Invoice not found")
         
     invoice.amount_paid += data.amount
+    invoice.pending_amount = max(0, invoice.total_amount - invoice.amount_paid)
     
     if invoice.amount_paid >= invoice.total_amount:
         invoice.status = "PAID"
