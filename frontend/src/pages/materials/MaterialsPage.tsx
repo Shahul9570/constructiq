@@ -43,7 +43,9 @@ import { Label } from '@/components/ui/label'
 
 export default function MaterialsPage() {
   const queryClient = useQueryClient()
-  const [selectedProject, setSelectedProject] = useState<string>('')
+  const [selectedProject, setSelectedProject] = useState<string>(
+    localStorage.getItem('selected_project_id') || ''
+  )
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [page, setPage] = useState(1)
