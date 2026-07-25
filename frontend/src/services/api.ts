@@ -24,6 +24,13 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      // Don't intercept 401s from auth endpoints — let them bubble up to the
+      // caller (e.g. LoginPage) so the UI can display the error message.
+      const isAuthEndpoint = originalRequest.url?.includes('/auth/')
+      if (isAuthEndpoint) {
+        return Promise.reject(error)
+      }
+
       originalRequest._retry = true
       const refreshToken = localStorage.getItem('refresh_token')
 
