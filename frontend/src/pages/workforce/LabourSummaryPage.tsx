@@ -273,28 +273,46 @@ export default function LabourSummaryPage() {
                     <span className="font-bold text-lg">{l.workers_count}</span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1 text-muted-foreground">
-                      <IndianRupee className="h-3 w-3" />
-                      <span>{l.daily_rate.toFixed(2)}</span>
-                    </div>
+                    {l.contractor_id ? (
+                      <span className="text-muted-foreground/50 text-xs">—</span>
+                    ) : (
+                      <div className="flex items-center justify-end gap-1 text-muted-foreground">
+                        <IndianRupee className="h-3 w-3" />
+                        <span>{l.daily_rate.toFixed(2)}</span>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1 font-semibold text-green-600 dark:text-green-400">
-                      <IndianRupee className="h-3 w-3" />
-                      <span>{(l.workers_count * l.daily_rate).toFixed(2)}</span>
-                    </div>
+                    {l.contractor_id ? (
+                      <Badge variant="outline" className="text-blue-500 border-blue-500/30 bg-blue-500/5 text-xs rounded-full">
+                        Via Contractor
+                      </Badge>
+                    ) : (
+                      <div className="flex items-center justify-end gap-1 font-semibold text-green-600 dark:text-green-400">
+                        <IndianRupee className="h-3 w-3" />
+                        <span>{(l.workers_count * l.daily_rate).toFixed(2)}</span>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1 text-muted-foreground">
-                      <IndianRupee className="h-3 w-3" />
-                      <span>{(l.paid_amount || 0).toFixed(2)}</span>
-                    </div>
+                    {l.contractor_id ? (
+                      <span className="text-muted-foreground/50 text-xs">—</span>
+                    ) : (
+                      <div className="flex items-center justify-end gap-1 text-muted-foreground">
+                        <IndianRupee className="h-3 w-3" />
+                        <span>{(l.paid_amount || 0).toFixed(2)}</span>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1 text-orange-500">
-                      <IndianRupee className="h-3 w-3" />
-                      <span>{((l.workers_count * l.daily_rate) - (l.paid_amount || 0)).toFixed(2)}</span>
-                    </div>
+                    {l.contractor_id ? (
+                      <span className="text-muted-foreground/50 text-xs">—</span>
+                    ) : (
+                      <div className="flex items-center justify-end gap-1 text-orange-500">
+                        <IndianRupee className="h-3 w-3" />
+                        <span>{((l.workers_count * l.daily_rate) - (l.paid_amount || 0)).toFixed(2)}</span>
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{getContractorName(l.contractor_id)}</TableCell>
                   <TableCell className="text-muted-foreground max-w-[200px] truncate">
@@ -375,14 +393,24 @@ export default function LabourSummaryPage() {
                   <Label htmlFor="l-count">Worker Count *</Label>
                   <Input id="l-count" type="number" min="0" required value={form.workers_count || ''} onChange={(e) => setForm({ ...form, workers_count: Number(e.target.value) })} />
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="l-rate">Daily Rate (₹) *</Label>
-                  <Input id="l-rate" type="number" min="0" step="0.01" required value={form.daily_rate || ''} onChange={(e) => setForm({ ...form, daily_rate: Number(e.target.value) })} />
-                </div>
+                {form.contractor_id === 'none' && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="l-rate">Daily Rate (₹) *</Label>
+                    <Input id="l-rate" type="number" min="0" step="0.01" required value={form.daily_rate || ''} onChange={(e) => setForm({ ...form, daily_rate: Number(e.target.value) })} />
+                  </div>
+                )}
               </div>
+              {form.contractor_id !== 'none' && (
+                <div className="rounded-xl bg-blue-500/10 border border-blue-500/20 px-4 py-3 text-sm text-blue-400">
+                  💼 Daily wage is not required — payment is managed directly through the contractor.
+                </div>
+              )}
               <div className="grid gap-2">
                 <Label htmlFor="l-contractor">Contractor (Optional)</Label>
-                <Select value={form.contractor_id} onValueChange={(v) => setForm({ ...form, contractor_id: v })}>
+                <Select
+                  value={form.contractor_id}
+                  onValueChange={(v) => setForm({ ...form, contractor_id: v, daily_rate: v !== 'none' ? 0 : form.daily_rate })}
+                >
                   <SelectTrigger id="l-contractor">
                     <SelectValue placeholder="Direct / Self" />
                   </SelectTrigger>
@@ -401,7 +429,7 @@ export default function LabourSummaryPage() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createMutation.isPending || !form.trade || form.workers_count <= 0}>
+              <Button type="submit" disabled={createMutation.isPending || !form.trade || form.workers_count <= 0 || (form.contractor_id === 'none' && form.daily_rate <= 0)}>
                 {createMutation.isPending ? 'Saving...' : 'Save Entry'}
               </Button>
             </DialogFooter>
