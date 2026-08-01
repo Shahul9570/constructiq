@@ -17,7 +17,7 @@ from app.models.project import Project
 from app.models.audit_log import AuditLog
 from app.models.document import Document
 from app.models.photo import Photo
-from app.models.workforce import Worker
+from app.models.workforce import DailyLabourSummary
 from app.models.material import Material
 from app.schemas.user import UserResponse
 from pydantic import BaseModel
@@ -204,7 +204,7 @@ def get_system_health(
     total_users = db.query(User).count()
     active_users = db.query(User).filter(User.is_active == True).count()
     total_projects = db.query(Project).count()
-    total_workers = db.query(Worker).count()
+    total_workers = int(db.query(func.coalesce(func.sum(DailyLabourSummary.workers_count), 0)).scalar())
     total_documents = db.query(Document).count()
     total_photos = db.query(Photo).count()
     total_audit_events = db.query(AuditLog).count()
