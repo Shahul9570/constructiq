@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CreditCard, Check, X, ShieldCheck, FolderKanban, Users, HardDrive, Bot, Sparkles, Building, Eye, FileText, Download, Receipt, Settings2, Sliders, DollarSign, Activity } from 'lucide-react'
+import { CreditCard, Check, X, ShieldCheck, FolderKanban, Users, HardDrive, Bot, Sparkles, Building, Eye, FileText, Download, Receipt, Settings2, Sliders, DollarSign, Activity, Crown, Edit3 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +42,20 @@ export default function SubscriptionPage() {
     amount_paid: 249,
   })
 
+  // Admin Plan Matrix Editor Modal State
+  const [isAdminMatrixOpen, setIsAdminMatrixOpen] = useState(false)
+  const [matrixForm, setMatrixForm] = useState({
+    plan_tier: 'starter',
+    monthly_price: 59,
+    annual_price: 590,
+    max_projects: 5,
+    max_workers: 20,
+    max_storage_gb: 50,
+    site_diary: false,
+    client_portal: true,
+    api_access: false,
+  })
+
   const { data: sub, isLoading, isError } = useQuery({
     queryKey: ['my-subscription'],
     queryFn: () => subscriptionService.getMySubscription(),
@@ -69,6 +83,19 @@ export default function SubscriptionPage() {
     },
     onError: () => {
       toast.error('Failed to override company subscription.')
+    }
+  })
+
+  const matrixMutation = useMutation({
+    mutationFn: (data: any) => subscriptionService.updatePlanConfig(data),
+    onSuccess: (res) => {
+      toast.success(res.message || 'Plan definitions updated!')
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions'] })
+      queryClient.invalidateQueries({ queryKey: ['my-subscription'] })
+      setIsAdminMatrixOpen(false)
+    },
+    onError: () => {
+      toast.error('Failed to update plan matrix definitions.')
     }
   })
 
@@ -112,6 +139,11 @@ export default function SubscriptionPage() {
   const handleAdminOverrideSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     overrideMutation.mutate(overrideForm)
+  }
+
+  const handleAdminMatrixSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    matrixMutation.mutate(matrixForm)
   }
 
   if (isLoading) {
@@ -262,6 +294,32 @@ export default function SubscriptionPage() {
 
   return (
     <div className="space-y-8 max-w-7xl">
+      {/* Super Admin Exempt Banner */}
+      {isAdmin && (
+        <div className="p-4 rounded-xl bg-gradient-to-r from-purple-950/60 via-slate-900 to-slate-950 border border-purple-500/30 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/40">
+              <Crown className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Super Admin Operating Mode Unlocked
+              </h3>
+              <p className="text-slate-400 text-xs mt-0.5">
+                You are logged in as Platform Operator. Subscriptions apply to customer company accounts. You have unrestricted access to all features, projects, and analytics.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setIsAdminMatrixOpen(true)}
+            className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow shrink-0"
+          >
+            <Edit3 className="h-3.5 w-3.5 mr-1.5" /> Edit Plan Matrix Definitions
+          </Button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -463,7 +521,7 @@ export default function SubscriptionPage() {
             <div className="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 space-y-2">
               <div className="flex justify-between items-center text-xs font-semibold text-slate-300">
                 <span className="flex items-center gap-1.5 text-slate-400"><Bot className="h-4 w-4 text-purple-400" /> AI Tokens</span>
-                <span className="text-white font-mono">{(usage.ai_tokens_used / 1000).toFixed(1)}k / {(usage.ai_tokens_limit / 1000).toFixed(0)}k</span>
+                <span className="text-white font-mono font-bold">{(usage.ai_tokens_used / 1000).toFixed(1)}k / {(usage.ai_tokens_limit / 1000).toFixed(0)}k</span>
               </div>
               <div className="h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
                 <div
@@ -754,6 +812,145 @@ export default function SubscriptionPage() {
                   className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs"
                 >
                   {overrideMutation.isPending ? 'Saving Override...' : 'Apply Plan Override'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Super Admin Plan Matrix Definitions Editor Modal */}
+      {isAdmin && (
+        <Dialog open={isAdminMatrixOpen} onOpenChange={setIsAdminMatrixOpen}>
+          <DialogContent className="bg-slate-950 border-slate-800 text-slate-100 sm:max-w-lg p-6 space-y-4 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+                <Edit3 className="h-5 w-5 text-purple-400" /> Plan Definitions & Matrix Editor
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 text-xs">
+                Dynamically adjust pricing, quota caps, and feature permissions for any plan tier across the platform.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleAdminMatrixSubmit} className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-slate-300">Target Tier to Edit</Label>
+                <Select
+                  value={matrixForm.plan_tier}
+                  onValueChange={(val) => setMatrixForm(f => ({ ...f, plan_tier: val }))}
+                >
+                  <SelectTrigger className="bg-slate-900 border-slate-800 text-xs text-slate-200">
+                    <SelectValue placeholder="Select Tier" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
+                    <SelectItem value="free">Free Tier</SelectItem>
+                    <SelectItem value="starter">Starter Tier</SelectItem>
+                    <SelectItem value="professional">Professional Tier</SelectItem>
+                    <SelectItem value="enterprise">Enterprise Tier</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-300">Monthly Price ($)</Label>
+                  <Input
+                    type="number"
+                    value={matrixForm.monthly_price}
+                    onChange={(e) => setMatrixForm(f => ({ ...f, monthly_price: Number(e.target.value) }))}
+                    className="bg-slate-900 border-slate-800 text-xs text-slate-200 font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-300">Annual Price ($)</Label>
+                  <Input
+                    type="number"
+                    value={matrixForm.annual_price}
+                    onChange={(e) => setMatrixForm(f => ({ ...f, annual_price: Number(e.target.value) }))}
+                    className="bg-slate-900 border-slate-800 text-xs text-slate-200 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-300">Max Projects</Label>
+                  <Input
+                    type="number"
+                    value={matrixForm.max_projects}
+                    onChange={(e) => setMatrixForm(f => ({ ...f, max_projects: Number(e.target.value) }))}
+                    className="bg-slate-900 border-slate-800 text-xs text-slate-200 font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-300">Max Seats</Label>
+                  <Input
+                    type="number"
+                    value={matrixForm.max_workers}
+                    onChange={(e) => setMatrixForm(f => ({ ...f, max_workers: Number(e.target.value) }))}
+                    className="bg-slate-900 border-slate-800 text-xs text-slate-200 font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-300">Storage (GB)</Label>
+                  <Input
+                    type="number"
+                    value={matrixForm.max_storage_gb}
+                    onChange={(e) => setMatrixForm(f => ({ ...f, max_storage_gb: Number(e.target.value) }))}
+                    className="bg-slate-900 border-slate-800 text-xs text-slate-200 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Feature Toggles */}
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <Label className="text-xs font-semibold text-slate-300">Feature Access Permissions</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMatrixForm(f => ({ ...f, site_diary: !f.site_diary }))}
+                    className={`p-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1 ${
+                      matrixForm.site_diary ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-500'
+                    }`}
+                  >
+                    Site Diary
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatrixForm(f => ({ ...f, client_portal: !f.client_portal }))}
+                    className={`p-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1 ${
+                      matrixForm.client_portal ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-500'
+                    }`}
+                  >
+                    Client Portal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMatrixForm(f => ({ ...f, api_access: !f.api_access }))}
+                    className={`p-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1 ${
+                      matrixForm.api_access ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400' : 'bg-slate-900 border-slate-800 text-slate-500'
+                    }`}
+                  >
+                    API Access
+                  </button>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-4 border-t border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAdminMatrixOpen(false)}
+                  className="bg-slate-900 border-slate-800 text-slate-400 hover:text-white text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={matrixMutation.isPending}
+                  className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs"
+                >
+                  {matrixMutation.isPending ? 'Saving Definitions...' : 'Update Plan Definitions'}
                 </Button>
               </DialogFooter>
             </form>

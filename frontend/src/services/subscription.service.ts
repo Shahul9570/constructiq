@@ -101,5 +101,25 @@ export const subscriptionService = {
   }): Promise<any> {
     const response = await api.put('/subscriptions/admin/override', data)
     return response.data
+  },
+
+  async getPlanConfigs(): Promise<any> {
+    const response = await api.get('/subscriptions/plans/config')
+    return response.data
+  },
+
+  async updatePlanConfig(data: {
+    plan_tier: string
+    monthly_price?: number
+    annual_price?: number
+    max_projects?: number
+    max_workers?: number
+    max_storage_gb?: number
+    site_diary?: boolean
+    client_portal?: boolean
+    api_access?: boolean
+  }): Promise<any> {
+    const response = await api.put('/subscriptions/admin/plans/config', data)
+    return response.data
   }
 }

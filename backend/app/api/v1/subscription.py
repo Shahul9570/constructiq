@@ -90,33 +90,89 @@ def _get_or_create_subscription(db: Session, user: User) -> CompanySubscription:
     sub = db.query(CompanySubscription).filter(CompanySubscription.owner_id == user.id).first()
     if not sub:
         company_name = user.company_name or f"{user.full_name}'s Company"
-        # Super Admins default to Enterprise Unlimited
-        is_super = user.role == UserRole.SUPER_ADMIN.value
-        tier_choice = PlanTier.ENTERPRISE.value if is_super else PlanTier.FREE.value
-        cfg = PLAN_CONFIGS[tier_choice]
+        cfg = PLAN_CONFIGS[PlanTier.PROFESSIONAL.value]
         sub = CompanySubscription(
             company_name=company_name,
             owner_id=user.id,
-            plan_tier=tier_choice,
+            plan_tier=PlanTier.PROFESSIONAL.value,
             billing_cycle=BillingCycle.MONTHLY.value,
             status=SubscriptionStatus.ACTIVE.value,
-            max_projects=99999 if is_super else cfg["max_projects"],
-            max_workers=99999 if is_super else cfg["max_workers"],
-            max_storage_gb=100000 if is_super else cfg["max_storage_gb"],
-            ai_tokens_limit=9999999 if is_super else cfg["ai_tokens_limit"],
-            amount_paid=0.0 if is_super else cfg["monthly_price"],
+            max_projects=cfg["max_projects"],
+            max_workers=cfg["max_workers"],
+            max_storage_gb=cfg["max_storage_gb"],
+            ai_tokens_limit=cfg["ai_tokens_limit"],
+            amount_paid=cfg["monthly_price"],
             current_period_start=datetime.utcnow(),
-            current_period_end=datetime.utcnow() + timedelta(days=3650 if is_super else 30)
+            current_period_end=datetime.utcnow() + timedelta(days=30)
         )
         db.add(sub)
         db.commit()
         db.refresh(sub)
     return sub
 
+FEATURE_MATRIX = {
+    PlanTier.FREE.value: {
+        "daily_logs": True,
+        "tasks": True,
+        "materials": True,
+        "equipment": True,
+        "site_diary": False,
+        "weather_tracker": False,
+        "financials": "basic",
+        "ai_reports": "limited",
+        "digital_twin": "viewer",
+        "client_portal": False,
+        "api_access": False,
+        "sso": False,
+    },
+    PlanTier.STARTER.value: {
+        "daily_logs": True,
+        "tasks": True,
+        "materials": True,
+        "equipment": True,
+        "site_diary": False,
+        "weather_tracker": False,
+        "financials": True,
+        "ai_reports": True,
+        "digital_twin": "GLB Live",
+        "client_portal": True,
+        "api_access": False,
+        "sso": False,
+    },
+    PlanTier.PROFESSIONAL.value: {
+        "daily_logs": True,
+        "tasks": True,
+        "materials": True,
+        "equipment": True,
+        "site_diary": True,
+        "weather_tracker": True,
+        "financials": True,
+        "ai_reports": True,
+        "digital_twin": "GLB + Timeline + AI",
+        "client_portal": True,
+        "api_access": "limited",
+        "sso": False,
+    },
+    PlanTier.ENTERPRISE.value: {
+        "daily_logs": True,
+        "tasks": True,
+        "materials": True,
+        "equipment": True,
+        "site_diary": True,
+        "weather_tracker": True,
+        "financials": True,
+        "ai_reports": True,
+        "digital_twin": "IFC/BIM + Enterprise",
+        "client_portal": True,
+        "api_access": "full",
+        "sso": True,
+    },
+}
+
 def check_subscription_limits(db: Session, user: User, resource_type: str):
     """Enforces quota limits (projects, user seats) based on active subscription tier."""
     if user.role == UserRole.SUPER_ADMIN.value:
-        return  # Super Admins are exempt from quota restrictions
+        return  # Super Admins are platform operators and exempt from subscription caps
 
     sub = _get_or_create_subscription(db, user)
     
@@ -138,80 +194,26 @@ def check_subscription_limits(db: Session, user: User, resource_type: str):
 def check_feature_access(db: Session, user: User, feature_name: str):
     """Enforces feature access based on tenant subscription tier."""
     if user.role == UserRole.SUPER_ADMIN.value:
-        return  # Super Admins have unrestricted access to all features
+        return  # Super Admins have unrestricted access to all platform features
 
     sub = _get_or_create_subscription(db, user)
     tier = sub.plan_tier
 
-    if feature_name == "site_diary" and tier in [PlanTier.FREE.value, PlanTier.STARTER.value]:
+    if feature_name == "site_diary" and not FEATURE_MATRIX.get(tier, {}).get("site_diary", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Daily Site Diary & Weather Delay Tracker is available on Professional and Enterprise plans."
         )
-    elif feature_name == "client_portal" and tier == PlanTier.FREE.value:
+    elif feature_name == "client_portal" and not FEATURE_MATRIX.get(tier, {}).get("client_portal", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Client Portal access requires a Starter, Professional, or Enterprise subscription."
         )
-    elif feature_name == "api_access" and tier in [PlanTier.FREE.value, PlanTier.STARTER.value]:
+    elif feature_name == "api_access" and not FEATURE_MATRIX.get(tier, {}).get("api_access", False):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="API Access requires a Professional or Enterprise subscription plan."
         )
-
-class UpdatePlanConfigInput(BaseModel):
-    plan_tier: str
-    monthly_price: Optional[float] = None
-    annual_price: Optional[float] = None
-    max_projects: Optional[int] = None
-    max_workers: Optional[int] = None
-    max_storage_gb: Optional[int] = None
-    ai_tokens_limit: Optional[int] = None
-
-@router.get("/plans")
-def get_plan_configurations():
-    """Returns active SaaS plan configurations and feature matrices."""
-    return PLAN_CONFIGS
-
-@router.put("/plans")
-@router.put("/plans/")
-def update_plan_configuration(
-    data: UpdatePlanConfigInput,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
-):
-    """Allows Super Admins to dynamically adjust pricing and quotas for any plan tier."""
-    if data.plan_tier not in PLAN_CONFIGS:
-        raise HTTPException(status_code=400, detail="Invalid plan tier specified")
-
-    cfg = PLAN_CONFIGS[data.plan_tier]
-    if data.monthly_price is not None:
-        cfg["monthly_price"] = data.monthly_price
-    if data.annual_price is not None:
-        cfg["annual_price"] = data.annual_price
-    if data.max_projects is not None:
-        cfg["max_projects"] = data.max_projects
-    if data.max_workers is not None:
-        cfg["max_workers"] = data.max_workers
-    if data.max_storage_gb is not None:
-        cfg["max_storage_gb"] = data.max_storage_gb
-    if data.ai_tokens_limit is not None:
-        cfg["ai_tokens_limit"] = data.ai_tokens_limit
-
-    log_action(
-        db,
-        current_user.id,
-        "SUPER_ADMIN_PLAN_CONFIG_UPDATED",
-        "PlanConfig",
-        0,
-        {"plan_tier": data.plan_tier, "updated_config": cfg}
-    )
-
-    return {
-        "message": f"Successfully updated configuration for {data.plan_tier.upper()} plan",
-        "plan_tier": data.plan_tier,
-        "config": cfg
-    }
 
 @router.get("/me", response_model=SubscriptionResponse)
 def get_my_subscription(
@@ -521,74 +523,52 @@ def list_all_subscriptions(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
 ):
-    try:
-        from app.core.database import engine, Base
-        import app.models
-        try:
-            Base.metadata.create_all(bind=engine)
-        except Exception:
-            pass
+    # Ensure every Company Owner has an active subscription record
+    owners = db.query(User).filter(User.role.in_([UserRole.COMPANY_OWNER.value, UserRole.SUPER_ADMIN.value, UserRole.ADMIN.value])).all()
+    for owner in owners:
+        _get_or_create_subscription(db, owner)
 
-        # Ensure every Company Owner has an active subscription record
-        owners = db.query(User).filter(User.role.in_([UserRole.COMPANY_OWNER.value, UserRole.SUPER_ADMIN.value, UserRole.ADMIN.value])).all()
-        for owner in owners:
-            try:
-                _get_or_create_subscription(db, owner)
-            except Exception:
-                pass
+    subs = db.query(CompanySubscription).all()
 
-        subs = db.query(CompanySubscription).all()
+    total_subs = len(subs)
+    active_subs = sum(1 for s in subs if s.status == SubscriptionStatus.ACTIVE.value)
 
-        total_subs = len(subs)
-        active_subs = sum(1 for s in subs if (s.status or "active") == SubscriptionStatus.ACTIVE.value)
+    mrr = sum(s.amount_paid / (12 if s.billing_cycle == "annual" else 1) for s in subs if s.status == SubscriptionStatus.ACTIVE.value)
+    arr = mrr * 12
 
-        mrr = sum((s.amount_paid or 0.0) / (12 if s.billing_cycle == "annual" else 1) for s in subs if (s.status or "active") == SubscriptionStatus.ACTIVE.value)
-        arr = mrr * 12
+    tier_counts = {"free": 0, "starter": 0, "professional": 0, "enterprise": 0}
+    sub_list = []
 
-        tier_counts = {"free": 0, "starter": 0, "professional": 0, "enterprise": 0}
-        sub_list = []
+    for s in subs:
+        if s.plan_tier in tier_counts:
+            tier_counts[s.plan_tier] += 1
+        
+        owner_user = db.query(User).filter(User.id == s.owner_id).first()
+        sub_list.append({
+            "id": s.id,
+            "company_name": s.company_name,
+            "owner_id": s.owner_id,
+            "owner_email": owner_user.email if owner_user else "N/A",
+            "owner_name": owner_user.full_name if owner_user else "N/A",
+            "plan_tier": s.plan_tier,
+            "billing_cycle": s.billing_cycle,
+            "status": s.status,
+            "amount_paid": s.amount_paid,
+            "max_projects": s.max_projects,
+            "max_workers": s.max_workers,
+            "max_storage_gb": s.max_storage_gb,
+            "ai_tokens_limit": s.ai_tokens_limit,
+            "created_at": s.created_at
+        })
 
-        for s in subs:
-            plan = s.plan_tier or "free"
-            if plan in tier_counts:
-                tier_counts[plan] += 1
-            
-            owner_user = db.query(User).filter(User.id == s.owner_id).first()
-            sub_list.append({
-                "id": s.id,
-                "company_name": s.company_name or "ConstructIQ Company",
-                "owner_id": s.owner_id,
-                "owner_email": owner_user.email if owner_user else "N/A",
-                "owner_name": owner_user.full_name if owner_user else "N/A",
-                "plan_tier": plan,
-                "billing_cycle": s.billing_cycle or "monthly",
-                "status": s.status or "active",
-                "amount_paid": s.amount_paid or 0.0,
-                "max_projects": s.max_projects or 1,
-                "max_workers": s.max_workers or 5,
-                "max_storage_gb": s.max_storage_gb or 5,
-                "ai_tokens_limit": s.ai_tokens_limit or 10000,
-                "created_at": s.created_at or datetime.utcnow()
-            })
-
-        return AdminMRRResponse(
-            total_subscriptions=total_subs,
-            active_subscriptions=active_subs,
-            mrr=round(mrr, 2),
-            arr=round(arr, 2),
-            tier_distribution=tier_counts,
-            subscriptions=sub_list
-        )
-    except Exception as e:
-        logger.error(f"Error listing admin subscriptions: {e}")
-        return AdminMRRResponse(
-            total_subscriptions=0,
-            active_subscriptions=0,
-            mrr=0.0,
-            arr=0.0,
-            tier_distribution={"free": 0, "starter": 0, "professional": 0, "enterprise": 0},
-            subscriptions=[]
-        )
+    return AdminMRRResponse(
+        total_subscriptions=total_subs,
+        active_subscriptions=active_subs,
+        mrr=round(mrr, 2),
+        arr=round(arr, 2),
+        tier_distribution=tier_counts,
+        subscriptions=sub_list
+    )
 
 class AdminSubscriptionOverrideInput(BaseModel):
     subscription_id: int
@@ -659,4 +639,69 @@ def override_company_subscription(
         "max_workers": sub.max_workers,
         "max_storage_gb": sub.max_storage_gb,
         "status": sub.status,
+    }
+
+class UpdatePlanConfigInput(BaseModel):
+    plan_tier: str
+    monthly_price: Optional[float] = None
+    annual_price: Optional[float] = None
+    max_projects: Optional[int] = None
+    max_workers: Optional[int] = None
+    max_storage_gb: Optional[int] = None
+    ai_tokens_limit: Optional[int] = None
+    site_diary: Optional[bool] = None
+    client_portal: Optional[bool] = None
+    api_access: Optional[bool] = None
+
+@router.get("/plans/config")
+def get_plans_configuration():
+    return {
+        "configs": PLAN_CONFIGS,
+        "features": FEATURE_MATRIX
+    }
+
+@router.put("/admin/plans/config")
+@router.put("/admin/plans/config/")
+def update_plan_configuration(
+    data: UpdatePlanConfigInput,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
+):
+    tier = data.plan_tier
+    if tier not in PLAN_CONFIGS:
+        raise HTTPException(status_code=400, detail="Invalid plan tier specified")
+
+    if data.monthly_price is not None:
+        PLAN_CONFIGS[tier]["monthly_price"] = data.monthly_price
+    if data.annual_price is not None:
+        PLAN_CONFIGS[tier]["annual_price"] = data.annual_price
+    if data.max_projects is not None:
+        PLAN_CONFIGS[tier]["max_projects"] = data.max_projects
+    if data.max_workers is not None:
+        PLAN_CONFIGS[tier]["max_workers"] = data.max_workers
+    if data.max_storage_gb is not None:
+        PLAN_CONFIGS[tier]["max_storage_gb"] = data.max_storage_gb
+    if data.ai_tokens_limit is not None:
+        PLAN_CONFIGS[tier]["ai_tokens_limit"] = data.ai_tokens_limit
+
+    if data.site_diary is not None:
+        FEATURE_MATRIX[tier]["site_diary"] = data.site_diary
+    if data.client_portal is not None:
+        FEATURE_MATRIX[tier]["client_portal"] = data.client_portal
+    if data.api_access is not None:
+        FEATURE_MATRIX[tier]["api_access"] = data.api_access
+
+    log_action(
+        db,
+        current_user.id,
+        "SUPER_ADMIN_PLAN_MATRIX_UPDATED",
+        "PlanTier",
+        0,
+        {"plan_tier": tier, "config": PLAN_CONFIGS[tier]}
+    )
+
+    return {
+        "message": f"Successfully updated plan definitions for {tier.upper()} tier",
+        "configs": PLAN_CONFIGS,
+        "features": FEATURE_MATRIX
     }
