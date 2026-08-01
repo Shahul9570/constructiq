@@ -110,6 +110,46 @@ def _get_or_create_subscription(db: Session, user: User) -> CompanySubscription:
         db.refresh(sub)
     return sub
 
+def check_subscription_limits(db: Session, user: User, resource_type: str):
+    """Enforces quota limits (projects, user seats) based on active subscription tier."""
+    sub = _get_or_create_subscription(db, user)
+    
+    if resource_type == "project":
+        current_projects = db.query(Project).count()
+        if current_projects >= sub.max_projects:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Project quota reached for your active {sub.plan_tier.upper()} plan ({sub.max_projects} max). Upgrade your plan to create more projects."
+            )
+    elif resource_type == "user":
+        current_users = db.query(User).count()
+        if current_users >= sub.max_workers:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"User seat quota reached for your active {sub.plan_tier.upper()} plan ({sub.max_workers} max). Upgrade your plan to add more team members."
+            )
+
+def check_feature_access(db: Session, user: User, feature_name: str):
+    """Enforces feature access based on tenant subscription tier."""
+    sub = _get_or_create_subscription(db, user)
+    tier = sub.plan_tier
+
+    if feature_name == "site_diary" and tier in [PlanTier.FREE.value, PlanTier.STARTER.value]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Daily Site Diary & Weather Delay Tracker is available on Professional and Enterprise plans."
+        )
+    elif feature_name == "client_portal" and tier == PlanTier.FREE.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Client Portal access requires a Starter, Professional, or Enterprise subscription."
+        )
+    elif feature_name == "api_access" and tier in [PlanTier.FREE.value, PlanTier.STARTER.value]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="API Access requires a Professional or Enterprise subscription plan."
+        )
+
 @router.get("/me", response_model=SubscriptionResponse)
 def get_my_subscription(
     db: Session = Depends(get_db),

@@ -152,12 +152,17 @@ def get_site_diary_summary(
         impact_breakdown=impact_counts
     )
 
+from app.api.v1.subscription import check_feature_access
+
 @router.post("", response_model=SiteDiaryResponse, status_code=status.HTTP_201_CREATED)
 def create_site_diary(
     data: SiteDiaryCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    # Enforce SaaS subscription feature tier access
+    check_feature_access(db, current_user, "site_diary")
+
     project = db.query(Project).filter(Project.id == data.project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")

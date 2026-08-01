@@ -11,6 +11,7 @@ from app.core.security import (
 )
 from app.core.config import settings
 from app.models.user import User, UserRole
+from app.api.v1.subscription import check_subscription_limits
 from app.schemas.user import (
     UserCreate, UserResponse, UserLogin, TokenResponse,
     RefreshTokenRequest, PasswordChange, UserUpdate
@@ -48,6 +49,12 @@ def register(data: UserCreate, request: Request, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email or username already registered"
         )
+
+    # Enforce active user seat limit quota for company accounts
+    if data.role != "super_admin":
+        owner_user = db.query(User).filter(User.id == company_owner_id).first() if company_owner_id else None
+        if owner_user:
+            check_subscription_limits(db, owner_user, "user")
 
     user = User(
         email=data.email,

@@ -62,12 +62,17 @@ def list_projects(
 from app.models.project_task import ProjectTask
 from app.models.project import ProjectType
 
+from app.api.v1.subscription import check_subscription_limits
+
 @router.post("/", response_model=ProjectResponse, status_code=201)
 def create_project(
     data: ProjectCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # Enforce active SaaS Subscription project limit quota
+    check_subscription_limits(db, current_user, "project")
+
     create_data = data.model_dump(exclude={"client_email"})
     
     if data.client_email:
