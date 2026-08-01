@@ -19,6 +19,9 @@ import {
   Settings,
   X,
   HardHat,
+  ShieldAlert,
+  Activity,
+  Sliders,
 } from 'lucide-react'
 import { UserRole } from '@/types'
 
@@ -29,23 +32,26 @@ interface SidebarProps {
 
 const adminNavGroups = [
   {
-    title: 'Platform Overview',
+    title: 'Platform Command',
     items: [
       { label: 'Global Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'All Projects', href: '/projects', icon: FolderKanban },
+      { label: 'System Telemetry', href: '/admin/system-health', icon: Activity },
     ],
   },
   {
-    title: 'Management',
+    title: 'Management & Governance',
     items: [
       { label: 'System Users', href: '/users', icon: Users },
       { label: 'Global Contractors', href: '/contractors', icon: Building2 },
+      { label: 'Security Audit Logs', href: '/admin/audit-logs', icon: ShieldAlert },
     ],
   },
   {
-    title: 'System',
+    title: 'Platform Control & AI',
     items: [
-      { label: 'AI Analytics', href: '/ai', icon: Bot },
+      { label: 'AI Operations', href: '/ai', icon: Bot },
+      { label: 'Platform Controls', href: '/admin/platform-settings', icon: Sliders },
       { label: 'Settings', href: '/settings', icon: Settings },
     ],
   },

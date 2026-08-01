@@ -24,6 +24,10 @@ import SettingsPage from '@/pages/settings/SettingsPage'
 
 import UsersPage from '@/pages/users/UsersPage'
 
+import AuditLogsPage from '@/pages/admin/AuditLogsPage'
+import SystemHealthPage from '@/pages/admin/SystemHealthPage'
+import PlatformSettingsPage from '@/pages/admin/PlatformSettingsPage'
+
 import RequireRole from '@/components/auth/RequireRole'
 import { UserRole } from '@/types'
 
@@ -62,6 +66,11 @@ export default function App() {
         
         {/* Only admins/owners/managers can view users */}
         <Route path="users" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER]}><UsersPage /></RequireRole>} />
+
+        {/* Super Admin Control Hub */}
+        <Route path="admin/audit-logs" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN]}><AuditLogsPage /></RequireRole>} />
+        <Route path="admin/system-health" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN]}><SystemHealthPage /></RequireRole>} />
+        <Route path="admin/platform-settings" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN]}><PlatformSettingsPage /></RequireRole>} />
         
         {/* Operations - exclude contractors */}
         <Route path="labour" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT]}><LabourSummaryPage /></RequireRole>} />
