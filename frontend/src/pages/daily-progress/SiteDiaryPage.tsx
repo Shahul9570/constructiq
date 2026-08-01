@@ -21,9 +21,11 @@ import {
 import { toast } from 'react-hot-toast'
 import { siteDiaryService, SiteDiaryItem, CreateSiteDiaryInput } from '@/services/site-diary.service'
 import { projectService } from '@/services/project.service'
+import api from '@/services/api'
 
 export default function SiteDiaryPage() {
   const queryClient = useQueryClient()
+  const [isFetchingLiveWeather, setIsFetchingLiveWeather] = useState(false)
 
   // State
   const [selectedProjectId, setSelectedProjectId] = useState<string>('all')
@@ -84,6 +86,35 @@ export default function SiteDiaryPage() {
       toast.error(err?.response?.data?.detail || 'Failed to create site diary entry')
     }
   })
+
+  const handleFetchLiveWeather = async () => {
+    try {
+      setIsFetchingLiveWeather(true)
+      const targetProjId = form.project_id || (projectList.length > 0 ? projectList[0].id : undefined)
+      const { data } = await api.get('/site-diary/live-weather', {
+        params: { project_id: targetProjId }
+      })
+
+      if (data?.weather) {
+        const w = data.weather
+        setForm(f => ({
+          ...f,
+          weather_condition: w.weather_condition,
+          temperature_c: w.temperature_c,
+          rainfall_mm: w.rainfall_mm,
+          work_impact: w.work_impact,
+          crane_stoppage_hours: w.crane_stoppage_hours,
+          lost_man_hours: w.lost_man_hours,
+          delay_description: `Live Open-Meteo weather recorded for ${data.location}: ${w.weather_condition} (${w.rainfall_mm}mm rain, ${w.wind_speed_kmh}km/h wind).`
+        }))
+        toast.success(`Live weather loaded for ${data.location}!`)
+      }
+    } catch (err: any) {
+      toast.error('Failed to fetch live weather for site location')
+    } finally {
+      setIsFetchingLiveWeather(false)
+    }
+  }
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -352,6 +383,21 @@ export default function SiteDiaryPage() {
           </DialogHeader>
 
           <form onSubmit={handleCreateSubmit} className="space-y-4 py-2">
+            <div className="flex items-center justify-between p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
+              <div className="text-xs">
+                <span className="font-bold text-white block">Hyper-Local Live Site Weather</span>
+                <span className="text-slate-400 text-[11px]">Auto-fill weather data using project coordinates & Open-Meteo</span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleFetchLiveWeather}
+                disabled={isFetchingLiveWeather}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs h-8"
+              >
+                {isFetchingLiveWeather ? 'Fetching...' : '📍 Fetch Live Weather'}
+              </Button>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300">Project</label>

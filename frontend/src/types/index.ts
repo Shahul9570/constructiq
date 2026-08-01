@@ -408,6 +408,10 @@ export enum NotificationType {
   PAYMENT_VERIFIED = 'payment_verified',
   INVOICE_OVERDUE = 'invoice_overdue',
   INVOICE_PENDING = 'invoice_pending',
+  WEATHER_DELAY_ALERT = 'weather_delay_alert',
+  QUOTA_WARNING = 'quota_warning',
+  MILESTONE_COMPLETED = 'milestone_completed',
+  SYSTEM_ALERT = 'system_alert',
 }
 
 export interface Notification {

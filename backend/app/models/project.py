@@ -43,6 +43,8 @@ class Project(Base):
     client_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     company_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     location = Column(Text, nullable=False)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     description = Column(Text)
     start_date = Column(DateTime, nullable=False)
     expected_end_date = Column(DateTime, nullable=False)

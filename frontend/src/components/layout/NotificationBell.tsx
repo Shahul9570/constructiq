@@ -60,10 +60,16 @@ export function NotificationBell() {
     setIsOpen(false)
 
     // Navigate based on type
-    if (notification.type === NotificationType.PAYMENT_SUBMITTED) {
+    if (notification.type === NotificationType.WEATHER_DELAY_ALERT) {
+      navigate('/daily-progress')
+    } else if (notification.type === NotificationType.QUOTA_WARNING) {
+      navigate('/subscription')
+    } else if (notification.type === NotificationType.MILESTONE_COMPLETED) {
+      navigate('/projects')
+    } else if (notification.type === NotificationType.PAYMENT_SUBMITTED) {
       navigate('/financial')
     } else if (notification.type === NotificationType.PAYMENT_VERIFIED) {
-      navigate('/billing') // client portal
+      navigate('/billing')
     }
   }
 

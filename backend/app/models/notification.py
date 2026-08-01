@@ -10,6 +10,10 @@ class NotificationType(enum.Enum):
     PAYMENT_VERIFIED = "payment_verified"
     INVOICE_OVERDUE = "invoice_overdue"
     INVOICE_PENDING = "invoice_pending"
+    WEATHER_DELAY_ALERT = "weather_delay_alert"
+    QUOTA_WARNING = "quota_warning"
+    MILESTONE_COMPLETED = "milestone_completed"
+    SYSTEM_ALERT = "system_alert"
 
 class Notification(Base):
     __tablename__ = "notifications"

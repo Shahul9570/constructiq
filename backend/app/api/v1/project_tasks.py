@@ -43,6 +43,9 @@ def create_task(
     return task
 
 
+from app.models.project import Project
+from app.services.notification_service import trigger_milestone_completed_notification
+
 @router.patch("/{task_id}", response_model=ProjectTaskResponse)
 def update_task(
     task_id: int,
@@ -54,11 +57,20 @@ def update_task(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    old_status = str(task.status).lower() if task.status else ""
     update_data = data.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(task, key, value)
+
     db.commit()
     db.refresh(task)
+
+    new_status = str(task.status).lower() if task.status else ""
+    if old_status != "completed" and new_status == "completed":
+        proj = db.query(Project).filter(Project.id == task.project_id).first()
+        if proj and proj.client_id:
+            trigger_milestone_completed_notification(db, proj.client_id, proj.name, task.name)
+
     return task
 
 

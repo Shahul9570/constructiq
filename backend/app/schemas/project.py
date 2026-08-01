@@ -49,6 +49,8 @@ class ProjectBase(BaseModel):
     client_name: Optional[str] = None
     client_id: Optional[int] = None
     location: str
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     description: Optional[str] = None
     start_date: date
     expected_end_date: date
@@ -65,6 +67,8 @@ class ProjectUpdate(BaseModel):
     client_name: Optional[str] = None
     client_id: Optional[int] = None
     location: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     description: Optional[str] = None
     start_date: Optional[date] = None
     expected_end_date: Optional[date] = None

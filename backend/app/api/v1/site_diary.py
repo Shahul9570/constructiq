@@ -217,3 +217,47 @@ def create_site_diary(
         logged_by_name=current_user.full_name,
         created_at=entry.created_at
     )
+
+from app.services.weather_service import geocode_sub_locality, fetch_hyperlocal_weather, trigger_weather_alert_if_needed
+
+@router.get("/live-weather")
+def get_live_site_weather(
+    project_id: Optional[int] = None,
+    location: Optional[str] = None,
+    latitude: Optional[float] = None,
+    longitude: Optional[float] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    check_feature_access(db, current_user, "site_diary")
+
+    target_lat = latitude
+    target_lon = longitude
+    proj = None
+
+    if project_id:
+        proj = db.query(Project).filter(Project.id == project_id).first()
+        if proj:
+            target_lat = proj.latitude or target_lat
+            target_lon = proj.longitude or target_lon
+            location = location or proj.location
+
+    if (target_lat is None or target_lon is None) and location:
+        coords = geocode_sub_locality(location)
+        if coords:
+            target_lat, target_lon = coords
+
+    if target_lat is None or target_lon is None:
+        # Default to Kochi coordinates if location unavailable
+        target_lat, target_lon = 9.9312, 76.2673
+
+    weather_data = fetch_hyperlocal_weather(target_lat, target_lon)
+
+    if proj:
+        trigger_weather_alert_if_needed(db, proj, weather_data)
+
+    return {
+        "location": location or (proj.location if proj else "Site Location"),
+        "project_id": project_id,
+        "weather": weather_data
+    }

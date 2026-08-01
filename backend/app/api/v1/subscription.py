@@ -169,6 +169,8 @@ FEATURE_MATRIX = {
     },
 }
 
+from app.services.notification_service import check_and_trigger_quota_warnings
+
 def check_subscription_limits(db: Session, user: User, resource_type: str):
     """Enforces quota limits (projects, user seats) based on active subscription tier."""
     if user.role == UserRole.SUPER_ADMIN.value:
@@ -181,6 +183,10 @@ def check_subscription_limits(db: Session, user: User, resource_type: str):
         current_projects = db.query(Project).filter(
             (Project.company_id == company_id) | (Project.created_by == user.id)
         ).count()
+
+        # Trigger 80%/100% Quota Warning notification
+        check_and_trigger_quota_warnings(db, user, "project", current_projects, sub.max_projects)
+
         if current_projects >= sub.max_projects:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -190,6 +196,10 @@ def check_subscription_limits(db: Session, user: User, resource_type: str):
         current_users = db.query(User).filter(
             (User.company_owner_id == company_id) | (User.id == user.id)
         ).count()
+
+        # Trigger 80%/100% Quota Warning notification
+        check_and_trigger_quota_warnings(db, user, "user seat", current_users, sub.max_workers)
+
         if current_users >= sub.max_workers:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
