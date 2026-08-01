@@ -90,20 +90,23 @@ def _get_or_create_subscription(db: Session, user: User) -> CompanySubscription:
     sub = db.query(CompanySubscription).filter(CompanySubscription.owner_id == user.id).first()
     if not sub:
         company_name = user.company_name or f"{user.full_name}'s Company"
-        cfg = PLAN_CONFIGS[PlanTier.PROFESSIONAL.value]
+        # Super Admins default to Enterprise Unlimited
+        is_super = user.role == UserRole.SUPER_ADMIN.value
+        tier_choice = PlanTier.ENTERPRISE.value if is_super else PlanTier.FREE.value
+        cfg = PLAN_CONFIGS[tier_choice]
         sub = CompanySubscription(
             company_name=company_name,
             owner_id=user.id,
-            plan_tier=PlanTier.PROFESSIONAL.value,
+            plan_tier=tier_choice,
             billing_cycle=BillingCycle.MONTHLY.value,
             status=SubscriptionStatus.ACTIVE.value,
-            max_projects=cfg["max_projects"],
-            max_workers=cfg["max_workers"],
-            max_storage_gb=cfg["max_storage_gb"],
-            ai_tokens_limit=cfg["ai_tokens_limit"],
-            amount_paid=cfg["monthly_price"],
+            max_projects=99999 if is_super else cfg["max_projects"],
+            max_workers=99999 if is_super else cfg["max_workers"],
+            max_storage_gb=100000 if is_super else cfg["max_storage_gb"],
+            ai_tokens_limit=9999999 if is_super else cfg["ai_tokens_limit"],
+            amount_paid=0.0 if is_super else cfg["monthly_price"],
             current_period_start=datetime.utcnow(),
-            current_period_end=datetime.utcnow() + timedelta(days=30)
+            current_period_end=datetime.utcnow() + timedelta(days=3650 if is_super else 30)
         )
         db.add(sub)
         db.commit()
@@ -112,6 +115,9 @@ def _get_or_create_subscription(db: Session, user: User) -> CompanySubscription:
 
 def check_subscription_limits(db: Session, user: User, resource_type: str):
     """Enforces quota limits (projects, user seats) based on active subscription tier."""
+    if user.role == UserRole.SUPER_ADMIN.value:
+        return  # Super Admins are exempt from quota restrictions
+
     sub = _get_or_create_subscription(db, user)
     
     if resource_type == "project":
@@ -131,6 +137,9 @@ def check_subscription_limits(db: Session, user: User, resource_type: str):
 
 def check_feature_access(db: Session, user: User, feature_name: str):
     """Enforces feature access based on tenant subscription tier."""
+    if user.role == UserRole.SUPER_ADMIN.value:
+        return  # Super Admins have unrestricted access to all features
+
     sub = _get_or_create_subscription(db, user)
     tier = sub.plan_tier
 
@@ -149,6 +158,60 @@ def check_feature_access(db: Session, user: User, feature_name: str):
             status_code=status.HTTP_403_FORBIDDEN,
             detail="API Access requires a Professional or Enterprise subscription plan."
         )
+
+class UpdatePlanConfigInput(BaseModel):
+    plan_tier: str
+    monthly_price: Optional[float] = None
+    annual_price: Optional[float] = None
+    max_projects: Optional[int] = None
+    max_workers: Optional[int] = None
+    max_storage_gb: Optional[int] = None
+    ai_tokens_limit: Optional[int] = None
+
+@router.get("/plans")
+def get_plan_configurations():
+    """Returns active SaaS plan configurations and feature matrices."""
+    return PLAN_CONFIGS
+
+@router.put("/plans")
+@router.put("/plans/")
+def update_plan_configuration(
+    data: UpdatePlanConfigInput,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
+):
+    """Allows Super Admins to dynamically adjust pricing and quotas for any plan tier."""
+    if data.plan_tier not in PLAN_CONFIGS:
+        raise HTTPException(status_code=400, detail="Invalid plan tier specified")
+
+    cfg = PLAN_CONFIGS[data.plan_tier]
+    if data.monthly_price is not None:
+        cfg["monthly_price"] = data.monthly_price
+    if data.annual_price is not None:
+        cfg["annual_price"] = data.annual_price
+    if data.max_projects is not None:
+        cfg["max_projects"] = data.max_projects
+    if data.max_workers is not None:
+        cfg["max_workers"] = data.max_workers
+    if data.max_storage_gb is not None:
+        cfg["max_storage_gb"] = data.max_storage_gb
+    if data.ai_tokens_limit is not None:
+        cfg["ai_tokens_limit"] = data.ai_tokens_limit
+
+    log_action(
+        db,
+        current_user.id,
+        "SUPER_ADMIN_PLAN_CONFIG_UPDATED",
+        "PlanConfig",
+        0,
+        {"plan_tier": data.plan_tier, "updated_config": cfg}
+    )
+
+    return {
+        "message": f"Successfully updated configuration for {data.plan_tier.upper()} plan",
+        "plan_tier": data.plan_tier,
+        "config": cfg
+    }
 
 @router.get("/me", response_model=SubscriptionResponse)
 def get_my_subscription(
