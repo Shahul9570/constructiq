@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CreditCard, Check, Zap, ShieldCheck, FolderKanban, Users, HardDrive, Bot, ArrowRight, Download, Sparkles, Building } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { CreditCard, Check, X, ShieldCheck, FolderKanban, Users, HardDrive, Bot, Sparkles, Building, Eye } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { toast } from 'react-hot-toast'
-import { subscriptionService, CompanySubscription } from '@/services/subscription.service'
+import { subscriptionService } from '@/services/subscription.service'
 
 export default function SubscriptionPage() {
   const queryClient = useQueryClient()
@@ -50,75 +50,135 @@ export default function SubscriptionPage() {
 
   const usage = sub.usage
 
-  const plans = [
+  const comparisonRows = [
     {
-      id: 'free',
-      name: 'Free Trial',
-      tagline: 'Ideal for site engineers & individual trials.',
-      priceMonthly: 0,
-      priceAnnual: 0,
-      features: [
-        '1 Active Project Slot',
-        '5 Registered Workforce Seats',
-        '5 GB Document Storage',
-        '10k Monthly AI Tokens',
-        'Basic Daily Work Log Entry',
-      ],
-      highlight: false,
+      feature: 'Monthly Price',
+      free: '$0',
+      starter: billingCycle === 'annual' ? '$49' : '$59',
+      pro: billingCycle === 'annual' ? '$199' : '$249',
+      enterprise: 'Custom ($999+)',
+      isHighlight: true,
     },
     {
-      id: 'starter',
-      name: 'Starter Tier',
-      tagline: 'Ideal for small sub-contractors & single site projects.',
-      priceMonthly: 199,
-      priceAnnual: 1990,
-      features: [
-        'Up to 2 Active Projects',
-        '10 Registered Workforce Seats',
-        '25 GB Secure Document Storage',
-        '100k Monthly AI Tokens',
-        'Standard PDF Report Exports',
-      ],
-      highlight: false,
+      feature: 'Projects',
+      free: '1',
+      starter: '5',
+      pro: '25',
+      enterprise: 'Unlimited',
     },
     {
-      id: 'professional',
-      name: 'Professional Tier',
-      tagline: 'Best for growing construction firms & mid-sized teams.',
-      priceMonthly: 499,
-      priceAnnual: 4990,
-      features: [
-        'Up to 10 Active Projects',
-        '50 Registered Workforce Seats',
-        '250 GB Storage + 3D Visualizer',
-        '500k Monthly AI Tokens',
-        'Weather Delay & Site Diary Tracker',
-        'Interactive 3D Digital Twin GLB',
-        'Priority Phone & Chat Support',
-      ],
-      highlight: true,
+      feature: 'Users',
+      free: '5',
+      starter: '20',
+      pro: '100',
+      enterprise: 'Unlimited',
     },
     {
-      id: 'enterprise',
-      name: 'Enterprise Tier',
-      tagline: 'Unlimited scale for large construction enterprises & EPCs.',
-      priceMonthly: 999,
-      priceAnnual: 9990,
-      features: [
-        'Unlimited Active Projects',
-        'Unlimited Workforce Seats',
-        '1 TB Storage + Custom S3 Bucket',
-        '2M Monthly AI Tokens',
-        'Full 3D GLB & IFC BIM Parser',
-        'Dedicated Account Manager & SLA',
-        'Custom SSO & 2FA Governance',
-      ],
-      highlight: false,
+      feature: 'Daily Logs',
+      free: true,
+      starter: true,
+      pro: true,
+      enterprise: true,
+    },
+    {
+      feature: 'Tasks',
+      free: true,
+      starter: true,
+      pro: true,
+      enterprise: true,
+    },
+    {
+      feature: 'Materials',
+      free: true,
+      starter: true,
+      pro: true,
+      enterprise: true,
+    },
+    {
+      feature: 'Equipment',
+      free: true,
+      starter: true,
+      pro: true,
+      enterprise: true,
+    },
+    {
+      feature: 'Financials',
+      free: 'basic',
+      starter: true,
+      pro: true,
+      enterprise: true,
+    },
+    {
+      feature: 'AI Reports',
+      free: 'Limited',
+      starter: true,
+      pro: true,
+      enterprise: true,
+    },
+    {
+      feature: 'Digital Twin',
+      free: 'Viewer',
+      starter: 'GLB Live',
+      pro: 'GLB + Timeline + AI',
+      enterprise: 'IFC/BIM + Enterprise',
+    },
+    {
+      feature: 'Client Portal',
+      free: false,
+      starter: true,
+      pro: true,
+      enterprise: true,
+    },
+    {
+      feature: 'API Access',
+      free: false,
+      starter: false,
+      pro: 'Limited',
+      enterprise: 'Full',
+    },
+    {
+      feature: 'SSO',
+      free: false,
+      starter: false,
+      pro: false,
+      enterprise: true,
+    },
+    {
+      feature: 'Support',
+      free: 'Community',
+      starter: 'Email',
+      pro: 'Priority',
+      enterprise: 'Dedicated',
     },
   ]
 
+  const renderCellContent = (value: any) => {
+    if (value === true) {
+      return (
+        <span className="inline-flex items-center justify-center p-1 rounded-md bg-emerald-500/20 text-emerald-400">
+          <Check className="h-4 w-4" />
+        </span>
+      )
+    }
+    if (value === false) {
+      return (
+        <span className="inline-flex items-center justify-center p-1 text-slate-600">
+          <X className="h-4 w-4" />
+        </span>
+      )
+    }
+    if (value === 'basic') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/20">
+          <Eye className="h-3 w-3" /> Basic
+        </span>
+      )
+    }
+    return <span className="text-xs font-medium text-slate-200">{value}</span>
+  }
+
   return (
-    <div className="space-y-6 max-w-7xl">
+    <div className="space-y-8 max-w-7xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -127,8 +187,8 @@ export default function SubscriptionPage() {
               <CreditCard className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-white">SaaS Subscription & Plan Management</h1>
-              <p className="text-slate-400 mt-1 text-sm">Tenant plan tiers, resource allocation gauges, and renewal invoices.</p>
+              <h1 className="text-3xl font-bold tracking-tight text-white">SaaS Subscription & Plan Matrix</h1>
+              <p className="text-slate-400 mt-1 text-sm">Feature comparisons, tenant tier allocations, and live resource usage gauges.</p>
             </div>
           </div>
         </div>
@@ -149,7 +209,7 @@ export default function SubscriptionPage() {
               billingCycle === 'annual' ? 'bg-orange-500 text-white shadow-md' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Annual Billing <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Save 17%</span>
+            Annual Billing <span className="bg-emerald-500/20 text-emerald-300 text-[10px] px-1.5 py-0.5 rounded-full font-bold">Save 20%</span>
           </button>
         </div>
       </div>
@@ -239,70 +299,105 @@ export default function SubscriptionPage() {
         </CardContent>
       </Card>
 
-      {/* Plan Tiers Selection Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {plans.map((p) => {
-          const isCurrent = sub.plan_tier === p.id
-          const price = billingCycle === 'annual' ? p.priceAnnual : p.priceMonthly
+      {/* Sleek Feature Comparison Table Matrix */}
+      <Card className="bg-slate-950/90 border-slate-800/80 backdrop-blur-xl shadow-2xl overflow-hidden">
+        <CardHeader className="p-6 pb-4 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between">
+          <div>
+            <CardTitle className="text-xl font-extrabold text-white flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-orange-400" /> Plan Feature Comparison Matrix
+            </CardTitle>
+            <p className="text-slate-400 text-xs mt-1">Detailed feature breakdown across Free, Starter, Professional, and Enterprise plans.</p>
+          </div>
+        </CardHeader>
 
-          return (
-            <Card
-              key={p.id}
-              className={`bg-slate-900/40 border-slate-800/80 backdrop-blur-xl flex flex-col justify-between relative transition-all duration-200 ${
-                p.highlight ? 'border-orange-500/50 ring-1 ring-orange-500/30 shadow-2xl shadow-orange-950/30' : ''
-              }`}
-            >
-              {p.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-extrabold uppercase px-3 py-1 rounded-full shadow-lg tracking-widest flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" /> Most Popular
-                </div>
-              )}
-
-              <CardHeader className="pt-6">
-                <CardTitle className="text-xl font-bold text-white flex items-center justify-between">
-                  {p.name}
-                </CardTitle>
-                <CardDescription className="text-slate-400 text-xs mt-1 min-h-[36px]">
-                  {p.tagline}
-                </CardDescription>
-                <div className="pt-4 flex items-baseline gap-1">
-                  <span className="text-3xl font-extrabold text-white">${price}</span>
-                  <span className="text-xs text-slate-400">/ {billingCycle === 'annual' ? 'yr' : 'mo'}</span>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-4 flex-1">
-                <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
-                  {p.features.map((feat, i) => (
-                    <div key={i} className="flex items-center gap-2.5 text-xs text-slate-300">
-                      <div className="p-0.5 rounded-full bg-orange-500/10 text-orange-400 shrink-0">
-                        <Check className="h-3.5 w-3.5" />
-                      </div>
-                      <span>{feat}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-
-              <div className="p-6 pt-0">
-                <Button
-                  onClick={() => handleUpgrade(p.id)}
-                  disabled={isCurrent || upgradeMutation.isPending}
-                  className={`w-full font-semibold transition-all ${
-                    isCurrent
-                      ? 'bg-slate-800 text-slate-400 border border-slate-700/60 cursor-default'
-                      : p.highlight
-                      ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-950/50'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60'
-                  }`}
-                >
-                  {isCurrent ? 'Current Active Tier' : 'Upgrade to ' + p.name.split(' ')[0]}
-                </Button>
-              </div>
-            </Card>
-          )
-        })}
-      </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-900/60">
+                <th className="p-4 text-xs font-bold text-slate-300 uppercase tracking-wider w-1/5">Feature</th>
+                <th className="p-4 text-center text-xs font-bold text-slate-200 w-1/5">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>🆓 Free</span>
+                  </div>
+                </th>
+                <th className="p-4 text-center text-xs font-bold text-amber-400 w-1/5">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>⚡ Starter</span>
+                  </div>
+                </th>
+                <th className="p-4 text-center text-xs font-bold text-orange-400 bg-orange-500/10 border-x border-orange-500/20 relative w-1/5">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>🚀 Professional</span>
+                    <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.2 rounded-full uppercase tracking-tighter">Popular</span>
+                  </div>
+                </th>
+                <th className="p-4 text-center text-xs font-bold text-purple-400 w-1/5">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>🏢 Enterprise</span>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {comparisonRows.map((row, idx) => (
+                <tr key={idx} className={`hover:bg-slate-900/40 transition-colors ${row.isHighlight ? 'bg-slate-900/30 font-bold' : ''}`}>
+                  <td className="p-4 text-xs font-semibold text-slate-300 border-r border-slate-800/60">{row.feature}</td>
+                  <td className="p-4 text-center border-r border-slate-800/60">{renderCellContent(row.free)}</td>
+                  <td className="p-4 text-center border-r border-slate-800/60">{renderCellContent(row.starter)}</td>
+                  <td className="p-4 text-center border-r border-orange-500/20 bg-orange-500/5">{renderCellContent(row.pro)}</td>
+                  <td className="p-4 text-center">{renderCellContent(row.enterprise)}</td>
+                </tr>
+              ))}
+              
+              {/* Action Buttons Row */}
+              <tr className="bg-slate-900/80">
+                <td className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Select Tier</td>
+                <td className="p-4 text-center">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleUpgrade('free')}
+                    disabled={sub.plan_tier === 'free' || upgradeMutation.isPending}
+                    className="w-full text-xs font-semibold bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
+                  >
+                    {sub.plan_tier === 'free' ? 'Active' : 'Select Free'}
+                  </Button>
+                </td>
+                <td className="p-4 text-center">
+                  <Button
+                    size="sm"
+                    onClick={() => handleUpgrade('starter')}
+                    disabled={sub.plan_tier === 'starter' || upgradeMutation.isPending}
+                    className="w-full text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white shadow"
+                  >
+                    {sub.plan_tier === 'starter' ? 'Active' : 'Upgrade $59'}
+                  </Button>
+                </td>
+                <td className="p-4 text-center bg-orange-500/10 border-x border-orange-500/20">
+                  <Button
+                    size="sm"
+                    onClick={() => handleUpgrade('professional')}
+                    disabled={sub.plan_tier === 'professional' || upgradeMutation.isPending}
+                    className="w-full text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-950/50"
+                  >
+                    {sub.plan_tier === 'professional' ? 'Active' : 'Upgrade $249'}
+                  </Button>
+                </td>
+                <td className="p-4 text-center">
+                  <Button
+                    size="sm"
+                    onClick={() => handleUpgrade('enterprise')}
+                    disabled={sub.plan_tier === 'enterprise' || upgradeMutation.isPending}
+                    className="w-full text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white shadow"
+                  >
+                    {sub.plan_tier === 'enterprise' ? 'Active' : 'Upgrade Custom'}
+                  </Button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   )
 }
