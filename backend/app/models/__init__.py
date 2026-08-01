@@ -12,6 +12,7 @@ from app.models.notification import Notification
 from app.models.project_task import ProjectTask
 from app.models.audit_log import AuditLog
 from app.models.blob import FileBlob
+from app.models.site_diary import SiteDiary
 
 __all__ = [
     "User",
@@ -35,4 +36,5 @@ __all__ = [
     "ProjectTask",
     "AuditLog",
     "FileBlob",
+    "SiteDiary",
 ]

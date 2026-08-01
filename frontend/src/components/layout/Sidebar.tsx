@@ -22,6 +22,7 @@ import {
   ShieldAlert,
   Activity,
   Sliders,
+  CloudRain,
 } from 'lucide-react'
 import { UserRole } from '@/types'
 
@@ -70,12 +71,13 @@ const navGroups = [
   {
     title: 'Operations',
     items: [
-      { label: 'Daily Progress', href: '/daily-progress', icon: BarChart3 },
-      { label: 'Labour',         href: '/labour',         icon: Users },
-      { label: 'Materials',      href: '/materials',      icon: Package },
-      { label: 'Equipment',      href: '/equipment',      icon: Wrench },
-      { label: 'Contractors',    href: '/contractors',    icon: Building2 },
-      { label: 'Daily Expenses', href: '/daily-expenses', icon: DollarSign },
+      { label: 'Daily Progress',      href: '/daily-progress', icon: BarChart3 },
+      { label: 'Site Diary & Weather', href: '/site-diary',     icon: CloudRain },
+      { label: 'Labour',              href: '/labour',         icon: Users },
+      { label: 'Materials',           href: '/materials',      icon: Package },
+      { label: 'Equipment',           href: '/equipment',      icon: Wrench },
+      { label: 'Contractors',         href: '/contractors',    icon: Building2 },
+      { label: 'Daily Expenses',      href: '/daily-expenses', icon: DollarSign },
     ],
   },
   {
@@ -107,11 +109,11 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
   const allowedItemsPerRole: Record<string, string[]> = {
     company_owner: [
-      'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 
+      'Dashboard', 'Projects', 'Daily Progress', 'Site Diary & Weather', 'Labour', 'Materials', 'Equipment', 
       'Contractors', 'Daily Expenses', 'Financial', 'Client Billing', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
     ],
     project_manager: [
-      'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 
+      'Dashboard', 'Projects', 'Daily Progress', 'Site Diary & Weather', 'Labour', 'Materials', 'Equipment', 
       'Contractors', 'Daily Expenses', 'Financial', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
     ],
     accountant: [
@@ -119,7 +121,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
       'Daily Expenses', 'Financial', 'Client Billing', 'Documents', 'Photos', 'Reports', 'Settings'
     ],
     site_engineer: [
-      'Dashboard', 'Projects', 'Daily Progress', 'Labour', 'Materials', 'Equipment', 
+      'Dashboard', 'Projects', 'Daily Progress', 'Site Diary & Weather', 'Labour', 'Materials', 'Equipment', 
       'Contractors', 'Daily Expenses', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
     ],
     contractor: [

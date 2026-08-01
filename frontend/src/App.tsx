@@ -12,6 +12,7 @@ import ContractorsPage from '@/pages/contractors/ContractorsPage'
 import MaterialsPage from '@/pages/materials/MaterialsPage'
 import EquipmentPage from '@/pages/equipment/EquipmentPage'
 import DailyProgressPage from '@/pages/daily-progress/DailyProgressPage'
+import SiteDiaryPage from '@/pages/daily-progress/SiteDiaryPage'
 import DailyExpensesPage from '@/pages/expenses/DailyExpensesPage'
 import FinancialPage from '@/pages/financial/FinancialPage'
 import ClientBillingPage from '@/pages/financial/ClientBillingPage'
@@ -79,8 +80,9 @@ export default function App() {
         <Route path="equipment" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT]}><EquipmentPage /></RequireRole>} />
         <Route path="daily-expenses" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.ACCOUNTANT]}><DailyExpensesPage /></RequireRole>} />
         
-        {/* Daily Progress - everyone except accountant & client */}
+        {/* Daily Progress & Site Diary */}
         <Route path="daily-progress" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR]}><DailyProgressPage /></RequireRole>} />
+        <Route path="site-diary" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><SiteDiaryPage /></RequireRole>} />
         
         {/* Financials - admins, owners, PMs, and accountants */}
         <Route path="financial" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.ACCOUNTANT]}><FinancialPage /></RequireRole>} />
