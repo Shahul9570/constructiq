@@ -424,6 +424,7 @@ def link_client_to_project(
     )),
 ):
     """Link an existing CLIENT user to a project by their email address."""
+    check_feature_access(db, current_user, "client_portal")
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
