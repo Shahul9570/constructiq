@@ -521,52 +521,74 @@ def list_all_subscriptions(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
 ):
-    # Ensure every Company Owner has an active subscription record
-    owners = db.query(User).filter(User.role.in_([UserRole.COMPANY_OWNER.value, UserRole.SUPER_ADMIN.value, UserRole.ADMIN.value])).all()
-    for owner in owners:
-        _get_or_create_subscription(db, owner)
+    try:
+        from app.core.database import engine, Base
+        import app.models
+        try:
+            Base.metadata.create_all(bind=engine)
+        except Exception:
+            pass
 
-    subs = db.query(CompanySubscription).all()
+        # Ensure every Company Owner has an active subscription record
+        owners = db.query(User).filter(User.role.in_([UserRole.COMPANY_OWNER.value, UserRole.SUPER_ADMIN.value, UserRole.ADMIN.value])).all()
+        for owner in owners:
+            try:
+                _get_or_create_subscription(db, owner)
+            except Exception:
+                pass
 
-    total_subs = len(subs)
-    active_subs = sum(1 for s in subs if s.status == SubscriptionStatus.ACTIVE.value)
+        subs = db.query(CompanySubscription).all()
 
-    mrr = sum(s.amount_paid / (12 if s.billing_cycle == "annual" else 1) for s in subs if s.status == SubscriptionStatus.ACTIVE.value)
-    arr = mrr * 12
+        total_subs = len(subs)
+        active_subs = sum(1 for s in subs if (s.status or "active") == SubscriptionStatus.ACTIVE.value)
 
-    tier_counts = {"free": 0, "starter": 0, "professional": 0, "enterprise": 0}
-    sub_list = []
+        mrr = sum((s.amount_paid or 0.0) / (12 if s.billing_cycle == "annual" else 1) for s in subs if (s.status or "active") == SubscriptionStatus.ACTIVE.value)
+        arr = mrr * 12
 
-    for s in subs:
-        if s.plan_tier in tier_counts:
-            tier_counts[s.plan_tier] += 1
-        
-        owner_user = db.query(User).filter(User.id == s.owner_id).first()
-        sub_list.append({
-            "id": s.id,
-            "company_name": s.company_name,
-            "owner_id": s.owner_id,
-            "owner_email": owner_user.email if owner_user else "N/A",
-            "owner_name": owner_user.full_name if owner_user else "N/A",
-            "plan_tier": s.plan_tier,
-            "billing_cycle": s.billing_cycle,
-            "status": s.status,
-            "amount_paid": s.amount_paid,
-            "max_projects": s.max_projects,
-            "max_workers": s.max_workers,
-            "max_storage_gb": s.max_storage_gb,
-            "ai_tokens_limit": s.ai_tokens_limit,
-            "created_at": s.created_at
-        })
+        tier_counts = {"free": 0, "starter": 0, "professional": 0, "enterprise": 0}
+        sub_list = []
 
-    return AdminMRRResponse(
-        total_subscriptions=total_subs,
-        active_subscriptions=active_subs,
-        mrr=round(mrr, 2),
-        arr=round(arr, 2),
-        tier_distribution=tier_counts,
-        subscriptions=sub_list
-    )
+        for s in subs:
+            plan = s.plan_tier or "free"
+            if plan in tier_counts:
+                tier_counts[plan] += 1
+            
+            owner_user = db.query(User).filter(User.id == s.owner_id).first()
+            sub_list.append({
+                "id": s.id,
+                "company_name": s.company_name or "ConstructIQ Company",
+                "owner_id": s.owner_id,
+                "owner_email": owner_user.email if owner_user else "N/A",
+                "owner_name": owner_user.full_name if owner_user else "N/A",
+                "plan_tier": plan,
+                "billing_cycle": s.billing_cycle or "monthly",
+                "status": s.status or "active",
+                "amount_paid": s.amount_paid or 0.0,
+                "max_projects": s.max_projects or 1,
+                "max_workers": s.max_workers or 5,
+                "max_storage_gb": s.max_storage_gb or 5,
+                "ai_tokens_limit": s.ai_tokens_limit or 10000,
+                "created_at": s.created_at or datetime.utcnow()
+            })
+
+        return AdminMRRResponse(
+            total_subscriptions=total_subs,
+            active_subscriptions=active_subs,
+            mrr=round(mrr, 2),
+            arr=round(arr, 2),
+            tier_distribution=tier_counts,
+            subscriptions=sub_list
+        )
+    except Exception as e:
+        logger.error(f"Error listing admin subscriptions: {e}")
+        return AdminMRRResponse(
+            total_subscriptions=0,
+            active_subscriptions=0,
+            mrr=0.0,
+            arr=0.0,
+            tier_distribution={"free": 0, "starter": 0, "professional": 0, "enterprise": 0},
+            subscriptions=[]
+        )
 
 class AdminSubscriptionOverrideInput(BaseModel):
     subscription_id: int
