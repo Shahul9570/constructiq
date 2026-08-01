@@ -5,6 +5,7 @@ import enum
 from app.core.database import Base
 
 class PlanTier(str, enum.Enum):
+    FREE = "free"
     STARTER = "starter"
     PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"

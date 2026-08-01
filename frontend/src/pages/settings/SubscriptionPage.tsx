@@ -52,6 +52,21 @@ export default function SubscriptionPage() {
 
   const plans = [
     {
+      id: 'free',
+      name: 'Free Trial',
+      tagline: 'Ideal for site engineers & individual trials.',
+      priceMonthly: 0,
+      priceAnnual: 0,
+      features: [
+        '1 Active Project Slot',
+        '5 Registered Workforce Seats',
+        '5 GB Document Storage',
+        '10k Monthly AI Tokens',
+        'Basic Daily Work Log Entry',
+      ],
+      highlight: false,
+    },
+    {
       id: 'starter',
       name: 'Starter Tier',
       tagline: 'Ideal for small sub-contractors & single site projects.',
@@ -103,7 +118,7 @@ export default function SubscriptionPage() {
   ]
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-7xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -225,7 +240,7 @@ export default function SubscriptionPage() {
       </Card>
 
       {/* Plan Tiers Selection Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {plans.map((p) => {
           const isCurrent = sub.plan_tier === p.id
           const price = billingCycle === 'annual' ? p.priceAnnual : p.priceMonthly

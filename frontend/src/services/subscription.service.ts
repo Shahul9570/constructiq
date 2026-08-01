@@ -15,7 +15,7 @@ export interface CompanySubscription {
   id: number
   company_name: string
   owner_id: number
-  plan_tier: 'starter' | 'professional' | 'enterprise'
+  plan_tier: 'free' | 'starter' | 'professional' | 'enterprise'
   billing_cycle: 'monthly' | 'annual'
   status: 'active' | 'trialing' | 'past_due' | 'canceled'
   amount_paid: number

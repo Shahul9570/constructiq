@@ -52,6 +52,14 @@ class AdminMRRResponse(BaseModel):
     subscriptions: List[Dict[str, Any]]
 
 PLAN_CONFIGS = {
+    PlanTier.FREE.value: {
+        "max_projects": 1,
+        "max_workers": 5,
+        "max_storage_gb": 5,
+        "ai_tokens_limit": 10000,
+        "monthly_price": 0.0,
+        "annual_price": 0.0,
+    },
     PlanTier.STARTER.value: {
         "max_projects": 2,
         "max_workers": 10,
@@ -189,7 +197,7 @@ def list_all_subscriptions(
     mrr = sum(s.amount_paid / (12 if s.billing_cycle == "annual" else 1) for s in subs if s.status == SubscriptionStatus.ACTIVE.value)
     arr = mrr * 12
 
-    tier_counts = {"starter": 0, "professional": 0, "enterprise": 0}
+    tier_counts = {"free": 0, "starter": 0, "professional": 0, "enterprise": 0}
     sub_list = []
 
     for s in subs:
