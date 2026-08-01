@@ -25,13 +25,18 @@ app = FastAPI(
 )
 
 allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
-if "*" not in allowed_origins:
-    allowed_origins.append("*")
+# Ensure Cloudflare Pages origins and localhost are allowed
+allowed_origins.extend([
+    "https://constructiq-ebi.pages.dev",
+    "http://localhost:5173",
+    "http://localhost:3000"
+])
+allowed_origins = list(set(allowed_origins))
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if "*" in allowed_origins else allowed_origins,
-    allow_origin_regex=r"https://.*\.pages\.dev|https://.*\.onrender\.com|http://localhost:\d+",
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.pages\.dev",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,6 +51,12 @@ async def startup():
     logger.info("Celery app initialized")
     
     try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created/checked.")
+    except Exception as e:
+        logger.error(f"Failed to create/check DB tables on startup: {e}")
+
+    try:
         from create_admin import create_super_admin
         create_super_admin()
         logger.info("Super admin initialization checked/completed.")
@@ -56,9 +67,15 @@ async def startup():
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", path=request.url.path)
+    origin = request.headers.get("origin")
+    headers = {}
+    if origin:
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error. Please try again later."},
+        content={"detail": str(exc) if settings.ENVIRONMENT == "development" else "Internal server error. Please try again later."},
+        headers=headers,
     )
 
 
