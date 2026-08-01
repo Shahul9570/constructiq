@@ -51,6 +51,7 @@ async def startup():
     logger.info("Celery app initialized")
     
     try:
+        import app.models  # Register all models in Base.metadata
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created/checked.")
     except Exception as e:
