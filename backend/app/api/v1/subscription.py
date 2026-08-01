@@ -458,6 +458,11 @@ def list_all_subscriptions(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
 ):
+    # Ensure every Company Owner has an active subscription record
+    owners = db.query(User).filter(User.role.in_([UserRole.COMPANY_OWNER.value, UserRole.SUPER_ADMIN.value, UserRole.ADMIN.value])).all()
+    for owner in owners:
+        _get_or_create_subscription(db, owner)
+
     subs = db.query(CompanySubscription).all()
 
     total_subs = len(subs)
@@ -512,14 +517,24 @@ class AdminSubscriptionOverrideInput(BaseModel):
     amount_paid: Optional[float] = None
 
 @router.put("/admin/override")
+@router.put("/admin/override/")
 def override_company_subscription(
     data: AdminSubscriptionOverrideInput,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
 ):
-    sub = db.query(CompanySubscription).filter(CompanySubscription.id == data.subscription_id).first()
+    sub = db.query(CompanySubscription).filter(
+        (CompanySubscription.id == data.subscription_id) |
+        (CompanySubscription.owner_id == data.subscription_id)
+    ).first()
+
     if not sub:
-        raise HTTPException(status_code=404, detail="Subscription not found")
+        target_user = db.query(User).filter(User.id == data.subscription_id).first()
+        if target_user:
+            sub = _get_or_create_subscription(db, target_user)
+
+    if not sub:
+        raise HTTPException(status_code=404, detail=f"Subscription or User with ID {data.subscription_id} not found")
 
     if data.plan_tier not in PLAN_CONFIGS:
         raise HTTPException(status_code=400, detail="Invalid plan tier specified")
