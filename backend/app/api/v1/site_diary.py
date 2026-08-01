@@ -67,6 +67,8 @@ class SiteDiarySummaryResponse(BaseModel):
     total_rainfall_mm: float
     impact_breakdown: dict
 
+from app.api.v1.subscription import check_feature_access
+
 @router.get("", response_model=List[SiteDiaryResponse])
 def list_site_diaries(
     project_id: Optional[int] = None,
@@ -76,6 +78,7 @@ def list_site_diaries(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    check_feature_access(db, current_user, "site_diary")
     query = db.query(SiteDiary)
 
     if project_id:
@@ -126,6 +129,7 @@ def get_site_diary_summary(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    check_feature_access(db, current_user, "site_diary")
     query = db.query(SiteDiary)
     if project_id:
         query = query.filter(SiteDiary.project_id == project_id)

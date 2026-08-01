@@ -175,16 +175,21 @@ def check_subscription_limits(db: Session, user: User, resource_type: str):
         return  # Super Admins are platform operators and exempt from subscription caps
 
     sub = _get_or_create_subscription(db, user)
+    company_id = user.company_owner_id if user.company_owner_id else user.id
     
     if resource_type == "project":
-        current_projects = db.query(Project).count()
+        current_projects = db.query(Project).filter(
+            (Project.company_id == company_id) | (Project.created_by == user.id)
+        ).count()
         if current_projects >= sub.max_projects:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Project quota reached for your active {sub.plan_tier.upper()} plan ({sub.max_projects} max). Upgrade your plan to create more projects."
             )
     elif resource_type == "user":
-        current_users = db.query(User).count()
+        current_users = db.query(User).filter(
+            (User.company_owner_id == company_id) | (User.id == user.id)
+        ).count()
         if current_users >= sub.max_workers:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

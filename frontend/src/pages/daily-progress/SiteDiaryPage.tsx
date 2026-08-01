@@ -54,19 +54,21 @@ export default function SiteDiaryPage() {
     ? projectsData
     : (projectsData?.items || [])
 
-  const { data: diaries = [], isLoading } = useQuery({
+  const { data: diaries = [], isLoading, isError, error } = useQuery({
     queryKey: ['site-diaries', selectedProjectId, workImpactFilter],
     queryFn: () => siteDiaryService.list({
       project_id: selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined,
       work_impact: workImpactFilter !== 'all' ? workImpactFilter : undefined,
-    })
+    }),
+    retry: false,
   })
 
   const { data: summary } = useQuery({
     queryKey: ['site-diary-summary', selectedProjectId],
     queryFn: () => siteDiaryService.getSummary({
       project_id: selectedProjectId !== 'all' ? Number(selectedProjectId) : undefined,
-    })
+    }),
+    retry: false,
   })
 
   // Mutation
@@ -118,6 +120,28 @@ export default function SiteDiaryPage() {
       default:
         return <span className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Normal Work</span>
     }
+  }
+
+  if (isError && (error as any)?.response?.status === 403) {
+    return (
+      <div className="py-16 px-4 flex flex-col items-center justify-center text-center max-w-xl mx-auto space-y-6">
+        <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shadow-2xl">
+          <ShieldAlert className="h-12 w-12" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-2xl font-extrabold text-white">Daily Site Diary & Weather Delay Tracker Locked</h2>
+          <p className="text-slate-400 text-sm">
+            {(error as any)?.response?.data?.detail || 'Daily Site Diary & Weather Delay Tracker is available on Professional and Enterprise plans.'}
+          </p>
+        </div>
+        <Button
+          onClick={() => window.location.href = '/subscription'}
+          className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-6 shadow-lg shadow-orange-950/50"
+        >
+          Upgrade to Professional Plan ($249/mo)
+        </Button>
+      </div>
+    )
   }
 
   return (
