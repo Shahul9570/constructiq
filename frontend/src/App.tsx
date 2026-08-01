@@ -22,6 +22,7 @@ import PhotosPage from '@/pages/photos/PhotosPage'
 import ReportsPage from '@/pages/reports/ReportsPage'
 import AIAssistantPage from '@/pages/ai/AIAssistantPage'
 import SettingsPage from '@/pages/settings/SettingsPage'
+import SubscriptionPage from '@/pages/settings/SubscriptionPage'
 
 import UsersPage from '@/pages/users/UsersPage'
 
@@ -84,7 +85,8 @@ export default function App() {
         <Route path="daily-progress" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER, UserRole.CONTRACTOR]}><DailyProgressPage /></RequireRole>} />
         <Route path="site-diary" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.SITE_ENGINEER]}><SiteDiaryPage /></RequireRole>} />
         
-        {/* Financials - admins, owners, PMs, and accountants */}
+        {/* Financials & SaaS Subscriptions */}
+        <Route path="subscription" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER]}><SubscriptionPage /></RequireRole>} />
         <Route path="financial" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.PROJECT_MANAGER, UserRole.ACCOUNTANT]}><FinancialPage /></RequireRole>} />
         <Route path="client-billing" element={<RequireRole allowedRoles={[UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER, UserRole.ACCOUNTANT]}><ClientBillingPage /></RequireRole>} />
         <Route path="client-portal" element={<RequireRole allowedRoles={[UserRole.CLIENT]}><ClientPortalPage /></RequireRole>} />

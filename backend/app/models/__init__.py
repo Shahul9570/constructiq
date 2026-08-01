@@ -13,6 +13,7 @@ from app.models.project_task import ProjectTask
 from app.models.audit_log import AuditLog
 from app.models.blob import FileBlob
 from app.models.site_diary import SiteDiary
+from app.models.subscription import CompanySubscription
 
 __all__ = [
     "User",
@@ -37,4 +38,5 @@ __all__ = [
     "AuditLog",
     "FileBlob",
     "SiteDiary",
+    "CompanySubscription",
 ]

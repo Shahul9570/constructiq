@@ -23,6 +23,7 @@ import {
   Activity,
   Sliders,
   CloudRain,
+  CreditCard,
 } from 'lucide-react'
 import { UserRole } from '@/types'
 
@@ -81,8 +82,9 @@ const navGroups = [
     ],
   },
   {
-    title: 'Records',
+    title: 'Records & SaaS',
     items: [
+      { label: 'Subscription & Plan', href: '/subscription', icon: CreditCard },
       { label: 'Financial',  href: '/financial',  icon: DollarSign },
       { label: 'Client Billing', href: '/client-billing', icon: FileText },
       { label: 'Client Portal', href: '/client-portal', icon: FileText },
@@ -109,7 +111,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
 
   const allowedItemsPerRole: Record<string, string[]> = {
     company_owner: [
-      'Dashboard', 'Projects', 'Daily Progress', 'Site Diary & Weather', 'Labour', 'Materials', 'Equipment', 
+      'Dashboard', 'Projects', 'Daily Progress', 'Site Diary & Weather', 'Subscription & Plan', 'Labour', 'Materials', 'Equipment', 
       'Contractors', 'Daily Expenses', 'Financial', 'Client Billing', 'Documents', 'Photos', 'Reports', 'Settings', 'AI Assistant'
     ],
     project_manager: [
