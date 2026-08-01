@@ -4,6 +4,7 @@ from sqlalchemy import func, or_
 from typing import List, Optional, Any, Dict
 from datetime import datetime
 import os
+import json
 try:
     import psutil
 except ImportError:
@@ -24,8 +25,9 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
-# In-memory platform settings store with default enterprise values
-PLATFORM_SETTINGS = {
+SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "../../../platform_settings.json")
+
+DEFAULT_SETTINGS = {
     "maintenance_mode": False,
     "announcement_banner": "",
     "enable_ai_assistant": True,
@@ -35,6 +37,25 @@ PLATFORM_SETTINGS = {
     "max_file_upload_mb": 50,
     "ai_monthly_token_limit": 500000,
 }
+
+def load_settings():
+    if os.path.exists(SETTINGS_FILE):
+        try:
+            with open(SETTINGS_FILE, "r") as f:
+                data = json.load(f)
+                return {**DEFAULT_SETTINGS, **data}
+        except Exception:
+            pass
+    return dict(DEFAULT_SETTINGS)
+
+def save_settings(settings_dict):
+    try:
+        with open(SETTINGS_FILE, "w") as f:
+            json.dump(settings_dict, f, indent=2)
+    except Exception:
+        pass
+
+PLATFORM_SETTINGS = load_settings()
 
 class SystemStats(BaseModel):
     total_users: int
@@ -237,6 +258,15 @@ def get_system_health(
         }
     )
 
+@router.get("/public-settings")
+def get_public_platform_settings():
+    return {
+        "announcement_banner": PLATFORM_SETTINGS.get("announcement_banner", ""),
+        "maintenance_mode": PLATFORM_SETTINGS.get("maintenance_mode", False),
+        "enable_ai_assistant": PLATFORM_SETTINGS.get("enable_ai_assistant", True),
+        "enable_3d_visualizer": PLATFORM_SETTINGS.get("enable_3d_visualizer", True),
+    }
+
 @router.get("/platform-settings")
 def get_platform_settings(
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
@@ -254,6 +284,7 @@ def update_platform_settings(
     for key, val in updates.items():
         if val is not None:
             PLATFORM_SETTINGS[key] = val
+    save_settings(PLATFORM_SETTINGS)
 
     log_action(
         db,
@@ -266,4 +297,5 @@ def update_platform_settings(
     )
 
     return PLATFORM_SETTINGS
+
 

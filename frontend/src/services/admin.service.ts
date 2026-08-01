@@ -90,9 +90,15 @@ export const adminService = {
     return response.data
   },
 
+  async getPublicSettings(): Promise<{ announcement_banner: string; maintenance_mode: boolean; enable_ai_assistant: boolean; enable_3d_visualizer: boolean }> {
+    const response = await api.get('/admin/public-settings')
+    return response.data
+  },
+
   async updatePlatformSettings(data: Partial<PlatformSettings>): Promise<PlatformSettings> {
     const response = await api.patch('/admin/platform-settings', data)
     return response.data
   }
 }
+
 
