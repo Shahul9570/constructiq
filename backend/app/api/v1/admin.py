@@ -4,7 +4,10 @@ from sqlalchemy import func, or_
 from typing import List, Optional, Any, Dict
 from datetime import datetime
 import os
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 from app.core.database import get_db
 from app.core.security import require_roles
@@ -211,8 +214,8 @@ def get_system_health(
     role_distribution = {role: count for role, count in roles_raw}
 
     uptime = (datetime.utcnow() - START_TIME).total_seconds()
-    cpu_percent = psutil.cpu_percent(interval=None)
-    memory_percent = psutil.virtual_memory().percent
+    cpu_percent = psutil.cpu_percent(interval=None) if psutil else 0.0
+    memory_percent = psutil.virtual_memory().percent if psutil else 0.0
 
     return SystemHealthResponse(
         status="healthy",
