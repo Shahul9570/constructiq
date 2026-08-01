@@ -38,14 +38,16 @@ const adminNavGroups = [
     items: [
       { label: 'Global Dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'All Projects', href: '/projects', icon: FolderKanban },
+      { label: 'Site Diary & Weather', href: '/site-diary', icon: CloudRain },
       { label: 'System Telemetry', href: '/admin/system-health', icon: Activity },
     ],
   },
   {
-    title: 'Management & Governance',
+    title: 'Management & SaaS',
     items: [
       { label: 'System Users', href: '/users', icon: Users },
       { label: 'Global Contractors', href: '/contractors', icon: Building2 },
+      { label: 'Subscription & Plan', href: '/subscription', icon: CreditCard },
       { label: 'Security Audit Logs', href: '/admin/audit-logs', icon: ShieldAlert },
     ],
   },
