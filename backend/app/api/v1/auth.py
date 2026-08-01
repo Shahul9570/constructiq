@@ -70,9 +70,10 @@ def register(data: UserCreate, request: Request, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    # Auto-generate company_code for Company Owners after we have their ID
-    if user.role == UserRole.COMPANY_OWNER:
-        user.company_code = f"CO-{user.id:04d}"
+    # Auto-generate company_code for Company Owners & Independent Site Engineers
+    if not user.company_owner_id:
+        prefix = "CO" if user.role == UserRole.COMPANY_OWNER else "IND"
+        user.company_code = f"{prefix}-{user.id:04d}"
         db.commit()
         db.refresh(user)
 
