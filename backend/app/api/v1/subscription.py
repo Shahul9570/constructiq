@@ -472,13 +472,22 @@ def list_all_subscriptions(
     for s in subs:
         if s.plan_tier in tier_counts:
             tier_counts[s.plan_tier] += 1
+        
+        owner_user = db.query(User).filter(User.id == s.owner_id).first()
         sub_list.append({
             "id": s.id,
             "company_name": s.company_name,
+            "owner_id": s.owner_id,
+            "owner_email": owner_user.email if owner_user else "N/A",
+            "owner_name": owner_user.full_name if owner_user else "N/A",
             "plan_tier": s.plan_tier,
             "billing_cycle": s.billing_cycle,
             "status": s.status,
             "amount_paid": s.amount_paid,
+            "max_projects": s.max_projects,
+            "max_workers": s.max_workers,
+            "max_storage_gb": s.max_storage_gb,
+            "ai_tokens_limit": s.ai_tokens_limit,
             "created_at": s.created_at
         })
 
@@ -490,3 +499,64 @@ def list_all_subscriptions(
         tier_distribution=tier_counts,
         subscriptions=sub_list
     )
+
+class AdminSubscriptionOverrideInput(BaseModel):
+    subscription_id: int
+    plan_tier: str
+    billing_cycle: Optional[str] = "monthly"
+    status: Optional[str] = "active"
+    max_projects: Optional[int] = None
+    max_workers: Optional[int] = None
+    max_storage_gb: Optional[int] = None
+    ai_tokens_limit: Optional[int] = None
+    amount_paid: Optional[float] = None
+
+@router.put("/admin/override")
+def override_company_subscription(
+    data: AdminSubscriptionOverrideInput,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value))
+):
+    sub = db.query(CompanySubscription).filter(CompanySubscription.id == data.subscription_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+
+    if data.plan_tier not in PLAN_CONFIGS:
+        raise HTTPException(status_code=400, detail="Invalid plan tier specified")
+
+    cfg = PLAN_CONFIGS[data.plan_tier]
+
+    sub.plan_tier = data.plan_tier
+    sub.billing_cycle = data.billing_cycle or sub.billing_cycle
+    sub.status = data.status or sub.status
+
+    sub.max_projects = data.max_projects if data.max_projects is not None else cfg["max_projects"]
+    sub.max_workers = data.max_workers if data.max_workers is not None else cfg["max_workers"]
+    sub.max_storage_gb = data.max_storage_gb if data.max_storage_gb is not None else cfg["max_storage_gb"]
+    sub.ai_tokens_limit = data.ai_tokens_limit if data.ai_tokens_limit is not None else cfg["ai_tokens_limit"]
+    sub.amount_paid = data.amount_paid if data.amount_paid is not None else (cfg["annual_price"] if sub.billing_cycle == "annual" else cfg["monthly_price"])
+
+    sub.current_period_start = datetime.utcnow()
+    sub.current_period_end = datetime.utcnow() + timedelta(days=365 if sub.billing_cycle == "annual" else 30)
+
+    db.commit()
+    db.refresh(sub)
+
+    log_action(
+        db,
+        current_user.id,
+        "SUPER_ADMIN_SUBSCRIPTION_OVERRIDDEN",
+        "CompanySubscription",
+        sub.id,
+        {"plan_tier": sub.plan_tier, "company": sub.company_name, "custom_projects": sub.max_projects}
+    )
+
+    return {
+        "message": f"Successfully updated subscription for {sub.company_name}",
+        "subscription_id": sub.id,
+        "plan_tier": sub.plan_tier,
+        "max_projects": sub.max_projects,
+        "max_workers": sub.max_workers,
+        "max_storage_gb": sub.max_storage_gb,
+        "status": sub.status,
+    }

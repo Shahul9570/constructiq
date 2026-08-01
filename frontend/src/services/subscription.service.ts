@@ -86,5 +86,20 @@ export const subscriptionService = {
   async getAdminMRR(): Promise<AdminMRRData> {
     const response = await api.get('/subscriptions/all')
     return response.data
+  },
+
+  async overrideSubscription(data: {
+    subscription_id: number
+    plan_tier: string
+    billing_cycle?: string
+    status?: string
+    max_projects?: number
+    max_workers?: number
+    max_storage_gb?: number
+    ai_tokens_limit?: number
+    amount_paid?: number
+  }): Promise<any> {
+    const response = await api.put('/subscriptions/admin/override', data)
+    return response.data
   }
 }

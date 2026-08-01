@@ -1,15 +1,23 @@
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { CreditCard, Check, X, ShieldCheck, FolderKanban, Users, HardDrive, Bot, Sparkles, Building, Eye, FileText, Download, Receipt } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { CreditCard, Check, X, ShieldCheck, FolderKanban, Users, HardDrive, Bot, Sparkles, Building, Eye, FileText, Download, Receipt, Settings2, Sliders, DollarSign, Activity } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'react-hot-toast'
+import { useAuth } from '@/hooks/useAuth'
 import { subscriptionService, PaymentReceipt } from '@/services/subscription.service'
 import PaymentCheckoutModal from '@/components/subscription/PaymentCheckoutModal'
 import PaymentSuccessModal from '@/components/subscription/PaymentSuccessModal'
 
 export default function SubscriptionPage() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'super_admin'
+
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
 
   // Modals state
@@ -19,6 +27,20 @@ export default function SubscriptionPage() {
   
   const [isSuccessOpen, setIsSuccessOpen] = useState(false)
   const [lastReceipt, setLastReceipt] = useState<PaymentReceipt | null>(null)
+
+  // Admin Override Modal State
+  const [isAdminOverrideOpen, setIsAdminOverrideOpen] = useState(false)
+  const [selectedSubForOverride, setSelectedSubForOverride] = useState<any>(null)
+  const [overrideForm, setOverrideForm] = useState({
+    subscription_id: 0,
+    plan_tier: 'professional',
+    billing_cycle: 'monthly',
+    status: 'active',
+    max_projects: 25,
+    max_workers: 100,
+    max_storage_gb: 250,
+    amount_paid: 249,
+  })
 
   const { data: sub, isLoading, isError } = useQuery({
     queryKey: ['my-subscription'],
@@ -30,9 +52,28 @@ export default function SubscriptionPage() {
     queryFn: () => subscriptionService.getReceipts(),
   })
 
+  // Super Admin All Subscriptions & MRR Query
+  const { data: adminData } = useQuery({
+    queryKey: ['admin-subscriptions'],
+    queryFn: () => subscriptionService.getAdminMRR(),
+    enabled: isAdmin,
+  })
+
+  const overrideMutation = useMutation({
+    mutationFn: (data: any) => subscriptionService.overrideSubscription(data),
+    onSuccess: (res) => {
+      toast.success(res.message || 'Subscription overridden successfully!')
+      queryClient.invalidateQueries({ queryKey: ['admin-subscriptions'] })
+      queryClient.invalidateQueries({ queryKey: ['my-subscription'] })
+      setIsAdminOverrideOpen(false)
+    },
+    onError: () => {
+      toast.error('Failed to override company subscription.')
+    }
+  })
+
   const handleOpenCheckout = (tier: string, priceMonthly: number, priceAnnual: number) => {
     if (tier === 'free' || priceMonthly === 0) {
-      // Free tier switch directly
       subscriptionService.upgradePlan('free', billingCycle).then((updated) => {
         queryClient.setQueryData(['my-subscription'], updated)
         toast.success('Switched to Free Trial tier.')
@@ -51,6 +92,26 @@ export default function SubscriptionPage() {
     queryClient.invalidateQueries({ queryKey: ['payment-receipts'] })
     setLastReceipt(receipt)
     setIsSuccessOpen(true)
+  }
+
+  const handleOpenAdminOverride = (targetSub: any) => {
+    setSelectedSubForOverride(targetSub)
+    setOverrideForm({
+      subscription_id: targetSub.id,
+      plan_tier: targetSub.plan_tier,
+      billing_cycle: targetSub.billing_cycle || 'monthly',
+      status: targetSub.status || 'active',
+      max_projects: targetSub.max_projects || 25,
+      max_workers: targetSub.max_workers || 100,
+      max_storage_gb: targetSub.max_storage_gb || 250,
+      amount_paid: targetSub.amount_paid || 0,
+    })
+    setIsAdminOverrideOpen(true)
+  }
+
+  const handleAdminOverrideSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    overrideMutation.mutate(overrideForm)
   }
 
   if (isLoading) {
@@ -235,6 +296,100 @@ export default function SubscriptionPage() {
           </button>
         </div>
       </div>
+
+      {/* SUPER ADMIN SUBSCRIPTION GOVERNANCE HUB */}
+      {isAdmin && adminData && (
+        <Card className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border-orange-500/30 shadow-2xl overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+          <CardHeader className="p-6 border-b border-slate-800/80">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                  <ShieldCheck className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-bold text-white flex items-center gap-2">
+                    Super Admin SaaS Governance Hub
+                  </CardTitle>
+                  <CardDescription className="text-slate-400 text-xs mt-0.5">
+                    Platform Monthly Recurring Revenue (MRR), subscriber analytics, and instant plan override controls.
+                  </CardDescription>
+                </div>
+              </div>
+
+              {/* Revenue Stats Badges */}
+              <div className="flex items-center gap-4">
+                <div className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-center">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Monthly MRR</p>
+                  <p className="text-xl font-extrabold text-emerald-400 font-mono">${adminData.mrr.toFixed(2)}</p>
+                </div>
+                <div className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 text-center">
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Annual ARR</p>
+                  <p className="text-xl font-extrabold text-orange-400 font-mono">${adminData.arr.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-6 space-y-6">
+            {/* Global Tenant Subscriptions Table */}
+            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/50">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-950 text-slate-400 uppercase font-semibold">
+                    <th className="p-4">Company & Owner</th>
+                    <th className="p-4">Active Plan</th>
+                    <th className="p-4">Quotas (Proj / Seats / Storage)</th>
+                    <th className="p-4 text-right">Amount Paid</th>
+                    <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-center">Admin Controls</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                  {adminData.subscriptions.map((s: any) => (
+                    <tr key={s.id} className="hover:bg-slate-900/80 transition-colors">
+                      <td className="p-4">
+                        <p className="font-bold text-white">{s.company_name}</p>
+                        <p className="text-[11px] text-slate-400 font-mono">{s.owner_email || 'Owner ID: ' + s.owner_id}</p>
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 rounded-full text-[11px] font-bold uppercase ${
+                          s.plan_tier === 'enterprise' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                          s.plan_tier === 'professional' ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' :
+                          s.plan_tier === 'starter' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                          'bg-slate-800 text-slate-300 border border-slate-700'
+                        }`}>
+                          {s.plan_tier} ({s.billing_cycle || 'mo'})
+                        </span>
+                      </td>
+                      <td className="p-4 font-mono text-slate-300">
+                        {s.max_projects || 25} Projects | {s.max_workers || 100} Seats | {s.max_storage_gb || 250} GB
+                      </td>
+                      <td className="p-4 text-right font-bold text-white font-mono">
+                        ${(s.amount_paid || 0).toFixed(2)}
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
+                          {s.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <Button
+                          size="sm"
+                          onClick={() => handleOpenAdminOverride(s)}
+                          className="h-8 text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white shadow"
+                        >
+                          <Sliders className="h-3.5 w-3.5 mr-1" /> Grant / Edit Plan
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Active Subscription Overview Card */}
       <Card className="bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-slate-950/90 border-slate-800/80 backdrop-blur-xl shadow-2xl overflow-hidden relative">
@@ -501,6 +656,110 @@ export default function SubscriptionPage() {
         onClose={() => setIsSuccessOpen(false)}
         receipt={lastReceipt}
       />
+
+      {/* Super Admin Plan Override Modal */}
+      {isAdmin && selectedSubForOverride && (
+        <Dialog open={isAdminOverrideOpen} onOpenChange={setIsAdminOverrideOpen}>
+          <DialogContent className="bg-slate-950 border-slate-800 text-slate-100 sm:max-w-lg p-6 space-y-4 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+                <Sliders className="h-5 w-5 text-orange-400" /> Super Admin Subscription Override
+              </DialogTitle>
+              <DialogDescription className="text-slate-400 text-xs">
+                Grant custom plan access or override resource quotas for <strong className="text-white">{selectedSubForOverride.company_name}</strong>.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleAdminOverrideSubmit} className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-300">Target Plan Tier</Label>
+                  <Select
+                    value={overrideForm.plan_tier}
+                    onValueChange={(val) => setOverrideForm(f => ({ ...f, plan_tier: val }))}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-800 text-xs text-slate-200">
+                      <SelectValue placeholder="Select Plan" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
+                      <SelectItem value="free">Free Trial</SelectItem>
+                      <SelectItem value="starter">Starter Tier ($59)</SelectItem>
+                      <SelectItem value="professional">Professional Tier ($249)</SelectItem>
+                      <SelectItem value="enterprise">Enterprise Tier ($999+)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-300">Subscription Status</Label>
+                  <Select
+                    value={overrideForm.status}
+                    onValueChange={(val) => setOverrideForm(f => ({ ...f, status: val }))}
+                  >
+                    <SelectTrigger className="bg-slate-900 border-slate-800 text-xs text-slate-200">
+                      <SelectValue placeholder="Select Status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
+                      <SelectItem value="active">Active (Complimentary/Paid)</SelectItem>
+                      <SelectItem value="trialing">Trialing</SelectItem>
+                      <SelectItem value="past_due">Past Due</SelectItem>
+                      <SelectItem value="canceled">Canceled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 pt-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-300">Max Projects</Label>
+                  <Input
+                    type="number"
+                    value={overrideForm.max_projects}
+                    onChange={(e) => setOverrideForm(f => ({ ...f, max_projects: Number(e.target.value) }))}
+                    className="bg-slate-900 border-slate-800 text-xs text-slate-200 font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-300">Max Worker Seats</Label>
+                  <Input
+                    type="number"
+                    value={overrideForm.max_workers}
+                    onChange={(e) => setOverrideForm(f => ({ ...f, max_workers: Number(e.target.value) }))}
+                    className="bg-slate-900 border-slate-800 text-xs text-slate-200 font-mono"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-slate-300">Storage (GB)</Label>
+                  <Input
+                    type="number"
+                    value={overrideForm.max_storage_gb}
+                    onChange={(e) => setOverrideForm(f => ({ ...f, max_storage_gb: Number(e.target.value) }))}
+                    className="bg-slate-900 border-slate-800 text-xs text-slate-200 font-mono"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="pt-4 border-t border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAdminOverrideOpen(false)}
+                  className="bg-slate-900 border-slate-800 text-slate-400 hover:text-white text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={overrideMutation.isPending}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs"
+                >
+                  {overrideMutation.isPending ? 'Saving Override...' : 'Apply Plan Override'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }
