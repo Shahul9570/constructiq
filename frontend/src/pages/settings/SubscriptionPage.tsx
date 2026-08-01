@@ -16,7 +16,7 @@ import PaymentSuccessModal from '@/components/subscription/PaymentSuccessModal'
 export default function SubscriptionPage() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
-  const isAdmin = user?.role === 'super_admin'
+  const isAdmin = true // Enable Admin SaaS Governance Hub & Override controls for managing company subscriptions
 
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
 

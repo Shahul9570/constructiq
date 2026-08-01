@@ -86,10 +86,12 @@ def get_current_user(
 
 def require_roles(*roles: str):
     def role_checker(current_user=Depends(get_current_user)):
-        if current_user.role not in roles:
+        user_role = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+        allowed_roles = [r.value if hasattr(r, "value") else str(r) for r in roles]
+        if user_role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access denied. Required roles: {', '.join(roles)}",
+                detail=f"Access denied. Required roles: {', '.join(allowed_roles)}",
             )
         return current_user
 
