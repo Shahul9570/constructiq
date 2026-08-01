@@ -20,10 +20,12 @@ import PaymentSuccessModal from '@/components/subscription/PaymentSuccessModal'
 export default function SubscriptionPage() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
-  const isAdmin = (user?.role as string) === 'super_admin' || (user?.role as string) === 'company_owner'
+  
+  // Platform Super Admin Check ONLY
+  const isSuperAdmin = (user?.role as string) === 'super_admin'
 
   const [activeTab, setActiveTab] = useState<'governance' | 'plans' | 'usage' | 'billing'>(
-    isAdmin ? 'governance' : 'plans'
+    isSuperAdmin ? 'governance' : 'plans'
   )
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
   const [searchQuery, setSearchQuery] = useState('')
@@ -77,7 +79,7 @@ export default function SubscriptionPage() {
   const { data: adminData } = useQuery({
     queryKey: ['admin-subscriptions'],
     queryFn: () => subscriptionService.getAdminMRR(),
-    enabled: isAdmin,
+    enabled: isSuperAdmin,
   })
 
   const overrideMutation = useMutation({
@@ -206,23 +208,27 @@ export default function SubscriptionPage() {
         
         <div className="flex items-center gap-4">
           <div className="p-3.5 rounded-2xl bg-gradient-to-br from-orange-500/20 to-amber-500/10 border border-orange-500/30 text-orange-400 shadow-inner">
-            <Crown className="h-7 w-7" />
+            <CreditCard className="h-7 w-7" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-extrabold tracking-tight text-white">SaaS Subscriptions & Platform Hub</h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-500/10 text-orange-400 border border-orange-500/20 uppercase tracking-widest">
-                Platform Operator
-              </span>
+              <h1 className="text-2xl font-extrabold tracking-tight text-white">SaaS Subscription & Plan Matrix</h1>
+              {isSuperAdmin && (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-widest">
+                  Platform Operator
+                </span>
+              )}
             </div>
             <p className="text-slate-400 text-xs mt-1">
-              Manage tenant company subscriptions, revenue analytics, custom plan overrides, and tier feature matrix.
+              {isSuperAdmin
+                ? 'Manage tenant company subscriptions, revenue analytics, custom plan overrides, and tier feature matrix.'
+                : 'Manage your company subscription plan, resource allocations, and view official tax invoices.'}
             </p>
           </div>
         </div>
 
         {/* Global Admin Actions */}
-        {isAdmin && (
+        {isSuperAdmin && (
           <div className="flex items-center gap-2">
             <Button
               size="sm"
@@ -235,9 +241,28 @@ export default function SubscriptionPage() {
         )}
       </div>
 
+      {/* Super Admin Exempt Banner */}
+      {isSuperAdmin && (
+        <div className="p-4 rounded-xl bg-gradient-to-r from-purple-950/60 via-slate-900 to-slate-950 border border-purple-500/30 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/40">
+              <Crown className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                Super Admin Operating Mode Active
+              </h3>
+              <p className="text-slate-400 text-xs mt-0.5">
+                You are logged in as Platform Operator. Subscriptions apply to customer company accounts. You have unrestricted access to all platform features.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navigation Tabs Bar */}
       <div className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-900/90 border border-slate-800 overflow-x-auto">
-        {isAdmin && (
+        {isSuperAdmin && (
           <button
             onClick={() => setActiveTab('governance')}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${
@@ -281,8 +306,8 @@ export default function SubscriptionPage() {
         </button>
       </div>
 
-      {/* TAB 1: TENANT GOVERNANCE & MRR REVENUE (ADMIN) */}
-      {activeTab === 'governance' && isAdmin && adminData && (
+      {/* TAB 1: TENANT GOVERNANCE & MRR REVENUE (PLATFORM SUPER ADMIN ONLY) */}
+      {activeTab === 'governance' && isSuperAdmin && adminData && (
         <div className="space-y-6">
           {/* Revenue KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -463,8 +488,8 @@ export default function SubscriptionPage() {
                   <li className="flex items-center gap-2"><Check className="h-4 w-4 text-emerald-400" /> 5 GB Storage</li>
                 </ul>
               </div>
-              <Button variant="outline" onClick={() => handleOpenCheckout('free', 0, 0)} className="w-full mt-6 bg-slate-900 border-slate-700 text-slate-300">
-                Select Free
+              <Button variant="outline" onClick={() => handleOpenCheckout('free', 0, 0)} disabled={sub.plan_tier === 'free'} className="w-full mt-6 bg-slate-900 border-slate-700 text-slate-300">
+                {sub.plan_tier === 'free' ? 'Active Plan' : 'Select Free'}
               </Button>
             </Card>
 
@@ -484,8 +509,8 @@ export default function SubscriptionPage() {
                   <li className="flex items-center gap-2"><Check className="h-4 w-4 text-amber-400" /> Client Portal Access</li>
                 </ul>
               </div>
-              <Button onClick={() => handleOpenCheckout('starter', 59, 590)} className="w-full mt-6 bg-amber-600 hover:bg-amber-500 text-white font-bold">
-                Upgrade $59
+              <Button onClick={() => handleOpenCheckout('starter', 59, 590)} disabled={sub.plan_tier === 'starter'} className="w-full mt-6 bg-amber-600 hover:bg-amber-500 text-white font-bold">
+                {sub.plan_tier === 'starter' ? 'Active Plan' : 'Upgrade $59'}
               </Button>
             </Card>
 
@@ -509,8 +534,8 @@ export default function SubscriptionPage() {
                   <li className="flex items-center gap-2"><Check className="h-4 w-4 text-orange-400" /> GLB 3D Timeline Sync</li>
                 </ul>
               </div>
-              <Button onClick={() => handleOpenCheckout('professional', 249, 2490)} className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-950/50">
-                Upgrade $249
+              <Button onClick={() => handleOpenCheckout('professional', 249, 2490)} disabled={sub.plan_tier === 'professional'} className="w-full mt-6 bg-orange-500 hover:bg-orange-600 text-white font-bold shadow-lg shadow-orange-950/50">
+                {sub.plan_tier === 'professional' ? 'Active Plan' : 'Upgrade $249'}
               </Button>
             </Card>
 
@@ -530,8 +555,8 @@ export default function SubscriptionPage() {
                   <li className="flex items-center gap-2"><Check className="h-4 w-4 text-purple-400" /> Full API & Webhooks</li>
                 </ul>
               </div>
-              <Button onClick={() => handleOpenCheckout('enterprise', 999, 9990)} className="w-full mt-6 bg-purple-600 hover:bg-purple-500 text-white font-bold">
-                Upgrade $999
+              <Button onClick={() => handleOpenCheckout('enterprise', 999, 9990)} disabled={sub.plan_tier === 'enterprise'} className="w-full mt-6 bg-purple-600 hover:bg-purple-500 text-white font-bold">
+                {sub.plan_tier === 'enterprise' ? 'Active Plan' : 'Upgrade $999'}
               </Button>
             </Card>
           </div>
@@ -704,8 +729,8 @@ export default function SubscriptionPage() {
         receipt={lastReceipt}
       />
 
-      {/* Super Admin Plan Override Modal */}
-      {isAdmin && selectedSubForOverride && (
+      {/* Super Admin Plan Override Modal (Platform Super Admin Only) */}
+      {isSuperAdmin && selectedSubForOverride && (
         <Dialog open={isAdminOverrideOpen} onOpenChange={setIsAdminOverrideOpen}>
           <DialogContent className="bg-slate-950 border-slate-800 text-slate-100 sm:max-w-lg p-6 space-y-4 shadow-2xl">
             <DialogHeader>
@@ -778,8 +803,8 @@ export default function SubscriptionPage() {
         </Dialog>
       )}
 
-      {/* Super Admin Plan Matrix Definitions Editor Modal */}
-      {isAdmin && (
+      {/* Super Admin Plan Matrix Definitions Editor Modal (Platform Super Admin Only) */}
+      {isSuperAdmin && (
         <Dialog open={isAdminMatrixOpen} onOpenChange={setIsAdminMatrixOpen}>
           <DialogContent className="bg-slate-950 border-slate-800 text-slate-100 sm:max-w-lg p-6 space-y-4 shadow-2xl">
             <DialogHeader>
