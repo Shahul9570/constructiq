@@ -14,6 +14,7 @@ from app.models.audit_log import AuditLog
 from app.models.blob import FileBlob
 from app.models.site_diary import SiteDiary
 from app.models.subscription import CompanySubscription
+from app.models.payment_receipt import SubscriptionPaymentReceipt
 
 __all__ = [
     "User",
@@ -39,4 +40,5 @@ __all__ = [
     "FileBlob",
     "SiteDiary",
     "CompanySubscription",
+    "SubscriptionPaymentReceipt",
 ]

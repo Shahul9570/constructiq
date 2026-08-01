@@ -223,6 +223,133 @@ def upgrade_subscription(
     )
 
     return get_my_subscription(db, current_user)
+import random
+
+class CheckoutInput(BaseModel):
+    plan_tier: str
+    billing_cycle: str = "monthly"
+    payment_method: str = "credit_card"  # credit_card, upi, bank_transfer
+    card_name: Optional[str] = None
+    card_number: Optional[str] = None
+
+class PaymentReceiptResponse(BaseModel):
+    id: int
+    transaction_id: str
+    company_name: str
+    plan_tier: str
+    billing_cycle: str
+    amount: float
+    tax_amount: float
+    total_amount: float
+    payment_method: str
+    card_last4: Optional[str] = None
+    status: str
+    payment_date: datetime
+
+@router.post("/checkout", response_model=PaymentReceiptResponse)
+def checkout_subscription(
+    data: CheckoutInput,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value, UserRole.COMPANY_OWNER.value))
+):
+    if data.plan_tier not in PLAN_CONFIGS:
+        raise HTTPException(status_code=400, detail="Invalid plan tier specified")
+
+    sub = _get_or_create_subscription(db, current_user)
+    cfg = PLAN_CONFIGS[data.plan_tier]
+
+    # Update subscription
+    sub.plan_tier = data.plan_tier
+    sub.billing_cycle = data.billing_cycle
+    sub.max_projects = cfg["max_projects"]
+    sub.max_workers = cfg["max_workers"]
+    sub.max_storage_gb = cfg["max_storage_gb"]
+    sub.ai_tokens_limit = cfg["ai_tokens_limit"]
+    base_price = cfg["annual_price"] if data.billing_cycle == "annual" else cfg["monthly_price"]
+    tax_amount = round(base_price * 0.18, 2)  # 18% GST/Tax
+    total_amount = round(base_price + tax_amount, 2)
+    sub.amount_paid = base_price
+    sub.status = SubscriptionStatus.ACTIVE.value
+    sub.current_period_start = datetime.utcnow()
+    sub.current_period_end = datetime.utcnow() + timedelta(days=365 if data.billing_cycle == "annual" else 30)
+
+    db.commit()
+    db.refresh(sub)
+
+    # Generate receipt
+    txn_id = f"TXN-SUB-{datetime.utcnow().strftime('%Y%m%d')}-{random.randint(10000, 99999)}"
+    card_last4 = data.card_number[-4:] if data.card_number and len(data.card_number) >= 4 else "4242"
+
+    receipt = SubscriptionPaymentReceipt(
+        subscription_id=sub.id,
+        owner_id=current_user.id,
+        company_name=sub.company_name,
+        transaction_id=txn_id,
+        plan_tier=data.plan_tier,
+        billing_cycle=data.billing_cycle,
+        amount=base_price,
+        tax_amount=tax_amount,
+        total_amount=total_amount,
+        payment_method=data.payment_method,
+        card_last4=card_last4,
+        status="completed"
+    )
+
+    db.add(receipt)
+    db.commit()
+    db.refresh(receipt)
+
+    log_action(
+        db,
+        current_user.id,
+        "SUBSCRIPTION_CHECKOUT_COMPLETED",
+        "SubscriptionPaymentReceipt",
+        receipt.id,
+        {"transaction_id": txn_id, "amount": total_amount, "tier": data.plan_tier}
+    )
+
+    return PaymentReceiptResponse(
+        id=receipt.id,
+        transaction_id=receipt.transaction_id,
+        company_name=receipt.company_name,
+        plan_tier=receipt.plan_tier,
+        billing_cycle=receipt.billing_cycle,
+        amount=receipt.amount,
+        tax_amount=receipt.tax_amount,
+        total_amount=receipt.total_amount,
+        payment_method=receipt.payment_method,
+        card_last4=receipt.card_last4,
+        status=receipt.status,
+        payment_date=receipt.created_at
+    )
+
+@router.get("/receipts", response_model=List[PaymentReceiptResponse])
+def get_payment_receipts(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    sub = _get_or_create_subscription(db, current_user)
+    receipts = db.query(SubscriptionPaymentReceipt).filter(
+        SubscriptionPaymentReceipt.subscription_id == sub.id
+    ).order_by(SubscriptionPaymentReceipt.created_at.desc()).all()
+
+    return [
+        PaymentReceiptResponse(
+            id=r.id,
+            transaction_id=r.transaction_id,
+            company_name=r.company_name,
+            plan_tier=r.plan_tier,
+            billing_cycle=r.billing_cycle,
+            amount=r.amount,
+            tax_amount=r.tax_amount,
+            total_amount=r.total_amount,
+            payment_method=r.payment_method,
+            card_last4=r.card_last4,
+            status=r.status,
+            payment_date=r.created_at
+        )
+        for r in receipts
+    ]
 
 @router.get("/all", response_model=AdminMRRResponse)
 def list_all_subscriptions(

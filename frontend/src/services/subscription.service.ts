@@ -24,6 +24,21 @@ export interface CompanySubscription {
   usage: SubscriptionUsageStats
 }
 
+export interface PaymentReceipt {
+  id: number
+  transaction_id: string
+  company_name: string
+  plan_tier: string
+  billing_cycle: string
+  amount: number
+  tax_amount: number
+  total_amount: number
+  payment_method: string
+  card_last4?: string
+  status: string
+  payment_date: string
+}
+
 export interface AdminMRRData {
   total_subscriptions: number
   active_subscriptions: number
@@ -49,6 +64,22 @@ export const subscriptionService = {
 
   async upgradePlan(plan_tier: string, billing_cycle: string = 'monthly'): Promise<CompanySubscription> {
     const response = await api.post('/subscriptions/upgrade', { plan_tier, billing_cycle })
+    return response.data
+  },
+
+  async checkout(data: {
+    plan_tier: string
+    billing_cycle: string
+    payment_method: string
+    card_name?: string
+    card_number?: string
+  }): Promise<PaymentReceipt> {
+    const response = await api.post('/subscriptions/checkout', data)
+    return response.data
+  },
+
+  async getReceipts(): Promise<PaymentReceipt[]> {
+    const response = await api.get('/subscriptions/receipts')
     return response.data
   },
 

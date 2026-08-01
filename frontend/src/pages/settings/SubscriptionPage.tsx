@@ -1,34 +1,56 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { CreditCard, Check, X, ShieldCheck, FolderKanban, Users, HardDrive, Bot, Sparkles, Building, Eye } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { CreditCard, Check, X, ShieldCheck, FolderKanban, Users, HardDrive, Bot, Sparkles, Building, Eye, FileText, Download, Receipt } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { toast } from 'react-hot-toast'
-import { subscriptionService } from '@/services/subscription.service'
+import { subscriptionService, PaymentReceipt } from '@/services/subscription.service'
+import PaymentCheckoutModal from '@/components/subscription/PaymentCheckoutModal'
+import PaymentSuccessModal from '@/components/subscription/PaymentSuccessModal'
 
 export default function SubscriptionPage() {
   const queryClient = useQueryClient()
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
+
+  // Modals state
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
+  const [checkoutTier, setCheckoutTier] = useState('starter')
+  const [checkoutPrice, setCheckoutPrice] = useState(59)
+  
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false)
+  const [lastReceipt, setLastReceipt] = useState<PaymentReceipt | null>(null)
 
   const { data: sub, isLoading, isError } = useQuery({
     queryKey: ['my-subscription'],
     queryFn: () => subscriptionService.getMySubscription(),
   })
 
-  const upgradeMutation = useMutation({
-    mutationFn: ({ tier, cycle }: { tier: string; cycle: string }) =>
-      subscriptionService.upgradePlan(tier, cycle),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(['my-subscription'], updated)
-      toast.success(`Plan upgraded to ${updated.plan_tier.toUpperCase()}!`)
-    },
-    onError: () => {
-      toast.error('Failed to upgrade subscription tier.')
-    }
+  const { data: receipts = [] } = useQuery({
+    queryKey: ['payment-receipts'],
+    queryFn: () => subscriptionService.getReceipts(),
   })
 
-  const handleUpgrade = (tier: string) => {
-    upgradeMutation.mutate({ tier, cycle: billingCycle })
+  const handleOpenCheckout = (tier: string, priceMonthly: number, priceAnnual: number) => {
+    if (tier === 'free' || priceMonthly === 0) {
+      // Free tier switch directly
+      subscriptionService.upgradePlan('free', billingCycle).then((updated) => {
+        queryClient.setQueryData(['my-subscription'], updated)
+        toast.success('Switched to Free Trial tier.')
+      })
+      return
+    }
+
+    const finalPrice = billingCycle === 'annual' ? priceAnnual : priceMonthly
+    setCheckoutTier(tier)
+    setCheckoutPrice(finalPrice)
+    setIsCheckoutOpen(true)
+  }
+
+  const handleCheckoutSuccess = (receipt: PaymentReceipt) => {
+    queryClient.invalidateQueries({ queryKey: ['my-subscription'] })
+    queryClient.invalidateQueries({ queryKey: ['payment-receipts'] })
+    setLastReceipt(receipt)
+    setIsSuccessOpen(true)
   }
 
   if (isLoading) {
@@ -356,8 +378,8 @@ export default function SubscriptionPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleUpgrade('free')}
-                    disabled={sub.plan_tier === 'free' || upgradeMutation.isPending}
+                    onClick={() => handleOpenCheckout('free', 0, 0)}
+                    disabled={sub.plan_tier === 'free'}
                     className="w-full text-xs font-semibold bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
                   >
                     {sub.plan_tier === 'free' ? 'Active' : 'Select Free'}
@@ -366,8 +388,8 @@ export default function SubscriptionPage() {
                 <td className="p-4 text-center">
                   <Button
                     size="sm"
-                    onClick={() => handleUpgrade('starter')}
-                    disabled={sub.plan_tier === 'starter' || upgradeMutation.isPending}
+                    onClick={() => handleOpenCheckout('starter', 59, 590)}
+                    disabled={sub.plan_tier === 'starter'}
                     className="w-full text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white shadow"
                   >
                     {sub.plan_tier === 'starter' ? 'Active' : 'Upgrade $59'}
@@ -376,8 +398,8 @@ export default function SubscriptionPage() {
                 <td className="p-4 text-center bg-orange-500/10 border-x border-orange-500/20">
                   <Button
                     size="sm"
-                    onClick={() => handleUpgrade('professional')}
-                    disabled={sub.plan_tier === 'professional' || upgradeMutation.isPending}
+                    onClick={() => handleOpenCheckout('professional', 249, 2490)}
+                    disabled={sub.plan_tier === 'professional'}
                     className="w-full text-xs font-semibold bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-950/50"
                   >
                     {sub.plan_tier === 'professional' ? 'Active' : 'Upgrade $249'}
@@ -386,11 +408,11 @@ export default function SubscriptionPage() {
                 <td className="p-4 text-center">
                   <Button
                     size="sm"
-                    onClick={() => handleUpgrade('enterprise')}
-                    disabled={sub.plan_tier === 'enterprise' || upgradeMutation.isPending}
+                    onClick={() => handleOpenCheckout('enterprise', 999, 9990)}
+                    disabled={sub.plan_tier === 'enterprise'}
                     className="w-full text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white shadow"
                   >
-                    {sub.plan_tier === 'enterprise' ? 'Active' : 'Upgrade Custom'}
+                    {sub.plan_tier === 'enterprise' ? 'Active' : 'Upgrade $999'}
                   </Button>
                 </td>
               </tr>
@@ -398,6 +420,87 @@ export default function SubscriptionPage() {
           </table>
         </div>
       </Card>
+
+      {/* Subscription Payment Receipts & Invoices Table */}
+      <Card className="bg-slate-950/90 border-slate-800/80 backdrop-blur-xl shadow-2xl overflow-hidden">
+        <CardHeader className="p-6 pb-4 border-b border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between">
+          <div>
+            <CardTitle className="text-xl font-extrabold text-white flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-orange-400" /> Subscription Billing History & Receipts
+            </CardTitle>
+            <p className="text-slate-400 text-xs mt-1">Download official tax invoices and transaction verification receipts.</p>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          {receipts.length === 0 ? (
+            <div className="p-8 text-center text-slate-500 text-xs">
+              No subscription payment receipts found yet. Upgrade your plan above to generate receipts.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-800 bg-slate-900/60 text-slate-400 uppercase font-semibold">
+                    <th className="p-4">Transaction ID</th>
+                    <th className="p-4">Date</th>
+                    <th className="p-4">Plan Tier</th>
+                    <th className="p-4">Payment Method</th>
+                    <th className="p-4 text-right">Amount</th>
+                    <th className="p-4 text-center">Status</th>
+                    <th className="p-4 text-center">Receipt</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                  {receipts.map((r) => (
+                    <tr key={r.id} className="hover:bg-slate-900/40 font-mono">
+                      <td className="p-4 font-bold text-white">{r.transaction_id}</td>
+                      <td className="p-4 text-slate-400">{new Date(r.payment_date).toLocaleDateString()}</td>
+                      <td className="p-4 capitalize font-semibold text-orange-400">{r.plan_tier} ({r.billing_cycle})</td>
+                      <td className="p-4 capitalize text-slate-300">{r.payment_method.replace('_', ' ')} (•••• {r.card_last4 || '4242'})</td>
+                      <td className="p-4 text-right font-extrabold text-white">${r.total_amount.toFixed(2)}</td>
+                      <td className="p-4 text-center">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
+                          {r.status}
+                        </span>
+                      </td>
+                      <td className="p-4 text-center">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setLastReceipt(r)
+                            setIsSuccessOpen(true)
+                          }}
+                          className="h-7 text-xs text-orange-400 hover:text-orange-300 hover:bg-orange-500/10"
+                        >
+                          <FileText className="h-3.5 w-3.5 mr-1" /> View Receipt
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Checkout & Confirmation Modals */}
+      <PaymentCheckoutModal
+        open={isCheckoutOpen}
+        onClose={() => setIsCheckoutOpen(false)}
+        planTier={checkoutTier}
+        billingCycle={billingCycle}
+        price={checkoutPrice}
+        onSuccess={handleCheckoutSuccess}
+      />
+
+      <PaymentSuccessModal
+        open={isSuccessOpen}
+        onClose={() => setIsSuccessOpen(false)}
+        receipt={lastReceipt}
+      />
     </div>
   )
 }
