@@ -37,6 +37,10 @@ class Settings(BaseSettings):
 
     SENTRY_DSN: Optional[str] = None
 
+    RAZORPAY_KEY_ID: Optional[str] = None
+    RAZORPAY_KEY_SECRET: Optional[str] = None
+    RAZORPAY_WEBHOOK_SECRET: Optional[str] = None
+
     @model_validator(mode="after")
     def validate_production_secrets(self) -> 'Settings':
         if self.ENVIRONMENT == "production":

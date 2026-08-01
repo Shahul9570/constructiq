@@ -222,8 +222,31 @@ def upgrade_subscription(
         {"plan_tier": data.plan_tier, "billing_cycle": data.billing_cycle, "amount": sub.amount_paid}
     )
 
-    return get_my_subscription(db, current_user)
-import random
+from app.core.payment_gateway import get_payment_gateway
+
+class CreateOrderInput(BaseModel):
+    plan_tier: str
+    billing_cycle: str = "monthly"
+    currency: str = "USD"
+
+class CreateOrderResponse(BaseModel):
+    order_id: str
+    key_id: str
+    amount: float
+    tax_amount: float
+    total_amount: float
+    currency: str
+    plan_tier: str
+    billing_cycle: str
+
+class VerifyPaymentInput(BaseModel):
+    order_id: str
+    payment_id: str
+    signature: str
+    plan_tier: str
+    billing_cycle: str = "monthly"
+    payment_method: str = "credit_card"
+    card_number: Optional[str] = None
 
 class CheckoutInput(BaseModel):
     plan_tier: str
@@ -246,19 +269,62 @@ class PaymentReceiptResponse(BaseModel):
     status: str
     payment_date: datetime
 
-@router.post("/checkout", response_model=PaymentReceiptResponse)
-def checkout_subscription(
-    data: CheckoutInput,
+@router.post("/create-order", response_model=CreateOrderResponse)
+def create_subscription_order(
+    data: CreateOrderInput,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value, UserRole.COMPANY_OWNER.value))
 ):
     if data.plan_tier not in PLAN_CONFIGS:
         raise HTTPException(status_code=400, detail="Invalid plan tier specified")
 
+    cfg = PLAN_CONFIGS[data.plan_tier]
+    base_price = cfg["annual_price"] if data.billing_cycle == "annual" else cfg["monthly_price"]
+    tax_amount = round(base_price * 0.18, 2)
+    total_amount = round(base_price + tax_amount, 2)
+
+    gateway = get_payment_gateway()
+    order_data = gateway.create_order(
+        amount=total_amount,
+        currency=data.currency,
+        notes={
+            "user_id": current_user.id,
+            "company_name": current_user.company_name or current_user.full_name,
+            "plan_tier": data.plan_tier,
+            "billing_cycle": data.billing_cycle,
+        }
+    )
+
+    return CreateOrderResponse(
+        order_id=order_data["id"],
+        key_id=order_data.get("key_id", "rzp_test_simulated"),
+        amount=base_price,
+        tax_amount=tax_amount,
+        total_amount=total_amount,
+        currency=data.currency,
+        plan_tier=data.plan_tier,
+        billing_cycle=data.billing_cycle,
+    )
+
+@router.post("/verify-payment", response_model=PaymentReceiptResponse)
+def verify_and_activate_subscription(
+    data: VerifyPaymentInput,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value, UserRole.COMPANY_OWNER.value))
+):
+    if data.plan_tier not in PLAN_CONFIGS:
+        raise HTTPException(status_code=400, detail="Invalid plan tier specified")
+
+    gateway = get_payment_gateway()
+    is_valid = gateway.verify_payment_signature(data.order_id, data.payment_id, data.signature)
+
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="Payment signature verification failed.")
+
     sub = _get_or_create_subscription(db, current_user)
     cfg = PLAN_CONFIGS[data.plan_tier]
 
-    # Update subscription
+    # Upgrade tenant subscription
     sub.plan_tier = data.plan_tier
     sub.billing_cycle = data.billing_cycle
     sub.max_projects = cfg["max_projects"]
@@ -266,7 +332,7 @@ def checkout_subscription(
     sub.max_storage_gb = cfg["max_storage_gb"]
     sub.ai_tokens_limit = cfg["ai_tokens_limit"]
     base_price = cfg["annual_price"] if data.billing_cycle == "annual" else cfg["monthly_price"]
-    tax_amount = round(base_price * 0.18, 2)  # 18% GST/Tax
+    tax_amount = round(base_price * 0.18, 2)
     total_amount = round(base_price + tax_amount, 2)
     sub.amount_paid = base_price
     sub.status = SubscriptionStatus.ACTIVE.value
@@ -276,15 +342,13 @@ def checkout_subscription(
     db.commit()
     db.refresh(sub)
 
-    # Generate receipt
-    txn_id = f"TXN-SUB-{datetime.utcnow().strftime('%Y%m%d')}-{random.randint(10000, 99999)}"
     card_last4 = data.card_number[-4:] if data.card_number and len(data.card_number) >= 4 else "4242"
 
     receipt = SubscriptionPaymentReceipt(
         subscription_id=sub.id,
         owner_id=current_user.id,
         company_name=sub.company_name,
-        transaction_id=txn_id,
+        transaction_id=data.payment_id or f"TXN-{data.order_id}",
         plan_tier=data.plan_tier,
         billing_cycle=data.billing_cycle,
         amount=base_price,
@@ -302,10 +366,10 @@ def checkout_subscription(
     log_action(
         db,
         current_user.id,
-        "SUBSCRIPTION_CHECKOUT_COMPLETED",
+        "SUBSCRIPTION_PAYMENT_VERIFIED",
         "SubscriptionPaymentReceipt",
         receipt.id,
-        {"transaction_id": txn_id, "amount": total_amount, "tier": data.plan_tier}
+        {"transaction_id": receipt.transaction_id, "amount": total_amount, "tier": data.plan_tier}
     )
 
     return PaymentReceiptResponse(
@@ -321,6 +385,35 @@ def checkout_subscription(
         card_last4=receipt.card_last4,
         status=receipt.status,
         payment_date=receipt.created_at
+    )
+
+@router.post("/checkout", response_model=PaymentReceiptResponse)
+def checkout_subscription(
+    data: CheckoutInput,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN.value, UserRole.COMPANY_OWNER.value))
+):
+    # Direct checkout fallback wrapper
+    order_res = create_subscription_order(
+        CreateOrderInput(plan_tier=data.plan_tier, billing_cycle=data.billing_cycle),
+        db,
+        current_user
+    )
+    sim_payment_id = f"pay_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}_{random.randint(1000, 9999)}"
+    sim_sig = f"sim_sig_{random.randint(100000, 999999)}"
+
+    return verify_and_activate_subscription(
+        VerifyPaymentInput(
+            order_id=order_res.order_id,
+            payment_id=sim_payment_id,
+            signature=sim_sig,
+            plan_tier=data.plan_tier,
+            billing_cycle=data.billing_cycle,
+            payment_method=data.payment_method,
+            card_number=data.card_number,
+        ),
+        db,
+        current_user
     )
 
 @router.get("/receipts", response_model=List[PaymentReceiptResponse])
