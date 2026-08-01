@@ -20,9 +20,11 @@ import PaymentSuccessModal from '@/components/subscription/PaymentSuccessModal'
 export default function SubscriptionPage() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
-  const isAdmin = (user?.role as string) === 'super_admin' || true
+  const isAdmin = (user?.role as string) === 'super_admin' || (user?.role as string) === 'company_owner'
 
-  const [activeTab, setActiveTab] = useState<'governance' | 'plans' | 'usage' | 'billing'>('governance')
+  const [activeTab, setActiveTab] = useState<'governance' | 'plans' | 'usage' | 'billing'>(
+    isAdmin ? 'governance' : 'plans'
+  )
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly')
   const [searchQuery, setSearchQuery] = useState('')
 
