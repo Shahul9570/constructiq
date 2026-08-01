@@ -25,10 +25,13 @@ app = FastAPI(
 )
 
 allowed_origins = [o.strip() for o in settings.ALLOWED_ORIGINS.split(",") if o.strip()]
+if "*" not in allowed_origins:
+    allowed_origins.append("*")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"] if "*" in allowed_origins else allowed_origins,
+    allow_origin_regex=r"https://.*\.pages\.dev|https://.*\.onrender\.com|http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
