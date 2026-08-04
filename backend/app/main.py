@@ -54,6 +54,14 @@ async def startup():
         import app.models  # Register all models in Base.metadata
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created/checked.")
+
+        # Safe automatic column migrations for existing production tables
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;"))
+            conn.execute(text("ALTER TABLE projects ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;"))
+            conn.commit()
+            logger.info("Database column migrations (latitude, longitude) verified successfully.")
     except Exception as e:
         logger.error(f"Failed to create/check DB tables on startup: {e}")
 
