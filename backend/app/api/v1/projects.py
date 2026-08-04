@@ -134,12 +134,19 @@ def get_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # Super admin and company owner see everything
-    if current_user.role in [UserRole.SUPER_ADMIN, UserRole.COMPANY_OWNER]:
+    user_role_str = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    company_id = current_user.company_owner_id if current_user.company_owner_id else current_user.id
+
+    # Super admin is platform operator and sees everything
+    if user_role_str == UserRole.SUPER_ADMIN.value:
         return project
 
+    # Check multi-tenant company isolation boundary
+    if project.company_id and project.company_id != company_id and project.created_by != current_user.id and project.client_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied. Project belongs to another organization.")
+
     # Client can only see their own projects
-    if current_user.role == UserRole.CLIENT:
+    if user_role_str == UserRole.CLIENT.value:
         if project.client_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized to view this project")
         return project
@@ -150,7 +157,7 @@ def get_project(
         ProjectMember.user_id == current_user.id
     ).first()
 
-    if project.created_by != current_user.id and not is_member:
+    if project.created_by != current_user.id and not is_member and project.company_id != company_id:
         raise HTTPException(status_code=403, detail="Not authorized to view this project")
 
     return project
@@ -167,7 +174,10 @@ def update_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    if current_user.role != UserRole.SUPER_ADMIN and project.created_by != current_user.id:
+    user_role_str = current_user.role.value if hasattr(current_user.role, "value") else str(current_user.role)
+    company_id = current_user.company_owner_id if current_user.company_owner_id else current_user.id
+
+    if user_role_str != UserRole.SUPER_ADMIN.value and project.company_id != company_id and project.created_by != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized to modify this project")
 
     update_data = data.model_dump(exclude_unset=True)
@@ -424,7 +434,6 @@ def link_client_to_project(
     )),
 ):
     """Link an existing CLIENT user to a project by their email address."""
-    check_feature_access(db, current_user, "client_portal")
     project = db.query(Project).filter(Project.id == project_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")

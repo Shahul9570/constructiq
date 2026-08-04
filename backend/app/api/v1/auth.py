@@ -17,11 +17,17 @@ from app.schemas.user import (
     RefreshTokenRequest, PasswordChange, UserUpdate
 )
 
+from app.core.sanitizer import validate_password_strength, sanitize_text
+from app.services.security_service import check_login_rate_limit, record_failed_login, clear_failed_login
+
 router = APIRouter()
 
 
 @router.post("/register", response_model=UserResponse, status_code=201)
 def register(data: UserCreate, request: Request, db: Session = Depends(get_db)):
+    # Validate password complexity
+    validate_password_strength(data.password)
+
     # Block direct super_admin registration
     if data.role and data.role.lower() == UserRole.SUPER_ADMIN.value:
         raise HTTPException(
@@ -58,12 +64,12 @@ def register(data: UserCreate, request: Request, db: Session = Depends(get_db)):
 
     user = User(
         email=data.email,
-        username=data.username,
+        username=sanitize_text(data.username),
         hashed_password=hash_password(data.password),
-        full_name=data.full_name,
+        full_name=sanitize_text(data.full_name),
         phone=data.phone,
         role=UserRole(data.role) if hasattr(UserRole, data.role.upper()) else UserRole.SITE_ENGINEER,
-        company_name=data.company_name,
+        company_name=sanitize_text(data.company_name),
         company_owner_id=company_owner_id,
     )
     db.add(user)
@@ -83,30 +89,41 @@ def register(data: UserCreate, request: Request, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(data: UserLogin, request: Request, db: Session = Depends(get_db)):
+    client_ip = request.client.host if request.client else "unknown_ip"
+    rate_limit_key = f"{client_ip}:{data.username}"
+
+    # Check brute-force lockout status
+    check_login_rate_limit(rate_limit_key)
+
     user = db.query(User).filter(
         (User.username == data.username) | (User.email == data.username)
     ).first()
     
     if not user:
-        log_action(db, None, "FAILED_LOGIN", "User", None, {"username": data.username, "reason": "User not found"}, request.client.host if request.client else None)
+        record_failed_login(rate_limit_key)
+        log_action(db, None, "FAILED_LOGIN", "User", None, {"username": data.username, "reason": "User not found"}, client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
         
     if not verify_password(data.password, user.hashed_password):
-        log_action(db, user.id, "FAILED_LOGIN", "User", user.id, {"reason": "Invalid password"}, request.client.host if request.client else None)
+        record_failed_login(rate_limit_key)
+        log_action(db, user.id, "FAILED_LOGIN", "User", user.id, {"reason": "Invalid password"}, client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
         
     if not user.is_active:
-        log_action(db, user.id, "FAILED_LOGIN", "User", user.id, {"reason": "Inactive account"}, request.client.host if request.client else None)
+        log_action(db, user.id, "FAILED_LOGIN", "User", user.id, {"reason": "Inactive account"}, client_ip)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account is inactive"
         )
+
+    # Reset brute-force counter on successful login
+    clear_failed_login(rate_limit_key)
 
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role.value}
@@ -115,7 +132,7 @@ def login(data: UserLogin, request: Request, db: Session = Depends(get_db)):
         data={"sub": str(user.id)}
     )
 
-    log_action(db, user.id, "USER_LOGIN", "User", user.id, None, request.client.host if request.client else None)
+    log_action(db, user.id, "USER_LOGIN", "User", user.id, None, client_ip)
 
     return TokenResponse(
         access_token=access_token,
