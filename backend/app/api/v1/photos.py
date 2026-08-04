@@ -41,6 +41,8 @@ def list_photos(
     return {"items": photos, "total": total, "page": page, "size": size}
 
 
+from app.core.sanitizer import validate_uploaded_file, ALLOWED_PHOTO_EXTENSIONS
+
 @router.post("/upload", status_code=201)
 async def upload_photo(
     project_id: int,
@@ -52,6 +54,8 @@ async def upload_photo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    validate_uploaded_file(file.filename or "", ALLOWED_PHOTO_EXTENSIONS)
+
     file_ext = os.path.splitext(file.filename or "")[1] if file.filename else ".jpg"
     is_video = file.content_type and file.content_type.startswith("video/")
     prefix = "videos" if is_video else "photos"

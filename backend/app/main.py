@@ -42,6 +42,38 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import time
+from typing import Dict, Tuple
+
+_REQUEST_COUNTS: Dict[str, Tuple[int, float]] = {}
+MAX_REQ_PER_MINUTE = 120
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    # Allow health check without rate limit
+    if request.url.path == "/health":
+        return await call_next(request)
+
+    client_ip = request.client.host if request.client else "unknown_ip"
+    now = time.time()
+    count, reset_at = _REQUEST_COUNTS.get(client_ip, (0, now + 60.0))
+
+    if now > reset_at:
+        count = 1
+        reset_at = now + 60.0
+    else:
+        count += 1
+
+    _REQUEST_COUNTS[client_ip] = (count, reset_at)
+
+    if count > MAX_REQ_PER_MINUTE:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "API rate limit exceeded (120 requests/min). Please slow down."}
+        )
+
+    return await call_next(request)
+
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)

@@ -39,6 +39,8 @@ def list_documents(
     return {"items": documents, "total": total, "page": page, "size": size}
 
 
+from app.core.sanitizer import validate_uploaded_file, ALLOWED_DOC_EXTENSIONS
+
 @router.post("/upload", status_code=201)
 async def upload_document(
     project_id: int,
@@ -50,6 +52,8 @@ async def upload_document(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    validate_uploaded_file(file.filename or "", ALLOWED_DOC_EXTENSIONS)
+
     doc_name = name or file.filename
     file_ext = os.path.splitext(file.filename or "")[1] if file.filename else ""
     file_key = f"documents/{project_id}/{uuid.uuid4()}{file_ext}"

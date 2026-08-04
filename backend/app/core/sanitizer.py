@@ -53,8 +53,19 @@ def validate_password_strength(password: str) -> None:
             detail="Password must contain at least 1 number (0-9)."
         )
 
-    if not re.search(r'[@$!%*?&#^()_+\-=\[\]{};:\'",.<>/\\]', password):
+import os
+
+ALLOWED_PHOTO_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp', '.gif', '.mp4', '.mov', '.avi', '.webm'}
+ALLOWED_DOC_EXTENSIONS = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.csv', '.txt', '.png', '.jpg', '.jpeg', '.webp', '.glb', '.gltf', '.zip', '.dwg', '.rvt'}
+
+def validate_uploaded_file(filename: str, allowed_extensions: set):
+    """
+    Validates file extension against a whitelist to prevent arbitrary file upload vulnerabilities
+    (e.g., .php, .sh, .py, .exe, .html payload prevention).
+    """
+    ext = os.path.splitext(filename or "")[1].lower()
+    if not ext or ext not in allowed_extensions:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must contain at least 1 special character (e.g. @, $, !, %, *, ?, &)."
+            detail=f"Invalid file extension '{ext}'. Allowed file formats: {', '.join(sorted(allowed_extensions))}"
         )
